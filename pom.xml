@@ -12,7 +12,7 @@
 	</parent>
 
 	<groupId>sodresoftwares</groupId>
-	<artifactId>login</artifactId>
+	<artifactId>barbearia</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>login</name>
 	<description>Autenticação do usuário</description>

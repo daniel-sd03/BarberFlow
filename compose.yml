@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:15
-    container_name: authentication_postgres
+    container_name: barberflow_postgres
     environment:
       POSTGRES_USER: usuario
       POSTGRES_PASSWORD: senha123
@@ -18,6 +18,8 @@ services:
       - "8080:8080"
     depends_on:
       - db
+    profiles:
+      - "app"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/meubanco
       - SPRING_DATASOURCE_USERNAME=usuario
