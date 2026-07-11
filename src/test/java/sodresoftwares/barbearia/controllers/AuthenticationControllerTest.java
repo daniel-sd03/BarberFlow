@@ -68,12 +68,19 @@ class AuthenticationControllerTest {
     @BeforeEach
     void setUp() {
         authenticationDTO = new AuthenticationDTO("user@test.com", "password123");
-        registerDTO = new RegisterDTO("user@test.com", "password123", UserRole.USER);
+        registerDTO = new RegisterDTO(
+                "user@test.com",
+                "password123",
+                "Cliente Teste",
+                "11999999999",
+                UserRole.USER)
+        ;
         registerProfessionalDTO = new RegisterProfessionalDTO(
                 "barber@test.com",
                 "password123",
-                "Barbearia do Zé",
-                "11999999999"
+                "Barbeiro Teste",
+                "11999999999",
+                "Barbearia do Zé"
         );
     }
 
@@ -132,7 +139,7 @@ class AuthenticationControllerTest {
     @Test
     @DisplayName("Should return 400 when register fields are blank")
     void testRegister_ValidationErrors() throws Exception {
-        RegisterDTO invalidDTO = new RegisterDTO("", "", null);
+        RegisterDTO invalidDTO = new RegisterDTO("", "", "", "123", null);
 
         // Act & Assert
         mockMvc.perform(post("/auth/register")
@@ -164,7 +171,7 @@ class AuthenticationControllerTest {
     @DisplayName("Should return 400 when professional register fields are blank")
     void testRegisterProfessional_ValidationErrors() throws Exception {
         // Arrange
-        RegisterProfessionalDTO invalidDTO = new RegisterProfessionalDTO("", "", "", null);
+        RegisterProfessionalDTO invalidDTO = new RegisterProfessionalDTO("", "", "", "123", "");
 
         // Act & Assert
         mockMvc.perform(post("/auth/register/professional")

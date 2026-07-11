@@ -61,6 +61,8 @@ public class AuthenticationService {
         User newUser = User.builder()
                 .login(data.login())
                 .password(encryptedPassword)
+                .name(data.name())
+                .phone(data.phone())
                 .role(data.role())
                 .build();
 
@@ -72,19 +74,24 @@ public class AuthenticationService {
 
     @Transactional
     public void registerProfessional(RegisterProfessionalDTO data) {
-        RegisterDTO baseUserDTO = new RegisterDTO(data.login(), data.password(), UserRole.PROFESSIONAL);
+        RegisterDTO baseUserDTO = new RegisterDTO(
+                data.login(),
+                data.password(),
+                data.name(),
+                data.phone(),
+                UserRole.PROFESSIONAL
+        );
 
         User savedUser = this.register(baseUserDTO);
 
         Professional newProfessional = Professional.builder()
                 .user(savedUser)
                 .businessName(data.businessName())
-                .contactPhone(data.contactPhone())
                 .isActive(true)
                 .build();
 
         professionalRepository.save(newProfessional);
 
-        log.info("Professional registered successfully: {}", data.businessName());
+        log.info("Professional registered successfully");
     }
 }
