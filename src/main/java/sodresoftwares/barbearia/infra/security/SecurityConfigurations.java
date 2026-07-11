@@ -34,6 +34,7 @@ public class SecurityConfigurations {
 				.authorizeHttpRequests(authrize -> authrize
 						.requestMatchers(HttpMethod.POST, "/auth/barbearia").permitAll()
 						.requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
+						.requestMatchers(HttpMethod.POST, "/auth//register/professional").permitAll()
 						.requestMatchers("/oauth2/**", "/barbearia/oauth2/**").permitAll()
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.requestMatchers("/error").permitAll()
