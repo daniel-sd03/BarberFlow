@@ -37,7 +37,6 @@ public class SecurityConfigurations {
 						.requestMatchers("/oauth2/**", "/barbearia/oauth2/**").permitAll()
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.requestMatchers("/error").permitAll()
-						.requestMatchers(HttpMethod.POST, "/home").hasRole("ADMIN")
 						.anyRequest().authenticated()
 				)
 				.oauth2Login(oauth2 -> oauth2
