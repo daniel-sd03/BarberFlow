@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import sodresoftwares.barbearia.dto.AuthenticationDTO;
 import sodresoftwares.barbearia.dto.LoginResponseDTO;
 import sodresoftwares.barbearia.dto.RegisterDTO;
+import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
 import sodresoftwares.barbearia.services.AuthenticationService;
 
 @RestController
@@ -20,7 +21,7 @@ public class AuthenticationController {
 
 	private final AuthenticationService authenticationService;
 
-	@PostMapping("/barbearia")
+	@PostMapping("/login")
 	public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid AuthenticationDTO data) {
 		String token = authenticationService.login(data);
 		return ResponseEntity.ok(new LoginResponseDTO(token));
@@ -29,6 +30,12 @@ public class AuthenticationController {
 	@PostMapping("/register")
 	public ResponseEntity<Void> register(@RequestBody @Valid RegisterDTO data ) {
 		authenticationService.register(data);
+		return ResponseEntity.status(HttpStatus.CREATED).build();
+	}
+
+	@PostMapping("/register/professional")
+	public ResponseEntity<Void> registerProfessional(@RequestBody @Valid RegisterProfessionalDTO data) {
+		authenticationService.registerProfessional(data);
 		return ResponseEntity.status(HttpStatus.CREATED).build();
 	}
 }

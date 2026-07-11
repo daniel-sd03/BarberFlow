@@ -1,6 +1,7 @@
 package sodresoftwares.barbearia.model.user;
 
 public enum UserRole {
-    ADMIN,
-    USER
+    USER,
+    PROFESSIONAL,
+    ADMIN
 }
