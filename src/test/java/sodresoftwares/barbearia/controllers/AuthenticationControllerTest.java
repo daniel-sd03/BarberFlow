@@ -19,7 +19,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import sodresoftwares.barbearia.dto.AuthenticationDTO;
 import sodresoftwares.barbearia.dto.RegisterDTO;
+import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
+import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.AuthenticationService;
 
@@ -61,24 +63,31 @@ class AuthenticationControllerTest {
 
     private AuthenticationDTO authenticationDTO;
     private RegisterDTO registerDTO;
+    private RegisterProfessionalDTO registerProfessionalDTO;
 
     @BeforeEach
     void setUp() {
         authenticationDTO = new AuthenticationDTO("user@test.com", "password123");
         registerDTO = new RegisterDTO("user@test.com", "password123", UserRole.USER);
+        registerProfessionalDTO = new RegisterProfessionalDTO(
+                "barber@test.com",
+                "password123",
+                "Barbearia do Zé",
+                "11999999999"
+        );
     }
 
     // ==================== LOGIN TESTS ====================
 
     @Test
-    @DisplayName("Should barbearia successfully and return token (HTTP 200)")
+    @DisplayName("Should login successfully and return token (HTTP 200)")
     void testLogin_Success() throws Exception {
         // Arrange
         String VALID_TOKEN = "jwt-token-example";
         when(authService.login(any(AuthenticationDTO.class))).thenReturn(VALID_TOKEN);
 
         // Act & Assert
-        mockMvc.perform(post("/auth/barbearia")
+        mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(authenticationDTO).getJson()))
                 .andExpect(status().isOk())
@@ -88,13 +97,13 @@ class AuthenticationControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 400 when barbearia or password are blank")
+    @DisplayName("Should return 400 when login or password are blank")
     void testLogin_ValidationErrors() throws Exception {
         // Arrange
         AuthenticationDTO invalidDTO = new AuthenticationDTO("", "");
 
         // Act & Assert
-        mockMvc.perform(post("/auth/barbearia")
+        mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());
@@ -108,7 +117,8 @@ class AuthenticationControllerTest {
     @DisplayName("Should register new user successfully (HTTP 201)")
     void testRegister_Success() throws Exception {
         // Arrange
-        doNothing().when(authService).register(any(RegisterDTO.class));
+        User userMock = new User();
+        when(authService.register(any(RegisterDTO.class))).thenReturn(userMock);
 
         // Act & Assert
         mockMvc.perform(post("/auth/register")
@@ -126,6 +136,38 @@ class AuthenticationControllerTest {
 
         // Act & Assert
         mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(invalidDTO).getJson()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(authService);
+    }
+
+    // ==================== REGISTER PROFESSIONAL TESTS ====================
+
+    @Test
+    @DisplayName("Should register new professional successfully (HTTP 201)")
+    void testRegisterProfessional_Success() throws Exception {
+        // Arrange
+        doNothing().when(authService).registerProfessional(any(RegisterProfessionalDTO.class));
+
+        // Act & Assert
+        mockMvc.perform(post("/auth/register/professional")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(registerProfessionalDTO).getJson()))
+                .andExpect(status().isCreated());
+
+        verify(authService).registerProfessional(any(RegisterProfessionalDTO.class));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when professional register fields are blank")
+    void testRegisterProfessional_ValidationErrors() throws Exception {
+        // Arrange
+        RegisterProfessionalDTO invalidDTO = new RegisterProfessionalDTO("", "", "", null);
+
+        // Act & Assert
+        mockMvc.perform(post("/auth/register/professional")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());

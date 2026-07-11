@@ -14,10 +14,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import sodresoftwares.barbearia.dto.AuthenticationDTO;
 import sodresoftwares.barbearia.dto.RegisterDTO;
+import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.infra.security.TokenService;
+import sodresoftwares.barbearia.model.Professional;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
+import sodresoftwares.barbearia.repositories.ProfessionalRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,15 +43,20 @@ class AuthenticationServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private ProfessionalRepository professionalRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private AuthenticationService authService;
 
-    // Variáveis globais para os testes (evita duplicação)
     private User testUser;
+    private User testProfUser;
     private AuthenticationDTO authDTO;
     private RegisterDTO registerDTO;
+    private RegisterProfessionalDTO registerProfDTO;
+
 
     private final String TEST_LOGIN = "user@test.com";
     private final String RAW_PASSWORD = "password123";
@@ -56,7 +64,6 @@ class AuthenticationServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Inicializa os objetos que serão usados em vários testes
         testUser = User.builder()
                 .id("user-123")
                 .login(TEST_LOGIN)
@@ -64,8 +71,16 @@ class AuthenticationServiceTest {
                 .role(UserRole.USER)
                 .build();
 
+        testProfUser = User.builder()
+                .id("prof-123")
+                .login(TEST_LOGIN)
+                .password(ENCODED_PASSWORD)
+                .role(UserRole.PROFESSIONAL)
+                .build();
+
         authDTO = new AuthenticationDTO(TEST_LOGIN, RAW_PASSWORD);
         registerDTO = new RegisterDTO(TEST_LOGIN, RAW_PASSWORD, UserRole.USER);
+        registerProfDTO = new RegisterProfessionalDTO(TEST_LOGIN,RAW_PASSWORD,"Barbearia do Zé", "11999999999");
     }
 
     // ==================== LOGIN TESTS ====================
@@ -148,5 +163,54 @@ class AuthenticationServiceTest {
         verify(userRepository).existsByLogin(TEST_LOGIN);
         verify(passwordEncoder, never()).encode(anyString());
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    // ==================== REGISTER PROFESSIONAL TESTS ====================
+
+    @Test
+    @DisplayName("Should register new professional successfully")
+    void testRegisterProfessional_Successful() {
+        // Arrange
+        when(userRepository.existsByLogin(TEST_LOGIN)).thenReturn(false);
+        when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(ENCODED_PASSWORD);
+        when(userRepository.save(any(User.class))).thenReturn(testProfUser);
+
+        // Act
+        authService.registerProfessional(registerProfDTO);
+
+        // Assert
+        verify(userRepository).existsByLogin(TEST_LOGIN);
+        verify(passwordEncoder).encode(RAW_PASSWORD);
+
+        verify(userRepository).save(argThat(user ->
+                user.getLogin().equals(TEST_LOGIN) &&
+                        user.getPassword().equals(ENCODED_PASSWORD) &&
+                user.getRole().equals(UserRole.PROFESSIONAL)
+        ));
+
+        verify(professionalRepository).save(argThat(professional ->
+                professional.getUser().getId().equals("prof-123") &&
+                        professional.getBusinessName().equals("Barbearia do Zé") &&
+                        professional.getContactPhone().equals("11999999999") &&
+                        professional.getIsActive().equals(true)
+        ));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to register an existing professional")
+    void testRegisterProfessional_UserAlreadyExists() {
+        // Arrange
+        when(userRepository.existsByLogin(TEST_LOGIN)).thenReturn(true);
+
+        // Act & Assert
+        assertThatThrownBy(() -> authService.registerProfessional(registerProfDTO))
+                .isInstanceOf(AppException.class)
+                .hasMessage("User already exists")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+
+        verify(userRepository).existsByLogin(TEST_LOGIN);
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any(User.class));
+        verify(professionalRepository, never()).save(any(Professional.class));
     }
 }
