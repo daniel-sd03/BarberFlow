@@ -61,6 +61,8 @@ class AuthenticationServiceTest {
     private final String TEST_LOGIN = "user@test.com";
     private final String RAW_PASSWORD = "password123";
     private final String ENCODED_PASSWORD = "$2a$10$encodedPasswordHash...";
+    private final String TEST_NAME = "Fulano da Silva";
+    private final String TEST_PHONE = "11999999999";
 
     @BeforeEach
     void setUp() {
@@ -68,6 +70,8 @@ class AuthenticationServiceTest {
                 .id("user-123")
                 .login(TEST_LOGIN)
                 .password(ENCODED_PASSWORD)
+                .name(TEST_NAME)
+                .phone(TEST_PHONE)
                 .role(UserRole.USER)
                 .build();
 
@@ -75,18 +79,20 @@ class AuthenticationServiceTest {
                 .id("prof-123")
                 .login(TEST_LOGIN)
                 .password(ENCODED_PASSWORD)
+                .name(TEST_NAME)
+                .phone(TEST_PHONE)
                 .role(UserRole.PROFESSIONAL)
                 .build();
 
         authDTO = new AuthenticationDTO(TEST_LOGIN, RAW_PASSWORD);
-        registerDTO = new RegisterDTO(TEST_LOGIN, RAW_PASSWORD, UserRole.USER);
-        registerProfDTO = new RegisterProfessionalDTO(TEST_LOGIN,RAW_PASSWORD,"Barbearia do Zé", "11999999999");
+        registerDTO = new RegisterDTO(TEST_LOGIN, RAW_PASSWORD, TEST_NAME, TEST_PHONE, UserRole.USER);
+        registerProfDTO = new RegisterProfessionalDTO(TEST_LOGIN, RAW_PASSWORD, TEST_NAME, TEST_PHONE, "Barbearia do Zé");
     }
 
     // ==================== LOGIN TESTS ====================
 
     @Test
-    @DisplayName("Should barbearia user successfully and return JWT token")
+    @DisplayName("Should login user successfully and return JWT token")
     void testLogin_Successful() {
         // Arrange
         UsernamePasswordAuthenticationToken authenticatedToken = new UsernamePasswordAuthenticationToken(
@@ -110,7 +116,7 @@ class AuthenticationServiceTest {
     }
 
     @Test
-    @DisplayName("Should throw exception when barbearia credentials are invalid")
+    @DisplayName("Should throw exception when login credentials are invalid")
     void testLogin_InvalidCredentials() {
         // Arrange
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
@@ -144,12 +150,14 @@ class AuthenticationServiceTest {
         verify(userRepository).save(argThat(user ->
                 user.getLogin().equals(TEST_LOGIN) &&
                         user.getPassword().equals(ENCODED_PASSWORD) &&
+                        user.getName().equals(TEST_NAME) &&
+                        user.getPhone().equals(TEST_PHONE) &&
                         user.getRole().equals(UserRole.USER)
         ));
     }
 
     @Test
-    @DisplayName("Should throw exception when trying to register an existing barbearia")
+    @DisplayName("Should throw exception when trying to register an existing login")
     void testRegister_UserAlreadyExists() {
         // Arrange
         when(userRepository.existsByLogin(TEST_LOGIN)).thenReturn(true);
@@ -185,13 +193,14 @@ class AuthenticationServiceTest {
         verify(userRepository).save(argThat(user ->
                 user.getLogin().equals(TEST_LOGIN) &&
                         user.getPassword().equals(ENCODED_PASSWORD) &&
-                user.getRole().equals(UserRole.PROFESSIONAL)
+                        user.getName().equals(TEST_NAME) &&
+                        user.getPhone().equals(TEST_PHONE) &&
+                        user.getRole().equals(UserRole.PROFESSIONAL)
         ));
 
         verify(professionalRepository).save(argThat(professional ->
                 professional.getUser().getId().equals("prof-123") &&
                         professional.getBusinessName().equals("Barbearia do Zé") &&
-                        professional.getContactPhone().equals("11999999999") &&
                         professional.getIsActive().equals(true)
         ));
     }

@@ -35,9 +35,6 @@ public class Professional {
     @Column(name = "business_name", nullable = false)
     private String businessName;
 
-    @Column(name = "contact_phone")
-    private String contactPhone;
-
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
