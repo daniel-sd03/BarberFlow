@@ -1,5 +1,6 @@
 package sodresoftwares.barbearia.model.user;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -51,11 +52,11 @@ public class User implements UserDetails {
 
 	@CreatedDate
 	@Column(name = "created_at", nullable = false, updatable = false)
-	private LocalDateTime createdAt;
+	private Instant createdAt;
 
 	@LastModifiedDate
 	@Column(name = "updated_at")
-	private LocalDateTime updatedAt;
+	private Instant updatedAt;
 
 	@CreatedBy
 	@Column(name = "created_by", updatable = false)
