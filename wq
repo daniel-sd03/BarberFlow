@@ -1,0 +1,209 @@
+[33mcommit 26512f9e5688265a084e0d873157473fbc4be352[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Daniel Sodré <dsodre2003@gmail.com>
+Date:   Wed Jul 15 18:42:42 2026 -0300
+
+    feat(queue): implement core queue REST API (toggle session, join queue, active check) (#5)
+
+[33mcommit e4be8f94f12bdd63117c250800e11aa4fb15cd34[m
+Author: Daniel Sodré <dsodre2003@gmail.com>
+Date:   Mon Jul 13 18:59:12 2026 -0300
+
+    refactor(model): change audit date types to Instant in User entity (#4)
+
+[33mcommit d8d675810204b98c4b216d4de14fcfb8ff0a3b00[m
+Author: Daniel Sodré <dsodre2003@gmail.com>
+Date:   Sat Jul 11 18:26:18 2026 -0300
+
+    chore(security): permit public access to professional registration endpoint (#3)
+
+[33mcommit c24414c111baaf99c3724307c3ac49a586f667f8[m
+Author: Daniel Sodré <dsodre2003@gmail.com>
+Date:   Sat Jul 11 17:28:11 2026 -0300
+
+    feat(auth): add name and phone fields to user and professional registration (#2)
+
+[33mcommit 489266197038d5b4c336997b05e40f71f5b5daf8[m
+Author: Daniel Sodré <dsodre2003@gmail.com>
+Date:   Sat Jul 11 16:44:36 2026 -0300
+
+    feat(professional): implement professional registration flow (#1)
+
+[33mcommit c3fde4edb49c0a42ddb5a5fcf9a2af058839dc1d[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Sat Jul 11 07:04:23 2026 -0300
+
+    refactor: remove HomeController and update security configurations
+
+[33mcommit 639e3117479bd34f7b0398dbd253391bcf2469e6[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Fri Jul 10 20:07:53 2026 -0300
+
+    refactor: rename base package from login to barbearia
+
+[33mcommit 0ec4a539b9b54b4d7a33e692a3dfdabc6d4ea8ea[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Fri Jul 10 17:30:19 2026 -0300
+
+    build: containerize API with Docker multi-stage build
+    
+    - Create multi-stage Dockerfile using Maven for dependency caching/building and Temurin 25 JRE Alpine for an optimized, lightweight runtime image.
+    - Update docker-compose.yml to include the new 'api' service.
+    - Link 'api' to the 'db' container and inject Spring Datasource environment variables for internal Docker network communication.
+
+[33mcommit 5e8bac3cb27189e057fc8ae4a78b69f7df4296c2[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Fri Jul 10 17:21:48 2026 -0300
+
+    feat(Swagge): integrate Swagger/OpenAPI for API documentation
+
+[33mcommit 6cbbe796b12df82fae92d06d38a9f4bfc33775d2[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Fri Jul 10 17:02:38 2026 -0300
+
+    test: add unit tests for OAuth2AuthenticationSuccessHandler
+
+[33mcommit 25c111d4e028e4b0ce0b322fd43a139afd767b5a[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Wed Jul 8 22:23:38 2026 -0300
+
+    feat: implement Google social login and account linking
+    
+    - Add OAuth2AuthenticationSuccessHandler to handle JWT redirection via temporary Cookie (stateless).
+    - Update SecurityConfigurations to enable OAuth2 flow.
+    - Add google_id column to User entity and Flyway migration script (V1).
+    - Implement findByGoogleId in UserRepository for account linking.
+    - Hide sensitive credentials in application.properties using placeholders.
+    - Configure application-test.properties and adjust AuthenticationControllerTest to bypass security filters and OAuth2 auto-configurations, keeping tests isolated and green.
+
+[33mcommit feaa0aa49ac14f977ca1ab7baa38aaa526bf3dd7[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Tue Jul 7 19:48:58 2026 -0300
+
+    test: implement unit and integration tests for web, business, and security layers
+
+[33mcommit 6550fa0612b91768cdc5e5723ff813f4c23eb313[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Mon Jul 6 20:08:36 2026 -0300
+
+    feat(audit): implement JPA auditing with custom AuditorAware and UTC-0
+    
+    This update introduces automated database auditing and forces strict UTC-0 alignment:
+    * Create 'AuditConfig' with a secure, type-safe AuditorAware implementation using Java 16+ pattern matching.
+    * Add @CreatedDate, @LastModifiedDate, @CreatedBy, and @LastModifiedBy to the User entity.
+    * Enforce TIMESTAMPTZ in the database schema to store absolute instants without timezone distortion.
+
+[33mcommit 0ece6db38e0ccfe9111a0ceb60fdd69e2d08f19b[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Mon Jul 6 19:34:01 2026 -0300
+
+    feat(exception): implement global exception handler and standardized error responses
+    
+    This update introduces a robust error handling architecture to the API:
+    * Create 'ErrorResponseDTO' to standardize all error responses in JSON.
+    * Implement 'GlobalExceptionHandler' (@RestControllerAdvice) to catch and format 400, 401, 404, and 500 errors.
+    * Introduce 'AppException' for custom business logic error throwing.
+    * Refactor 'TokenService' and 'AuthenticationService' to use the new custom exception architecture.
+
+[33mcommit 6caae2dc68ce3d0127624d9a03b514a7a501951a[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Mon Jul 6 18:38:59 2026 -0300
+
+    refactor(timezone): standardize application time to UTC-0
+
+[33mcommit b87c300937dbf1a4cd7e0b251e26ab1e947867eb[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Sun Jul 5 15:32:31 2026 -0300
+
+    refactor(security): extract authentication entry point to custom class
+
+[33mcommit 2b9952e64ce4aaf5de70c8af4e2405e90da6fcd5[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Sun Jul 5 15:26:35 2026 -0300
+
+    refactor(SecurityFilter): add null check for login validation
+
+[33mcommit 90f7b06581b4b372954e1a582ef45bf53d999909[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Sun Jul 5 12:52:37 2026 -0300
+
+    feat: implement structured JSON logging and MDC traceability
+    
+    This update introduces a professional logging architecture to the API:
+    
+    * Create logback-spring.xml configuration file (Dev/Prod environments).
+    
+    * Inject MDC traceability into the request filter.
+    
+    * Optimize Spring Security filter chain for the logging filter.
+    
+    * Add mapped logs to core services (Authentication and Token).
+
+[33mcommit 0e98362e741ef78d500dafd377ee1815570fcad0[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Sat Jul 4 16:08:36 2026 -0300
+
+    refactor: optimize service layer with Lombok and Spring Data
+    
+    Changes made:
+    
+    - Make service dependencies final for immutability
+    
+    - Replace manual constructors with @RequiredArgsConstructor
+    
+    - Apply @Transactional(readOnly = true) for read operations performance
+    
+    - Isolate write operations with @Transactional
+
+[33mcommit d848280fd7257a95d59a28c22782c7b5425c5b39[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Sat Jul 4 15:30:09 2026 -0300
+
+    refactor(user): clean up User class with Lombok and add JPA constraints
+
+[33mcommit 314c2ae8425a77ff5a29d7b26d8fd8d128c96ab6[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Wed Jul 1 20:53:12 2026 -0300
+
+    refactor: extract authentication logic into AuthenticationService
+
+[33mcommit 6c1dc4914bd397c33b27ff33e15945ebfda8e5ba[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Wed Jul 1 19:50:44 2026 -0300
+
+    refactor: move DTO classes to a dedicated package
+
+[33mcommit 87b67ff4feed7f5b26252552a11a1122a3e8f9b2[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Wed Jul 1 19:35:57 2026 -0300
+
+    chore: add docker compose for postgresql database
+
+[33mcommit 68039e8544e739e01fdd9f39fafe7969de1e2ce8[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Tue Jun 30 21:10:39 2026 -0300
+
+    chore: update Spring Boot to 4.1.0 and Java to 25
+
+[33mcommit d88ec959478feba3a024b8f28da5236cb2565e0b[m
+Author: daniel-sd03 <dsodre2003@gmail.com>
+Date:   Sun Mar 29 16:37:01 2026 -0300
+
+    Remove arquivos do Eclipse e aplica .gitignore
+
+[33mcommit d03116097a9352750c785408f15a7d9c9c56d2b8[m
+Author: Daniel Sodré <dsodre2003@gmail.com>
+Date:   Sat Mar 14 12:26:58 2026 -0300
+
+    Fix/jwt auth validation (#2)
+
+[33mcommit 28f6bf05ab2f35949b6496295c00727f0e633008[m
+Author: Daniel Sodré <dsodre2003@gmail.com>
+Date:   Sat Sep 13 20:04:58 2025 -0300
+
+    feat: add README.md
+
+[33mcommit 1fc7fa55060978ab1b16cfebbe67710ed17972cb[m
+Author: daniel sodre <dsodre2003@gmail.com>
+Date:   Sat Sep 13 19:59:59 2025 -0300
+
+    feat: implementando autenticação e autorização
