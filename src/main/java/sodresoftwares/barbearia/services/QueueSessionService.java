@@ -5,12 +5,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sodresoftwares.barbearia.dto.ProfessionalDashboardDTO;
+import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.Professional;
+import sodresoftwares.barbearia.model.QueueEntry;
 import sodresoftwares.barbearia.model.QueueSession;
 import sodresoftwares.barbearia.repositories.ProfessionalRepository;
+import sodresoftwares.barbearia.repositories.QueueEntryRepository;
 import sodresoftwares.barbearia.repositories.QueueSessionRepository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,14 +25,15 @@ import java.util.UUID;
 public class QueueSessionService {
 
     private final QueueSessionRepository queueSessionRepository;
+    private final QueueEntryRepository queueEntryRepository;
     private final ProfessionalRepository professionalRepository;
 
     @Transactional
-    public QueueSession toggleQueue(String professionalId, boolean activate, String customPrefix) {
+    public QueueSession toggleQueue(String loggedUserId, boolean activate, String customPrefix) {
 
-        QueueSession session = queueSessionRepository.findByProfessionalId(professionalId)
+        QueueSession session = queueSessionRepository.findByProfessionalId(loggedUserId)
                 .orElseGet(() -> {
-                    Professional professional = professionalRepository.findById(professionalId)
+                    Professional professional = professionalRepository.findById(loggedUserId)
                             .orElseThrow(() -> {
                                 log.warn("Toggle queue failed: professional not found");
                                 return new AppException(
@@ -47,6 +53,38 @@ public class QueueSessionService {
 
         session.setIsActive(activate);
         return queueSessionRepository.save(session);
+    }
+
+    public ProfessionalDashboardDTO getDashboardData(String loggedUserId) {
+        QueueSession session = queueSessionRepository.findByProfessionalId(loggedUserId)
+                .orElseThrow(() -> {
+                    log.warn("Dashboard fetch failed: session not found for professional");
+                    return new AppException(
+                            HttpStatus.NOT_FOUND,
+                            "SESSION_NOT_FOUND",
+                            "No queue session found for this professional.");
+                });
+
+        List<QueueEntry> activeEntries = queueEntryRepository.findActiveEntriesBySessionId(session.getId());
+
+        List<QueueEntryResponseDTO> queueDTOs = activeEntries.stream()
+                .map(entry -> new QueueEntryResponseDTO(
+                        entry.getId(),
+                        activeEntries.indexOf(entry) + 1,
+                        entry.getUser().getId(),
+                        entry.getUser().getName(),
+                        entry.getServiceName(),
+                        entry.getStatus()
+                ))
+                .toList();
+
+        return new ProfessionalDashboardDTO(
+                session.getId(),
+                session.getProfessional().getBusinessName(),
+                session.getTicketCode(),
+                session.getIsActive(),
+                queueDTOs
+        );
     }
 
     // Priority rule: Custom prefix > Business name > "FILA"

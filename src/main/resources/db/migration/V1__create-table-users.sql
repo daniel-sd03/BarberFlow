@@ -37,7 +37,7 @@
 
  CREATE TABLE queue_entries (
      id TEXT PRIMARY KEY NOT NULL,
-     daily_queue_id TEXT NOT NULL,
+     queue_sessions_id TEXT NOT NULL,
      user_id TEXT NOT NULL,
      service_name VARCHAR(100) NOT NULL,
      status VARCHAR(30) NOT NULL DEFAULT 'WAITING',
@@ -45,6 +45,6 @@
      joined_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
      called_at TIMESTAMPTZ,
      updated_at TIMESTAMPTZ,
-     CONSTRAINT fk_daily_queue FOREIGN KEY (daily_queue_id) REFERENCES daily_queues(id) ON DELETE CASCADE,
+     CONSTRAINT fk_queue_sessions FOREIGN KEY (queue_sessions_id) REFERENCES queue_sessions(id) ON DELETE CASCADE,
      CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
  );
