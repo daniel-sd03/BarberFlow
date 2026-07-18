@@ -75,7 +75,7 @@ public class QueueEntryService {
     @Transactional
     public QueueEntryResponseDTO callNext(String sessionId, String loggedUserId) {
         QueueSession session = getAndValidateSession(sessionId);
-        validateBarberOwnership(session, loggedUserId);
+        validateProfessionalOwnership(session, loggedUserId);
 
         List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
 
@@ -104,7 +104,7 @@ public class QueueEntryService {
     @Transactional
     public QueueEntryResponseDTO startService(String entryId, String loggedUserId) {
         QueueEntry entry = getEntryById(entryId);
-        validateBarberOwnership(entry.getQueueSession(), loggedUserId);
+        validateProfessionalOwnership(entry.getQueueSession(), loggedUserId);
 
         if (entry.getStatus() != QueueEntryStatus.CALLED && entry.getStatus() != QueueEntryStatus.WAITING) {
             throw new AppException(
@@ -127,7 +127,7 @@ public class QueueEntryService {
     @Transactional
     public void finishService(String entryId, String loggedUserId) {
         QueueEntry entry = getEntryById(entryId);
-        validateBarberOwnership(entry.getQueueSession(), loggedUserId);
+        validateProfessionalOwnership(entry.getQueueSession(), loggedUserId);
 
         entry.setStatus(QueueEntryStatus.FINISHED);
         queueEntryRepository.save(entry);
@@ -226,8 +226,8 @@ public class QueueEntryService {
         }
     }
 
-    private void validateBarberOwnership(QueueSession session, String loggedUserId) {
-        if (!session.getProfessional().getId().equals(loggedUserId)) {
+    private void validateProfessionalOwnership(QueueSession session, String loggedUserId) {
+        if (!session.getProfessional().getUser().getId().equals(loggedUserId)) {
             log.warn("Security alert: User {} attempted to modify session {} without permission", loggedUserId, session.getId());
             throw new AppException(
                     HttpStatus.FORBIDDEN,
@@ -237,7 +237,7 @@ public class QueueEntryService {
     }
 
     private void validateCancelPermission(QueueEntry entry, String loggedUserId) {
-        boolean isTheBarber = entry.getQueueSession().getProfessional().getId().equals(loggedUserId);
+        boolean isTheBarber = entry.getQueueSession().getProfessional().getUser().getId().equals(loggedUserId);
         boolean isTheClient = entry.getUser().getId().equals(loggedUserId);
 
         if (!isTheBarber && !isTheClient) {
