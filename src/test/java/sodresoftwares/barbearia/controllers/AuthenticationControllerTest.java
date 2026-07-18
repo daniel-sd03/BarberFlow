@@ -11,6 +11,7 @@ import org.springframework.boot.test.autoconfigure.json.AutoConfigureJsonTesters
 import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
@@ -18,6 +19,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import sodresoftwares.barbearia.dto.AuthenticationDTO;
+import sodresoftwares.barbearia.dto.LoginResponseDTO;
 import sodresoftwares.barbearia.dto.RegisterDTO;
 import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
@@ -55,6 +57,9 @@ class AuthenticationControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoBean
+    private CacheManager cacheManager;
+
     @Autowired
     private JacksonTester<Object> jsonTester;
 
@@ -91,14 +96,19 @@ class AuthenticationControllerTest {
     void testLogin_Success() throws Exception {
         // Arrange
         String VALID_TOKEN = "jwt-token-example";
-        when(authService.login(any(AuthenticationDTO.class))).thenReturn(VALID_TOKEN);
+        String VALID_ROLE = UserRole.USER.toString();
+
+        LoginResponseDTO mockResponse = new LoginResponseDTO(VALID_TOKEN, VALID_ROLE);
+
+        when(authService.login(any(AuthenticationDTO.class))).thenReturn(mockResponse);
 
         // Act & Assert
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(authenticationDTO).getJson()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token", is(VALID_TOKEN)));
+                .andExpect(jsonPath("$.token", is(VALID_TOKEN)))
+                .andExpect(jsonPath("$.role", is(VALID_ROLE)));
 
         verify(authService).login(any(AuthenticationDTO.class));
     }
