@@ -7,15 +7,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sodresoftwares.barbearia.dto.ProfessionalDashboardDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
+import sodresoftwares.barbearia.dto.QueueSessionResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.Professional;
 import sodresoftwares.barbearia.model.QueueEntry;
 import sodresoftwares.barbearia.model.QueueSession;
 import sodresoftwares.barbearia.repositories.ProfessionalRepository;
-import sodresoftwares.barbearia.repositories.QueueEntryRepository;
 import sodresoftwares.barbearia.repositories.QueueSessionRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -25,47 +26,70 @@ import java.util.UUID;
 public class QueueSessionService {
 
     private final QueueSessionRepository queueSessionRepository;
-    private final QueueEntryRepository queueEntryRepository;
     private final ProfessionalRepository professionalRepository;
+    private final QueueCacheService queueCacheService;
 
     @Transactional
-    public QueueSession toggleQueue(String loggedUserId, boolean activate, String customPrefix) {
+    public QueueSessionResponseDTO createQueueSession(String loggedUserId) {
+        if (queueSessionRepository.existsByProfessionalId(loggedUserId)) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "QUEUE_ALREADY_EXISTS",
+                    "This professional already has a queue session.");
+        }
 
+        Professional professional = professionalRepository.findByUserId(loggedUserId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "PROFESSIONAL_NOT_FOUND",
+                        "Professional not found"));
+
+        String finalPrefix = determinePrefix(professional.getBusinessName());
+        String safeTicketCode = generateUniqueTicketCode(finalPrefix);
+
+        QueueSession newSession = QueueSession.builder()
+                .professional(professional)
+                .ticketCode(safeTicketCode)
+                .isActive(false)
+                .build();
+
+        QueueSession savedSession = queueSessionRepository.save(newSession);
+
+        return mapToSessionDTO(savedSession);
+    }
+
+    @Transactional
+    public QueueSessionResponseDTO updateQueueStatus(String loggedUserId, boolean activate) {
         QueueSession session = queueSessionRepository.findByProfessionalId(loggedUserId)
-                .orElseGet(() -> {
-                    Professional professional = professionalRepository.findByUserId(loggedUserId)
-                            .orElseThrow(() -> {
-                                log.warn("Toggle queue failed: professional not found");
-                                return new AppException(
-                                        HttpStatus.NOT_FOUND,
-                                        "PROFESSIONAL_NOT_FOUND",
-                                        "Professional not found");});
-
-                    String finalPrefix = determinePrefix(customPrefix, professional.getBusinessName());
-                    String safeTicketCode = generateUniqueTicketCode(finalPrefix);
-
-                    return QueueSession.builder()
-                            .professional(professional)
-                            .ticketCode(safeTicketCode)
-                            .isActive(activate)
-                            .build();
-                });
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SESSION_NOT_FOUND", "Queue not set up yet."));
 
         session.setIsActive(activate);
-        return queueSessionRepository.save(session);
+        QueueSession savedSession = queueSessionRepository.save(session);
+
+        return mapToSessionDTO(savedSession);
     }
 
     public ProfessionalDashboardDTO getDashboardData(String loggedUserId) {
-        QueueSession session = queueSessionRepository.findByProfessionalId(loggedUserId)
-                .orElseThrow(() -> {
-                    log.warn("Dashboard fetch failed: session not found for professional");
-                    return new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "SESSION_NOT_FOUND",
-                            "No queue session found for this professional.");
-                });
+        Optional<QueueSession> sessionOpt = queueSessionRepository.findByProfessionalId(loggedUserId);
 
-        List<QueueEntry> activeEntries = queueEntryRepository.findActiveEntriesBySessionId(session.getId());
+        if (sessionOpt.isEmpty()) {
+            Professional professional = professionalRepository.findByUserId(loggedUserId)
+                    .orElseThrow(() -> new AppException(
+                            HttpStatus.NOT_FOUND,
+                            "PROFESSIONAL_NOT_FOUND",
+                            "Professional not found"));
+
+            return new ProfessionalDashboardDTO(
+                    null,
+                    professional.getBusinessName(),
+                    null,
+                    false,
+                    List.of()
+            );
+        }
+
+        QueueSession session = sessionOpt.get();
+        List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(session.getId());
 
         List<QueueEntryResponseDTO> queueDTOs = activeEntries.stream()
                 .map(entry -> new QueueEntryResponseDTO(
@@ -87,22 +111,14 @@ public class QueueSessionService {
         );
     }
 
-    // Priority rule: Custom prefix > Business name > "FILA"
-    private String determinePrefix(String customPrefix, String businessName) {
-        if (customPrefix != null && !customPrefix.isBlank()) {
-            String sanitized = sanitize(customPrefix);
-            if (sanitized.length() >= 3) {
-                return sanitized.substring(0, Math.min(sanitized.length(), 5));
-            }
-        }
-
+    // Generates prefix based on Business name or defaults to "FILA"
+    private String determinePrefix(String businessName) {
         if (businessName != null && !businessName.isBlank()) {
             String sanitized = sanitize(businessName);
             if (sanitized.length() >= 3) {
                 return sanitized.substring(0, Math.min(sanitized.length(), 4));
             }
         }
-
         return "FILA";
     }
 
@@ -129,5 +145,13 @@ public class QueueSessionService {
         } while (codeExists);
 
         return generatedCode;
+    }
+
+    private QueueSessionResponseDTO mapToSessionDTO(QueueSession session) {
+        return new QueueSessionResponseDTO(
+                session.getId(),
+                session.getTicketCode(),
+                session.getIsActive()
+        );
     }
 }

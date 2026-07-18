@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface QueueSessionRepository extends JpaRepository<QueueSession, String> {
     Optional<QueueSession> findByProfessionalId(String professionalId);
     boolean existsByTicketCode(String ticketCode);
+    boolean existsByProfessionalId(String professionalId);
 }
