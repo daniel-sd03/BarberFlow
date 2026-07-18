@@ -1,5 +1,6 @@
 package sodresoftwares.barbearia.services;
 
+import org.h2.engine.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -86,7 +87,7 @@ class AuthenticationServiceTest {
                 .build();
 
         authDTO = new AuthenticationDTO(TEST_LOGIN, RAW_PASSWORD);
-        registerDTO = new RegisterDTO(TEST_LOGIN, RAW_PASSWORD, TEST_NAME, TEST_PHONE, UserRole.USER);
+        registerDTO = new RegisterDTO(TEST_LOGIN, RAW_PASSWORD, TEST_NAME, TEST_PHONE);
         registerProfDTO = new RegisterProfessionalDTO(TEST_LOGIN, RAW_PASSWORD, TEST_NAME, TEST_PHONE, "Barbearia do Zé");
     }
 

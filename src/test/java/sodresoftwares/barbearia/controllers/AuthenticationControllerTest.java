@@ -77,8 +77,7 @@ class AuthenticationControllerTest {
                 "user@test.com",
                 "password123",
                 "Cliente Teste",
-                "11999999999",
-                UserRole.USER)
+                "11999999999")
         ;
         registerProfessionalDTO = new RegisterProfessionalDTO(
                 "barber@test.com",
@@ -149,7 +148,7 @@ class AuthenticationControllerTest {
     @Test
     @DisplayName("Should return 400 when register fields are blank")
     void testRegister_ValidationErrors() throws Exception {
-        RegisterDTO invalidDTO = new RegisterDTO("", "", "", "123", null);
+        RegisterDTO invalidDTO = new RegisterDTO("", "", "", "123");
 
         // Act & Assert
         mockMvc.perform(post("/auth/register")

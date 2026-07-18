@@ -18,8 +18,5 @@ public record RegisterDTO(
         String name,
 
         @Pattern(regexp = "^\\d{10,11}$", message = "Phone must contain 10 or 11 digits")
-        String phone,
-
-        @NotNull(message = "Role is required")
-        UserRole role
+        String phone
 ) {}
