@@ -53,6 +53,27 @@ public class AuthenticationService {
 
     @Transactional
     public User register(RegisterDTO data) {
+        return registerInternal(data, UserRole.USER);
+    }
+
+    @Transactional
+    public void registerProfessional(RegisterProfessionalDTO data) {
+        RegisterDTO baseData = new RegisterDTO(data.login(), data.password(), data.name(), data.phone());
+
+        User savedUser = registerInternal(baseData, UserRole.PROFESSIONAL);
+
+        Professional newProfessional = Professional.builder()
+                .user(savedUser)
+                .businessName(data.businessName())
+                .isActive(true)
+                .build();
+
+        professionalRepository.save(newProfessional);
+
+        log.info("Professional registered successfully");
+    }
+
+    private User registerInternal(RegisterDTO data, UserRole role) {
         if (this.userRepository.existsByLogin(data.login())) {
             log.warn("Registration failed: user already exists");
             throw new AppException(
@@ -68,35 +89,12 @@ public class AuthenticationService {
                 .password(encryptedPassword)
                 .name(data.name())
                 .phone(data.phone())
-                .role(data.role())
+                .role(role)
                 .build();
 
         User savedUser = userRepository.save(newUser);
         log.info("User registered with role {}", savedUser.getRole());
 
         return savedUser;
-    }
-
-    @Transactional
-    public void registerProfessional(RegisterProfessionalDTO data) {
-        RegisterDTO baseUserDTO = new RegisterDTO(
-                data.login(),
-                data.password(),
-                data.name(),
-                data.phone(),
-                UserRole.PROFESSIONAL
-        );
-
-        User savedUser = this.register(baseUserDTO);
-
-        Professional newProfessional = Professional.builder()
-                .user(savedUser)
-                .businessName(data.businessName())
-                .isActive(true)
-                .build();
-
-        professionalRepository.save(newProfessional);
-
-        log.info("Professional registered successfully");
     }
 }
