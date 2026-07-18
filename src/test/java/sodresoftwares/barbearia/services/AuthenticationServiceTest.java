@@ -13,6 +13,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import sodresoftwares.barbearia.dto.AuthenticationDTO;
+import sodresoftwares.barbearia.dto.LoginResponseDTO;
 import sodresoftwares.barbearia.dto.RegisterDTO;
 import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
@@ -105,11 +106,12 @@ class AuthenticationServiceTest {
                 .thenReturn("valid-jwt-token");
 
         // Act
-        String result = authService.login(authDTO);
+        LoginResponseDTO result = authService.login(authDTO);
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result).isEqualTo("valid-jwt-token");
+        assertThat(result.token()).isEqualTo("valid-jwt-token");
+        assertThat(result.role()).isEqualTo(UserRole.USER.toString());
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(tokenService).generateToken(testUser);

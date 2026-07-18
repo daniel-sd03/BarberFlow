@@ -23,8 +23,8 @@ public class AuthenticationController {
 
 	@PostMapping("/login")
 	public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid AuthenticationDTO data) {
-		String token = authenticationService.login(data);
-		return ResponseEntity.ok(new LoginResponseDTO(token));
+		LoginResponseDTO response = authenticationService.login(data);
+		return ResponseEntity.ok(response);
 	}
 	
 	@PostMapping("/register")
