@@ -33,7 +33,7 @@ public class QueueSessionService {
 
         QueueSession session = queueSessionRepository.findByProfessionalId(loggedUserId)
                 .orElseGet(() -> {
-                    Professional professional = professionalRepository.findById(loggedUserId)
+                    Professional professional = professionalRepository.findByUserId(loggedUserId)
                             .orElseThrow(() -> {
                                 log.warn("Toggle queue failed: professional not found");
                                 return new AppException(
