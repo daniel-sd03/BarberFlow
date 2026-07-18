@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "daily_queues")
+@Table(name = "queue_sessions")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,11 +31,13 @@ public class QueueSession {
     @Column(name = "ticket_code", unique = true, nullable = false, length = 50)
     private String ticketCode;
 
+    @Builder.Default
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = false;
 
+    @Builder.Default
     @Column(name = "tolerance_minutes", nullable = false)
-    private Integer toleranceMinutes = 5;
+    private Integer toleranceMinutes = 10;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

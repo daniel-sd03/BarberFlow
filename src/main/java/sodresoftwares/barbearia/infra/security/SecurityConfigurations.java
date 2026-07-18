@@ -32,7 +32,7 @@ public class SecurityConfigurations {
 				.csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(authrize -> authrize
-						.requestMatchers(HttpMethod.POST, "/auth/barbearia").permitAll()
+						.requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
 						.requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
 						.requestMatchers(HttpMethod.POST, "/auth/register/professional").permitAll()
 						.requestMatchers("/oauth2/**", "/barbearia/oauth2/**").permitAll()

@@ -29,6 +29,7 @@ public class QueueEntryService {
     private final QueueEntryRepository queueEntryRepository;
     private final QueueSessionRepository queueSessionRepository;
     private final UserRepository userRepository;
+    private final QueueCacheService queueCacheService;
 
     @Transactional
     public QueueEntryResponseDTO joinQueue(@NonNull JoinQueueDTO dto, String loggedUserId ) {
@@ -44,16 +45,31 @@ public class QueueEntryService {
                 .build();
 
         QueueEntry savedEntry = queueEntryRepository.save(entry);
-        log.info("User successfully joined queue session {} with entry ID {}", session.getId(), savedEntry.getId());
+        log.info("User successfully joined queue session {} with entry ID {}",
+                session.getId(), savedEntry.getId());
 
-        return mapToResponseDTO(savedEntry, session.getId());
+        queueCacheService.evict(dto.queueSessionId());
+
+        List<QueueEntry> activeEntries =
+                queueEntryRepository.findActiveEntriesBySessionId(dto.queueSessionId());
+
+        return mapToResponseDTO(savedEntry, activeEntries);
     }
 
     public Optional<QueueEntryResponseDTO> findActiveEntryByUserId(String userId) {
         return queueEntryRepository.findByUserIdAndStatusIn(
                 userId,
-                List.of(QueueEntryStatus.WAITING, QueueEntryStatus.CALLED, QueueEntryStatus.IN_SERVICE)
-        ).map(entry -> mapToResponseDTO(entry, entry.getQueueSession().getId()));
+                List.of(
+                        QueueEntryStatus.WAITING,
+                        QueueEntryStatus.CALLED,
+                        QueueEntryStatus.IN_SERVICE)
+        ).map(entry -> {
+
+            List<QueueEntry> activeEntries =
+                    queueCacheService.getActiveEntries(entry.getQueueSession().getId());
+
+            return mapToResponseDTO(entry, activeEntries);
+        });
     }
 
     @Transactional
@@ -61,17 +77,28 @@ public class QueueEntryService {
         QueueSession session = getAndValidateSession(sessionId);
         validateBarberOwnership(session, loggedUserId);
 
-        List<QueueEntry> activeEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+        List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
 
-        QueueEntry nextInLine = activeEntries.stream()
+        String nextEntryId = activeEntries.stream()
                 .filter(e -> e.getStatus() == QueueEntryStatus.WAITING)
+                .map(QueueEntry::getId)
                 .findFirst()
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "QUEUE_EMPTY", "There are no clients waiting in the queue."));
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "QUEUE_EMPTY",
+                        "There are no clients waiting in the queue."));
+
+        QueueEntry nextInLine = getEntryById(nextEntryId);
 
         nextInLine.setStatus(QueueEntryStatus.CALLED);
         QueueEntry savedEntry = queueEntryRepository.save(nextInLine);
 
-        return mapToResponseDTO(savedEntry, sessionId);
+        queueCacheService.evict(sessionId);
+
+        List<QueueEntry> updatedActiveEntries =
+                queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+
+        return mapToResponseDTO(savedEntry, updatedActiveEntries);
     }
 
     @Transactional
@@ -80,13 +107,21 @@ public class QueueEntryService {
         validateBarberOwnership(entry.getQueueSession(), loggedUserId);
 
         if (entry.getStatus() != QueueEntryStatus.CALLED && entry.getStatus() != QueueEntryStatus.WAITING) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_STATUS", "The client must be waiting or called to start the service.");
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_STATUS",
+                    "The client must be waiting or called to start the service.");
         }
 
         entry.setStatus(QueueEntryStatus.IN_SERVICE);
         QueueEntry savedEntry = queueEntryRepository.save(entry);
 
-        return mapToResponseDTO(savedEntry, savedEntry.getQueueSession().getId());
+        queueCacheService.evict(entry.getQueueSession().getId());
+
+        List<QueueEntry> activeEntries =
+                queueEntryRepository.findActiveEntriesBySessionId(entry.getQueueSession().getId());
+
+        return mapToResponseDTO(savedEntry, activeEntries);
     }
 
     @Transactional
@@ -96,6 +131,8 @@ public class QueueEntryService {
 
         entry.setStatus(QueueEntryStatus.FINISHED);
         queueEntryRepository.save(entry);
+
+        queueCacheService.evict(entry.getQueueSession().getId());
     }
 
     @Transactional
@@ -105,34 +142,40 @@ public class QueueEntryService {
 
         entry.setStatus(QueueEntryStatus.CANCELLED);
         queueEntryRepository.save(entry);
+
+        queueCacheService.evict(entry.getQueueSession().getId());
     }
 
-    public QueueEntryResponseDTO mapToResponseDTO(QueueEntry entry, String sessionId) {
-        List<QueueEntry> activeEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
-        int position = 0;
+    public QueueEntryResponseDTO mapToResponseDTO(QueueEntry entry, List<QueueEntry> activeEntries) {
 
         for (int i = 0; i < activeEntries.size(); i++) {
             if (activeEntries.get(i).getId().equals(entry.getId())) {
-                position = i + 1; //+1 because indices start in 0
-                break;
+                return new QueueEntryResponseDTO(
+                        entry.getId(),
+                        i + 1,
+                        entry.getUser().getId(),
+                        entry.getUser().getName(),
+                        entry.getServiceName(),
+                        entry.getStatus()
+                );
             }
         }
 
-        return new QueueEntryResponseDTO(
-                entry.getId(),
-                position,
-                entry.getUser().getId(),
-                entry.getUser().getName(),
-                entry.getServiceName(),
-                entry.getStatus()
-        );
+        log.error("Queue inconsistency: entry {} was not found in active entries.", entry.getId());
+        throw new AppException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "ENTRY_NOT_IN_ACTIVE_QUEUE",
+                "Queue entry was not found in the active queue.");
     }
 
     private QueueEntry getEntryById(String entryId) {
         return queueEntryRepository.findById(entryId)
                 .orElseThrow(() -> {
                     log.warn("Entry lookup failed: entry {} not found", entryId);
-                    return new AppException(HttpStatus.NOT_FOUND, "ENTRY_NOT_FOUND", "Entry Id not found");
+                    return new AppException(
+                            HttpStatus.NOT_FOUND,
+                            "ENTRY_NOT_FOUND",
+                            "Entry Id not found");
                 });
     }
 
@@ -186,7 +229,10 @@ public class QueueEntryService {
     private void validateBarberOwnership(QueueSession session, String loggedUserId) {
         if (!session.getProfessional().getId().equals(loggedUserId)) {
             log.warn("Security alert: User {} attempted to modify session {} without permission", loggedUserId, session.getId());
-            throw new AppException(HttpStatus.FORBIDDEN, "FORBIDDEN", "You do not have permission to manage this queue.");
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "FORBIDDEN",
+                    "You do not have permission to manage this queue.");
         }
     }
 
@@ -196,7 +242,10 @@ public class QueueEntryService {
 
         if (!isTheBarber && !isTheClient) {
             log.warn("Security alert: User {} attempted to cancel entry {} without permission", loggedUserId, entry.getId());
-            throw new AppException(HttpStatus.FORBIDDEN, "FORBIDDEN", "You do not have permission to cancel this entry.");
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "FORBIDDEN",
+                    "You do not have permission to cancel this entry.");
         }
     }
 }

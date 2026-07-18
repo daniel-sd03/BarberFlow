@@ -27,7 +27,7 @@ public class QueueEntry {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "daily_queue_id", nullable = false)
+    @JoinColumn(name = "queue_sessions_id", nullable = false)
     private QueueSession queueSession;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -37,22 +37,21 @@ public class QueueEntry {
     @Column(name = "service_name", nullable = false, length = 100)
     private String serviceName;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private QueueEntryStatus status = QueueEntryStatus.WAITING;
 
+    @Builder.Default
     @Column(name = "missed_calls", nullable = false)
     private Integer missedCalls = 0;
 
+    @CreatedDate
     @Column(name = "joined_at", nullable = false, updatable = false)
-    private Instant joinedAt = Instant.now();
+    private Instant joinedAt;
 
     @Column(name = "called_at")
     private Instant calledAt;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at")
