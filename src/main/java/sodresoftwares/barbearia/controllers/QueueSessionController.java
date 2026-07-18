@@ -2,11 +2,11 @@ package sodresoftwares.barbearia.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import sodresoftwares.barbearia.dto.ProfessionalDashboardDTO;
-import sodresoftwares.barbearia.dto.ToggleQueueDTO;
+import sodresoftwares.barbearia.dto.*;
 import sodresoftwares.barbearia.model.QueueSession;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.QueueSessionService;
@@ -18,16 +18,20 @@ public class QueueSessionController {
 
     private final QueueSessionService queueSessionService;
 
-    @PostMapping("/toggle")
-    public ResponseEntity<QueueSession> toggleQueue(
-            @AuthenticationPrincipal User loggedInUser,
-            @RequestBody @Valid ToggleQueueDTO dto) {
+    @PostMapping
+    public ResponseEntity<QueueSessionResponseDTO> createSession(
+            @AuthenticationPrincipal User loggedInUser) {
 
-        QueueSession session = queueSessionService.toggleQueue(
-                loggedInUser.getId(),
-                dto.activate(),
-                dto.customPrefix()
-        );
+        QueueSessionResponseDTO session = queueSessionService.createQueueSession(loggedInUser.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(session);
+    }
+
+    @PatchMapping("/status")
+    public ResponseEntity<QueueSessionResponseDTO> updateStatus(
+            @AuthenticationPrincipal User loggedInUser,
+            @RequestBody @Valid UpdateQueueStatusDTO dto) {
+
+        QueueSessionResponseDTO session = queueSessionService.updateQueueStatus(loggedInUser.getId(),dto.activate());
         return ResponseEntity.ok(session);
     }
 
