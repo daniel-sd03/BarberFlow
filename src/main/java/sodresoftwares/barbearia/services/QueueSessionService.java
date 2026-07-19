@@ -31,7 +31,7 @@ public class QueueSessionService {
 
     @Transactional
     public QueueSessionResponseDTO createQueueSession(String loggedUserId) {
-        if (queueSessionRepository.existsByProfessionalId(loggedUserId)) {
+        if (queueSessionRepository.existsByProfessionalUserId(loggedUserId)) {
             throw new AppException(
                     HttpStatus.CONFLICT,
                     "QUEUE_ALREADY_EXISTS",
@@ -60,7 +60,7 @@ public class QueueSessionService {
 
     @Transactional
     public QueueSessionResponseDTO updateQueueStatus(String loggedUserId, boolean activate) {
-        QueueSession session = queueSessionRepository.findByProfessionalId(loggedUserId)
+        QueueSession session = queueSessionRepository.findByProfessionalUserId(loggedUserId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SESSION_NOT_FOUND", "Queue not set up yet."));
 
         session.setIsActive(activate);
@@ -70,7 +70,7 @@ public class QueueSessionService {
     }
 
     public ProfessionalDashboardDTO getDashboardData(String loggedUserId) {
-        Optional<QueueSession> sessionOpt = queueSessionRepository.findByProfessionalId(loggedUserId);
+        Optional<QueueSession> sessionOpt = queueSessionRepository.findByProfessionalUserId(loggedUserId);
 
         if (sessionOpt.isEmpty()) {
             Professional professional = professionalRepository.findByUserId(loggedUserId)
