@@ -11,4 +11,5 @@ public interface QueueSessionRepository extends JpaRepository<QueueSession, Stri
     Optional<QueueSession> findByProfessionalUserId(String userId);
     boolean existsByTicketCode(String ticketCode);
     boolean existsByProfessionalUserId(String userId);
+    Optional<QueueSession> findByTicketCode(String ticketCode);
 }
