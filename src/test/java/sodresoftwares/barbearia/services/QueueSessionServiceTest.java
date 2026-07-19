@@ -97,7 +97,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should create queue session and generate prefix based on business name")
     void testCreateQueueSession_Success_PrefixGeneration() {
         // Arrange
-        when(queueSessionRepository.existsByProfessionalId(PROF_USER_ID)).thenReturn(false);
+        when(queueSessionRepository.existsByProfessionalUserId(PROF_USER_ID)).thenReturn(false);
         when(professionalRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(professional));
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
         when(queueSessionRepository.save(any(QueueSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -117,7 +117,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should generate a new ticket code if a collision is detected during creation")
     void testCreateQueueSession_CollisionLoop() {
         // Arrange
-        when(queueSessionRepository.existsByProfessionalId(PROF_USER_ID)).thenReturn(false);
+        when(queueSessionRepository.existsByProfessionalUserId(PROF_USER_ID)).thenReturn(false);
         when(professionalRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(professional));
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(true, false);
         when(queueSessionRepository.save(any(QueueSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -133,7 +133,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should throw conflict exception when professional already has a queue")
     void testCreateQueueSession_AlreadyExists() {
         // Arrange
-        when(queueSessionRepository.existsByProfessionalId(PROF_USER_ID)).thenReturn(true);
+        when(queueSessionRepository.existsByProfessionalUserId(PROF_USER_ID)).thenReturn(true);
 
         // Act & Assert
         assertThatThrownBy(() -> queueSessionService.createQueueSession(PROF_USER_ID))
@@ -148,7 +148,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should throw exception when creating queue but professional is not found")
     void testCreateQueueSession_ProfessionalNotFound() {
         // Arrange
-        when(queueSessionRepository.existsByProfessionalId(PROF_USER_ID)).thenReturn(false);
+        when(queueSessionRepository.existsByProfessionalUserId(PROF_USER_ID)).thenReturn(false);
         when(professionalRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -167,7 +167,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should update an existing queue session successfully")
     void testUpdateQueueStatus_Success() {
         // Arrange
-        when(queueSessionRepository.findByProfessionalId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
         when(queueSessionRepository.save(any(QueueSession.class))).thenReturn(existingSession);
 
         // Act
@@ -185,7 +185,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should throw exception when updating status but session does not exist")
     void testUpdateQueueStatus_SessionNotFound() {
         // Arrange
-        when(queueSessionRepository.findByProfessionalId(PROF_USER_ID)).thenReturn(Optional.empty());
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> queueSessionService.updateQueueStatus(PROF_USER_ID, true))
@@ -202,7 +202,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should return active Dashboard DTO successfully using Cache")
     void testGetDashboardData_SessionExists() {
         // Arrange
-        when(queueSessionRepository.findByProfessionalId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
         when(queueCacheService.getActiveEntries(existingSession.getId())).thenReturn(List.of(activeEntry));
 
         // Act
@@ -230,7 +230,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should return blank Dashboard DTO if session does not exist yet (First Access)")
     void testGetDashboardData_FirstAccess() {
         // Arrange
-        when(queueSessionRepository.findByProfessionalId(PROF_USER_ID)).thenReturn(Optional.empty());
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID)).thenReturn(Optional.empty());
         when(professionalRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(professional));
 
         // Act
