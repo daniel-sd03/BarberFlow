@@ -7,7 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sodresoftwares.barbearia.dto.ProfessionalDashboardDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
-import sodresoftwares.barbearia.dto.QueueSessionResponseDTO;
+import sodresoftwares.barbearia.dto.QueueSessionProfResponseDTO;
+import sodresoftwares.barbearia.dto.QueueSessionUserResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.Professional;
 import sodresoftwares.barbearia.model.QueueEntry;
@@ -30,7 +31,7 @@ public class QueueSessionService {
     private final QueueCacheService queueCacheService;
 
     @Transactional
-    public QueueSessionResponseDTO createQueueSession(String loggedUserId) {
+    public QueueSessionProfResponseDTO createQueueSession(String loggedUserId) {
         if (queueSessionRepository.existsByProfessionalUserId(loggedUserId)) {
             throw new AppException(
                     HttpStatus.CONFLICT,
@@ -59,7 +60,7 @@ public class QueueSessionService {
     }
 
     @Transactional
-    public QueueSessionResponseDTO updateQueueStatus(String loggedUserId, boolean activate) {
+    public QueueSessionProfResponseDTO updateQueueStatus(String loggedUserId, boolean activate) {
         QueueSession session = queueSessionRepository.findByProfessionalUserId(loggedUserId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SESSION_NOT_FOUND", "Queue not set up yet."));
 
@@ -111,6 +112,27 @@ public class QueueSessionService {
         );
     }
 
+    public QueueSessionUserResponseDTO getSessionInfoByCode(String ticketCode) {
+        QueueSession session = queueSessionRepository.findByTicketCode(ticketCode.toUpperCase())
+                .orElseThrow(() -> {
+                    log.warn("Session search failed: code {} not found", ticketCode);
+                    return new AppException(
+                            HttpStatus.NOT_FOUND,
+                            "SESSION_NOT_FOUND",
+                            "Queue not found for the Ticket code.");
+
+                });
+
+        int peopleInQueue = queueCacheService.getActiveEntries(session.getId()).size();
+
+        return new QueueSessionUserResponseDTO(
+                session.getId(),
+                session.getProfessional().getBusinessName(),
+                peopleInQueue,
+                session.getIsActive()
+        );
+    }
+
     // Generates prefix based on Business name or defaults to "FILA"
     private String determinePrefix(String businessName) {
         if (businessName != null && !businessName.isBlank()) {
@@ -147,8 +169,8 @@ public class QueueSessionService {
         return generatedCode;
     }
 
-    private QueueSessionResponseDTO mapToSessionDTO(QueueSession session) {
-        return new QueueSessionResponseDTO(
+    private QueueSessionProfResponseDTO mapToSessionDTO(QueueSession session) {
+        return new QueueSessionProfResponseDTO(
                 session.getId(),
                 session.getTicketCode(),
                 session.getIsActive()

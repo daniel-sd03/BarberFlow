@@ -1,12 +1,9 @@
 package sodresoftwares.barbearia.controllers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration;
 import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.json.AutoConfigureJsonTesters;
@@ -17,15 +14,10 @@ import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import sodresoftwares.barbearia.dto.ProfessionalDashboardDTO;
-import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
-import sodresoftwares.barbearia.dto.QueueSessionResponseDTO;
-import sodresoftwares.barbearia.dto.UpdateQueueStatusDTO;
+import sodresoftwares.barbearia.dto.*;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
 import sodresoftwares.barbearia.model.QueueEntryStatus;
 import sodresoftwares.barbearia.model.user.User;
@@ -73,7 +65,7 @@ class QueueSessionControllerTest {
     private QueueSessionService queueSessionService;
 
     private User loggedInUser;
-    private QueueSessionResponseDTO sessionResponseDTO;
+    private QueueSessionProfResponseDTO sessionResponseDTO;
     private ProfessionalDashboardDTO dashboardDTO;
 
     @BeforeEach
@@ -85,7 +77,7 @@ class QueueSessionControllerTest {
                 .role(UserRole.PROFESSIONAL)
                 .build();
 
-        sessionResponseDTO = new QueueSessionResponseDTO(
+        sessionResponseDTO = new QueueSessionProfResponseDTO(
                 "session-123",
                 "BARB1234",
                 false
@@ -134,7 +126,7 @@ class QueueSessionControllerTest {
     void testUpdateStatus_Success() throws Exception {
         // Arrange
         UpdateQueueStatusDTO requestDTO = new UpdateQueueStatusDTO(true);
-        QueueSessionResponseDTO activeSessionDTO = new QueueSessionResponseDTO("session-123", "BARB1234", true);
+        QueueSessionProfResponseDTO activeSessionDTO = new QueueSessionProfResponseDTO("session-123", "BARB1234", true);
 
         when(queueSessionService.updateQueueStatus(any(), anyBoolean())).thenReturn(activeSessionDTO);
 
@@ -188,5 +180,31 @@ class QueueSessionControllerTest {
                 .andExpect(jsonPath("$.activeQueue[0].clientName").value("João Silva"))
                 .andExpect(jsonPath("$.activeQueue[0].serviceName").value("Corte Navalhado"))
                 .andExpect(jsonPath("$.activeQueue[0].status").value("WAITING"));
+    }
+
+    // ==================== GET SESSION INFO BY CODE TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/queue-sessions/code/{ticketCode} - Should return 200 OK and session preview DTO")
+    void testGetSessionByCode_Success() throws Exception {
+        // Arrange
+        String ticketCode = "BARB1";
+        QueueSessionUserResponseDTO mockResponse = new QueueSessionUserResponseDTO(
+                "session-123",
+                "Barbearia do Zé",
+                3,
+                true
+        );
+
+        when(queueSessionService.getSessionInfoByCode(ticketCode)).thenReturn(mockResponse);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/queue-sessions/code/{ticketCode}", ticketCode)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").value("session-123"))
+                .andExpect(jsonPath("$.businessName").value("Barbearia do Zé"))
+                .andExpect(jsonPath("$.peopleInQueue").value(3))
+                .andExpect(jsonPath("$.isActive").value(true));
     }
 }

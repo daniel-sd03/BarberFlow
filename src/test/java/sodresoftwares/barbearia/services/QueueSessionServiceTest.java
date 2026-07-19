@@ -9,7 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import sodresoftwares.barbearia.dto.ProfessionalDashboardDTO;
-import sodresoftwares.barbearia.dto.QueueSessionResponseDTO;
+import sodresoftwares.barbearia.dto.QueueSessionProfResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.Professional;
 import sodresoftwares.barbearia.model.QueueEntry;
@@ -103,7 +103,7 @@ class QueueSessionServiceTest {
         when(queueSessionRepository.save(any(QueueSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        QueueSessionResponseDTO result = queueSessionService.createQueueSession(PROF_USER_ID);
+        QueueSessionProfResponseDTO result = queueSessionService.createQueueSession(PROF_USER_ID);
 
         // Assert
         assertThat(result).isNotNull();
@@ -171,7 +171,7 @@ class QueueSessionServiceTest {
         when(queueSessionRepository.save(any(QueueSession.class))).thenReturn(existingSession);
 
         // Act
-        QueueSessionResponseDTO result = queueSessionService.updateQueueStatus(PROF_USER_ID, true);
+        QueueSessionProfResponseDTO result = queueSessionService.updateQueueStatus(PROF_USER_ID, true);
 
         // Assert
         assertThat(result).isNotNull();
@@ -243,6 +243,47 @@ class QueueSessionServiceTest {
         assertThat(dashboardData.isActive()).isFalse();
         assertThat(dashboardData.businessName()).isEqualTo("Barbearia do Zé");
         assertThat(dashboardData.activeQueue()).isEmpty();
+
+        verifyNoInteractions(queueCacheService);
+    }
+
+    // ==================== GET SESSION INFO BY CODE TESTS ====================
+
+    @Test
+    @DisplayName("Should return session info preview successfully when ticket code exists")
+    void testGetSessionInfoByCode_Success() {
+        // Arrange
+        String ticketCode = "BARB1";
+        when(queueSessionRepository.findByTicketCode(ticketCode)).thenReturn(Optional.of(existingSession));
+        when(queueCacheService.getActiveEntries(existingSession.getId()))
+                .thenReturn(List.of(activeEntry, activeEntry));
+
+        // Act
+        var result = queueSessionService.getSessionInfoByCode(ticketCode);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.sessionId()).isEqualTo(existingSession.getId());
+        assertThat(result.businessName()).isEqualTo("Barbearia do Zé");
+        assertThat(result.peopleInQueue()).isEqualTo(2);
+        assertThat(result.isActive()).isEqualTo(existingSession.getIsActive());
+
+        verify(queueSessionRepository).findByTicketCode(ticketCode);
+        verify(queueCacheService).getActiveEntries(existingSession.getId());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to get info with an invalid ticket code")
+    void testGetSessionInfoByCode_NotFound() {
+        // Arrange
+        String invalidCode = "INVALID";
+        when(queueSessionRepository.findByTicketCode(invalidCode)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> queueSessionService.getSessionInfoByCode(invalidCode))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Queue not found for the Ticket code.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
         verifyNoInteractions(queueCacheService);
     }

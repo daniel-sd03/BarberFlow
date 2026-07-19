@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import sodresoftwares.barbearia.dto.*;
-import sodresoftwares.barbearia.model.QueueSession;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.QueueSessionService;
 
@@ -19,19 +18,17 @@ public class QueueSessionController {
     private final QueueSessionService queueSessionService;
 
     @PostMapping
-    public ResponseEntity<QueueSessionResponseDTO> createSession(
+    public ResponseEntity<QueueSessionProfResponseDTO> createSession(
             @AuthenticationPrincipal User loggedInUser) {
-
-        QueueSessionResponseDTO session = queueSessionService.createQueueSession(loggedInUser.getId());
+        QueueSessionProfResponseDTO session = queueSessionService.createQueueSession(loggedInUser.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(session);
     }
 
     @PatchMapping("/status")
-    public ResponseEntity<QueueSessionResponseDTO> updateStatus(
+    public ResponseEntity<QueueSessionProfResponseDTO> updateStatus(
             @AuthenticationPrincipal User loggedInUser,
             @RequestBody @Valid UpdateQueueStatusDTO dto) {
-
-        QueueSessionResponseDTO session = queueSessionService.updateQueueStatus(loggedInUser.getId(),dto.activate());
+        QueueSessionProfResponseDTO session = queueSessionService.updateQueueStatus(loggedInUser.getId(),dto.activate());
         return ResponseEntity.ok(session);
     }
 
@@ -40,5 +37,12 @@ public class QueueSessionController {
             @AuthenticationPrincipal User loggedInUser) {
         ProfessionalDashboardDTO dashboard = queueSessionService.getDashboardData(loggedInUser.getId());
         return ResponseEntity.ok(dashboard);
+    }
+
+    @GetMapping("/code/{ticketCode}")
+    public ResponseEntity<QueueSessionUserResponseDTO> getSessionByCode(
+            @PathVariable String ticketCode) {
+        QueueSessionUserResponseDTO response = queueSessionService.getSessionInfoByCode(ticketCode);
+        return ResponseEntity.ok(response);
     }
 }
