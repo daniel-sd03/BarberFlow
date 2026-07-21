@@ -10,6 +10,7 @@ import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.dto.QueueSessionProfResponseDTO;
 import sodresoftwares.barbearia.dto.QueueSessionUserResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
+import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.Professional;
 import sodresoftwares.barbearia.model.QueueEntry;
 import sodresoftwares.barbearia.model.QueueSession;
@@ -29,6 +30,7 @@ public class QueueSessionService {
     private final QueueSessionRepository queueSessionRepository;
     private final ProfessionalRepository professionalRepository;
     private final QueueCacheService queueCacheService;
+    private final QueueMapper queueMapper;
 
     @Transactional
     public QueueSessionProfResponseDTO createQueueSession(String loggedUserId) {
@@ -92,16 +94,7 @@ public class QueueSessionService {
         QueueSession session = sessionOpt.get();
         List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(session.getId());
 
-        List<QueueEntryResponseDTO> queueDTOs = activeEntries.stream()
-                .map(entry -> new QueueEntryResponseDTO(
-                        entry.getId(),
-                        activeEntries.indexOf(entry) + 1,
-                        entry.getUser().getId(),
-                        entry.getUser().getName(),
-                        entry.getServiceName(),
-                        entry.getStatus()
-                ))
-                .toList();
+        List<QueueEntryResponseDTO> queueDTOs = queueMapper.toDtoList(activeEntries);
 
         return new ProfessionalDashboardDTO(
                 session.getId(),
