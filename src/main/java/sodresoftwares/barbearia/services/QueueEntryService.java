@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import sodresoftwares.barbearia.dto.JoinQueueDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
+import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.QueueEntry;
 import sodresoftwares.barbearia.model.QueueEntryStatus;
 import sodresoftwares.barbearia.model.QueueSession;
@@ -24,12 +25,13 @@ import java.util.Optional;
 @Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class QueueEntryService {
+    public class QueueEntryService {
 
     private final QueueEntryRepository queueEntryRepository;
     private final QueueSessionRepository queueSessionRepository;
     private final UserRepository userRepository;
     private final QueueCacheService queueCacheService;
+    private final QueueMapper queueMapper;
 
     @Transactional
     public QueueEntryResponseDTO joinQueue(@NonNull JoinQueueDTO dto, String loggedUserId ) {
@@ -53,7 +55,7 @@ public class QueueEntryService {
         List<QueueEntry> activeEntries =
                 queueEntryRepository.findActiveEntriesBySessionId(dto.queueSessionId());
 
-        return mapToResponseDTO(savedEntry, activeEntries);
+        return queueMapper.toSingleDto(savedEntry, activeEntries);
     }
 
     public Optional<QueueEntryResponseDTO> findActiveEntryByUserId(String userId) {
@@ -68,7 +70,7 @@ public class QueueEntryService {
             List<QueueEntry> activeEntries =
                     queueCacheService.getActiveEntries(entry.getQueueSession().getId());
 
-            return mapToResponseDTO(entry, activeEntries);
+            return queueMapper.toSingleDto(entry, activeEntries);
         });
     }
 
@@ -98,7 +100,7 @@ public class QueueEntryService {
         List<QueueEntry> updatedActiveEntries =
                 queueEntryRepository.findActiveEntriesBySessionId(sessionId);
 
-        return mapToResponseDTO(savedEntry, updatedActiveEntries);
+        return queueMapper.toSingleDto(savedEntry, updatedActiveEntries);
     }
 
     @Transactional
@@ -121,7 +123,7 @@ public class QueueEntryService {
         List<QueueEntry> activeEntries =
                 queueEntryRepository.findActiveEntriesBySessionId(entry.getQueueSession().getId());
 
-        return mapToResponseDTO(savedEntry, activeEntries);
+        return queueMapper.toSingleDto(savedEntry, activeEntries);
     }
 
     @Transactional
@@ -144,28 +146,6 @@ public class QueueEntryService {
         queueEntryRepository.save(entry);
 
         queueCacheService.evict(entry.getQueueSession().getId());
-    }
-
-    public QueueEntryResponseDTO mapToResponseDTO(QueueEntry entry, List<QueueEntry> activeEntries) {
-
-        for (int i = 0; i < activeEntries.size(); i++) {
-            if (activeEntries.get(i).getId().equals(entry.getId())) {
-                return new QueueEntryResponseDTO(
-                        entry.getId(),
-                        i + 1,
-                        entry.getUser().getId(),
-                        entry.getUser().getName(),
-                        entry.getServiceName(),
-                        entry.getStatus()
-                );
-            }
-        }
-
-        log.error("Queue inconsistency: entry {} was not found in active entries.", entry.getId());
-        throw new AppException(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "ENTRY_NOT_IN_ACTIVE_QUEUE",
-                "Queue entry was not found in the active queue.");
     }
 
     private QueueEntry getEntryById(String entryId) {

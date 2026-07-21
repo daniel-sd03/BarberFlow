@@ -6,11 +6,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import sodresoftwares.barbearia.dto.JoinQueueDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
+import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.Professional;
 import sodresoftwares.barbearia.model.QueueEntry;
 import sodresoftwares.barbearia.model.QueueEntryStatus;
@@ -45,6 +47,9 @@ class QueueEntryServiceTest {
 
     @Mock
     private QueueCacheService queueCacheService;
+
+    @Spy
+    private QueueMapper queueMapper = new QueueMapper();
 
     @InjectMocks
     private QueueEntryService queueEntryService;
@@ -415,19 +420,5 @@ class QueueEntryServiceTest {
 
         verify(queueEntryRepository, never()).save(any());
         verifyNoInteractions(queueCacheService);
-    }
-    // ==================== MAPPER AND UTILS TESTS ====================
-
-    @Test
-    @DisplayName("Should throw internal server error if entry is missing from active entries list")
-    void testMapToResponseDTO_EntryNotInActiveQueue() {
-        // Arrange
-        List<QueueEntry> activeEntries = List.of();
-
-        // Act & Assert
-        assertThatThrownBy(() -> queueEntryService.mapToResponseDTO(waitingEntry, activeEntries))
-                .isInstanceOf(AppException.class)
-                .hasMessage("Queue entry was not found in the active queue.")
-                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

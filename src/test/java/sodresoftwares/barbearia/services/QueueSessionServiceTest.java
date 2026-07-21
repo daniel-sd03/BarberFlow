@@ -6,11 +6,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import sodresoftwares.barbearia.dto.ProfessionalDashboardDTO;
 import sodresoftwares.barbearia.dto.QueueSessionProfResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
+import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.Professional;
 import sodresoftwares.barbearia.model.QueueEntry;
 import sodresoftwares.barbearia.model.QueueEntryStatus;
@@ -42,6 +44,9 @@ class QueueSessionServiceTest {
 
     @Mock
     private QueueCacheService queueCacheService;
+
+    @Spy
+    private QueueMapper queueMapper = new QueueMapper();
 
     @InjectMocks
     private QueueSessionService queueSessionService;
