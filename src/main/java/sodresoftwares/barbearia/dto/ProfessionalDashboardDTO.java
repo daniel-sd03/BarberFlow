@@ -7,5 +7,6 @@ public record ProfessionalDashboardDTO(
         String businessName,
         String ticketCode,
         boolean isActive,
+        Integer toleranceMinutes,
         List<QueueEntryResponseDTO> activeQueue
 ) {}

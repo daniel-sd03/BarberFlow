@@ -98,6 +98,7 @@ class QueueSessionControllerTest {
                 "Barbearia do Zé",
                 "BARB1234",
                 true,
+                5,
                 List.of(entryDTO)
         );
     }
@@ -175,6 +176,7 @@ class QueueSessionControllerTest {
                 .andExpect(jsonPath("$.businessName").value("Barbearia do Zé"))
                 .andExpect(jsonPath("$.ticketCode").value("BARB1234"))
                 .andExpect(jsonPath("$.isActive").value(true))
+                .andExpect(jsonPath("$.toleranceMinutes").value(5))
                 .andExpect(jsonPath("$.activeQueue[0].id").value("entry-123"))
                 .andExpect(jsonPath("$.activeQueue[0].position").value(1))
                 .andExpect(jsonPath("$.activeQueue[0].userId").value("client-123"))
@@ -194,7 +196,8 @@ class QueueSessionControllerTest {
                 "session-123",
                 "Barbearia do Zé",
                 3,
-                true
+                true,
+                5
         );
 
         when(queueSessionService.getSessionInfoByCode(ticketCode)).thenReturn(mockResponse);
@@ -206,6 +209,7 @@ class QueueSessionControllerTest {
                 .andExpect(jsonPath("$.sessionId").value("session-123"))
                 .andExpect(jsonPath("$.businessName").value("Barbearia do Zé"))
                 .andExpect(jsonPath("$.peopleInQueue").value(3))
-                .andExpect(jsonPath("$.isActive").value(true));
+                .andExpect(jsonPath("$.isActive").value(true))
+                .andExpect(jsonPath("$.toleranceMinutes").value(5));
     }
 }
