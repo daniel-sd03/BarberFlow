@@ -21,8 +21,7 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, String> 
         ORDER BY q.joinedAt ASC
     """)
     List<QueueEntry> findActiveEntriesBySessionId(@Param("sessionId") String sessionId);
-
     boolean existsByUserIdAndStatusIn(String userId, List<QueueEntryStatus> statuses);
-
     Optional<QueueEntry> findByUserIdAndStatusIn(String userId, List<QueueEntryStatus> statuses);
+    Optional<QueueEntry> findFirstByUserIdOrderByJoinedAtDesc(String userId);
 }

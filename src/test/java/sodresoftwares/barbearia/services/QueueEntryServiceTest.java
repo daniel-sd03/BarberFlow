@@ -24,6 +24,7 @@ import sodresoftwares.barbearia.repositories.QueueSessionRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -96,6 +97,107 @@ class QueueEntryServiceTest {
                 .build();
 
         joinQueueDTO = new JoinQueueDTO(SESSION_ID, "Corte");
+    }
+
+    // ==================== FIND ACTIVE ENTRY TESTS ====================
+
+    @Test
+    @DisplayName("Should return active entry DTO with correct position when user is in queue")
+    void testFindActiveEntryByUserId_Success() {
+        // Arrange
+        String userId = CLIENT_USER_ID;
+
+        when(queueEntryRepository.findByUserIdAndStatusIn(eq(userId), anyList()))
+                .thenReturn(Optional.of(waitingEntry));
+        when(queueCacheService.getActiveEntries(SESSION_ID))
+                .thenReturn(List.of(waitingEntry));
+
+        // Act
+        Optional<QueueEntryResponseDTO> result = queueEntryService.findActiveEntryByUserId(userId);
+
+        // Assert
+        assertThat(result).isPresent();
+        QueueEntryResponseDTO dto = result.get();
+
+        assertThat(dto.id()).isEqualTo(ENTRY_ID);
+        assertThat(dto.position()).isEqualTo(1);
+        assertThat(dto.userId()).isEqualTo(userId);
+        assertThat(dto.clientName()).isEqualTo("Cliente João");
+        assertThat(dto.serviceName()).isEqualTo("Corte");
+        assertThat(dto.status()).isEqualTo(QueueEntryStatus.WAITING);
+
+
+        verify(queueEntryRepository).findByUserIdAndStatusIn(eq(userId), anyList());
+        verify(queueCacheService).getActiveEntries(SESSION_ID);
+    }
+
+    @Test
+    @DisplayName("Should return empty optional when user has no active entries in any queue")
+    void testFindActiveEntryByUserId_NotFound() {
+        // Arrange
+        String userId = CLIENT_USER_ID;
+
+        when(queueEntryRepository.findByUserIdAndStatusIn(eq(userId), anyList()))
+                .thenReturn(Optional.empty());
+
+        // Act
+        Optional<QueueEntryResponseDTO> result = queueEntryService.findActiveEntryByUserId(userId);
+
+        // Assert
+        assertThat(result).isEmpty();
+
+        verify(queueEntryRepository).findByUserIdAndStatusIn(eq(userId), anyList());
+        verifyNoInteractions(queueCacheService);
+    }
+
+
+    // ==================== LATEST ENTRY TESTS ====================
+
+    @Test
+    @DisplayName("Should return latest entry when it is recent (within 24 hours)")
+    void testFindLatestEntryByUserId_RecentEntry() {
+        // Arrange
+        when(queueEntryRepository.findFirstByUserIdOrderByJoinedAtDesc(CLIENT_USER_ID))
+                .thenReturn(Optional.of(waitingEntry));
+
+        // Act
+        Optional<QueueEntryResponseDTO> result = queueEntryService.findLatestEntryByUserId(CLIENT_USER_ID);
+
+        // Assert
+        assertThat(result).isPresent();
+        assertThat(result.get().id()).isEqualTo(ENTRY_ID);
+    }
+
+    @Test
+    @DisplayName("Should return empty when latest entry is older than 24 hours")
+    void testFindLatestEntryByUserId_OldEntry() {
+        // Arrange
+        waitingEntry.setJoinedAt(Instant.now().minus(25, ChronoUnit.HOURS));
+
+        when(queueEntryRepository.findFirstByUserIdOrderByJoinedAtDesc(CLIENT_USER_ID))
+                .thenReturn(Optional.of(waitingEntry));
+
+        // Act
+        Optional<QueueEntryResponseDTO> result = queueEntryService.findLatestEntryByUserId(CLIENT_USER_ID);
+
+        // Assert
+        assertThat(result).isEmpty();
+        verifyNoInteractions(queueMapper);
+    }
+
+    @Test
+    @DisplayName("Should return empty when user has no entries")
+    void testFindLatestEntryByUserId_NoEntryFound() {
+        // Arrange
+        when(queueEntryRepository.findFirstByUserIdOrderByJoinedAtDesc(CLIENT_USER_ID))
+                .thenReturn(Optional.empty());
+
+        // Act
+        Optional<QueueEntryResponseDTO> result = queueEntryService.findLatestEntryByUserId(CLIENT_USER_ID);
+
+        // Assert
+        assertThat(result).isEmpty();
+        verifyNoInteractions(queueMapper);
     }
 
     // ==================== JOIN QUEUE TESTS ====================
@@ -187,57 +289,6 @@ class QueueEntryServiceTest {
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
 
         verify(queueEntryRepository, never()).save(any());
-    }
-
-    // ==================== FIND ACTIVE ENTRY TESTS ====================
-
-    @Test
-    @DisplayName("Should return active entry DTO with correct position when user is in queue")
-    void testFindActiveEntryByUserId_Success() {
-        // Arrange
-        String userId = CLIENT_USER_ID;
-
-        when(queueEntryRepository.findByUserIdAndStatusIn(eq(userId), anyList()))
-                .thenReturn(Optional.of(waitingEntry));
-        when(queueCacheService.getActiveEntries(SESSION_ID))
-                .thenReturn(List.of(waitingEntry));
-
-        // Act
-        Optional<QueueEntryResponseDTO> result = queueEntryService.findActiveEntryByUserId(userId);
-
-        // Assert
-        assertThat(result).isPresent();
-        QueueEntryResponseDTO dto = result.get();
-
-        assertThat(dto.id()).isEqualTo(ENTRY_ID);
-        assertThat(dto.position()).isEqualTo(1);
-        assertThat(dto.userId()).isEqualTo(userId);
-        assertThat(dto.clientName()).isEqualTo("Cliente João");
-        assertThat(dto.serviceName()).isEqualTo("Corte");
-        assertThat(dto.status()).isEqualTo(QueueEntryStatus.WAITING);
-
-
-        verify(queueEntryRepository).findByUserIdAndStatusIn(eq(userId), anyList());
-        verify(queueCacheService).getActiveEntries(SESSION_ID);
-    }
-
-    @Test
-    @DisplayName("Should return empty optional when user has no active entries in any queue")
-    void testFindActiveEntryByUserId_NotFound() {
-        // Arrange
-        String userId = CLIENT_USER_ID;
-
-        when(queueEntryRepository.findByUserIdAndStatusIn(eq(userId), anyList()))
-                .thenReturn(Optional.empty());
-
-        // Act
-        Optional<QueueEntryResponseDTO> result = queueEntryService.findActiveEntryByUserId(userId);
-
-        // Assert
-        assertThat(result).isEmpty();
-
-        verify(queueEntryRepository).findByUserIdAndStatusIn(eq(userId), anyList());
-        verifyNoInteractions(queueCacheService);
     }
 
     // ==================== CALL NEXT TESTS ====================
