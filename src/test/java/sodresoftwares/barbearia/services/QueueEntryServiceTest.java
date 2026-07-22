@@ -48,6 +48,9 @@ class QueueEntryServiceTest {
     @Mock
     private QueueCacheService queueCacheService;
 
+    @Mock
+    private QueueNotificationService queueNotificationService;
+
     @Spy
     private QueueMapper queueMapper = new QueueMapper();
 

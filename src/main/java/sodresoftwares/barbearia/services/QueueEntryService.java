@@ -32,6 +32,7 @@ import java.util.Optional;
     private final UserRepository userRepository;
     private final QueueCacheService queueCacheService;
     private final QueueMapper queueMapper;
+    private final QueueNotificationService queueNotificationService;
 
     @Transactional
     public QueueEntryResponseDTO joinQueue(@NonNull JoinQueueDTO dto, String loggedUserId ) {
@@ -54,6 +55,8 @@ import java.util.Optional;
 
         List<QueueEntry> activeEntries =
                 queueEntryRepository.findActiveEntriesBySessionId(dto.queueSessionId());
+
+        queueNotificationService.notifyQueueUpdate(dto.queueSessionId());
 
         return queueMapper.toSingleDto(savedEntry, activeEntries);
     }
@@ -100,6 +103,8 @@ import java.util.Optional;
         List<QueueEntry> updatedActiveEntries =
                 queueEntryRepository.findActiveEntriesBySessionId(sessionId);
 
+        queueNotificationService.notifyQueueUpdate(sessionId);
+
         return queueMapper.toSingleDto(savedEntry, updatedActiveEntries);
     }
 
@@ -123,6 +128,7 @@ import java.util.Optional;
         List<QueueEntry> activeEntries =
                 queueEntryRepository.findActiveEntriesBySessionId(entry.getQueueSession().getId());
 
+        queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
         return queueMapper.toSingleDto(savedEntry, activeEntries);
     }
 
@@ -135,6 +141,8 @@ import java.util.Optional;
         queueEntryRepository.save(entry);
 
         queueCacheService.evict(entry.getQueueSession().getId());
+
+        queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
     }
 
     @Transactional
@@ -146,6 +154,8 @@ import java.util.Optional;
         queueEntryRepository.save(entry);
 
         queueCacheService.evict(entry.getQueueSession().getId());
+
+        queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
     }
 
     private QueueEntry getEntryById(String entryId) {
