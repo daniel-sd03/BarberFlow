@@ -260,6 +260,9 @@ class QueueEntryServiceTest {
         // Assert
         assertThat(response).isNotNull();
         assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.CALLED);
+        assertThat(waitingEntry.getCalledAt()).isNotNull();
+
+        verify(queueEntryRepository).save(waitingEntry);
         verify(queueCacheService).evict(SESSION_ID);
     }
 

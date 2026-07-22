@@ -88,7 +88,8 @@ class QueueEntryControllerTest {
                 "user-123",
                 "Cliente Silva",
                 "Corte de Cabelo",
-                QueueEntryStatus.WAITING
+                QueueEntryStatus.WAITING,
+                null
         );
 
         UsernamePasswordAuthenticationToken auth =
@@ -159,8 +160,15 @@ class QueueEntryControllerTest {
     @DisplayName("POST /api/queue-entries/session/{sessionId}/call-next -> Should call next and return 200 OK")
     void testCallNext_Success() throws Exception {
         QueueEntryResponseDTO calledEntry = new QueueEntryResponseDTO(
-                "entry-123", 1, "user-123", "Cliente Silva", "Corte de Cabelo", QueueEntryStatus.CALLED
+                "entry-123",
+                1,
+                "user-123",
+                "Cliente Silva",
+                "Corte de Cabelo",
+                QueueEntryStatus.CALLED,
+                null
         );
+
         when(queueEntryService.callNext(any(), any())).thenReturn(calledEntry);
 
         mockMvc.perform(post("/api/queue-entries/session/{sessionId}/call-next", "session-789")
@@ -176,7 +184,13 @@ class QueueEntryControllerTest {
     @DisplayName("POST /api/queue-entries/{entryId}/start -> Should start service and return 200 OK")
     void testStartService_Success() throws Exception {
         QueueEntryResponseDTO inServiceEntry = new QueueEntryResponseDTO(
-                "entry-123", 1, "user-123", "Cliente Silva", "Corte de Cabelo", QueueEntryStatus.IN_SERVICE
+                "entry-123",
+                1,
+                "user-123",
+                "Cliente Silva",
+                "Corte de Cabelo",
+                QueueEntryStatus.IN_SERVICE,
+                null
         );
         when(queueEntryService.startService(any(), any())).thenReturn(inServiceEntry);
 

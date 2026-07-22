@@ -10,6 +10,7 @@ import sodresoftwares.barbearia.model.QueueEntry;
 import sodresoftwares.barbearia.model.QueueEntryStatus;
 import sodresoftwares.barbearia.model.user.User;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,10 +24,12 @@ class QueueMapperTest {
     private QueueEntry entry1;
     private QueueEntry entry2;
     private List<QueueEntry> activeEntries;
+    private Instant timeOfCall;
 
     @BeforeEach
     void setUp() {
         queueMapper = new QueueMapper();
+        timeOfCall = Instant.now();
 
         User user1 = User.builder()
                 .id("user-1")
@@ -49,7 +52,8 @@ class QueueMapperTest {
                 .id("entry-2")
                 .user(user2)
                 .serviceName("Corte e Barba")
-                .status(QueueEntryStatus.WAITING)
+                .status(QueueEntryStatus.CALLED)
+                .calledAt(timeOfCall)
                 .build();
 
         activeEntries = List.of(entry1, entry2);
@@ -69,7 +73,8 @@ class QueueMapperTest {
         assertThat(result.userId()).isEqualTo("user-2");
         assertThat(result.clientName()).isEqualTo("Maria");
         assertThat(result.serviceName()).isEqualTo("Corte e Barba");
-        assertThat(result.status()).isEqualTo(QueueEntryStatus.WAITING);
+        assertThat(result.status()).isEqualTo(QueueEntryStatus.CALLED);
+        assertThat(result.calledAt()).isEqualTo(timeOfCall);
     }
 
     @Test
@@ -101,9 +106,11 @@ class QueueMapperTest {
         assertThat(results.get(0).id()).isEqualTo("entry-1");
         assertThat(results.get(0).position()).isEqualTo(1);
         assertThat(results.get(0).clientName()).isEqualTo("João");
+        assertThat(results.get(0).calledAt()).isNull();
 
         assertThat(results.get(1).id()).isEqualTo("entry-2");
         assertThat(results.get(1).position()).isEqualTo(2);
         assertThat(results.get(1).clientName()).isEqualTo("Maria");
+        assertThat(results.get(1).calledAt()).isEqualTo(timeOfCall);
     }
 }
