@@ -18,20 +18,28 @@ public class QueueEntryController {
 
     private final QueueEntryService queueEntryService;
 
-    @PostMapping("/join")
-    public ResponseEntity<QueueEntryResponseDTO> joinQueue(
-            @RequestBody @Valid JoinQueueDTO dto,
-            @AuthenticationPrincipal User loggedInUser) {
-        QueueEntryResponseDTO response = queueEntryService.joinQueue(dto,loggedInUser.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
     @GetMapping("/active/me")
     public ResponseEntity<QueueEntryResponseDTO> getActiveEntry(
             @AuthenticationPrincipal User loggedInUser) {
         return queueEntryService.findActiveEntryByUserId(loggedInUser.getId())
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+
+    @GetMapping("/latest/me")
+    public ResponseEntity<QueueEntryResponseDTO> getLatestEntry(@AuthenticationPrincipal User user) {
+        return queueEntryService.findLatestEntryByUserId(user.getId())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
+    }
+
+    @PostMapping("/join")
+    public ResponseEntity<QueueEntryResponseDTO> joinQueue(
+            @RequestBody @Valid JoinQueueDTO dto,
+            @AuthenticationPrincipal User loggedInUser) {
+        QueueEntryResponseDTO response = queueEntryService.joinQueue(dto,loggedInUser.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/session/{sessionId}/call-next")

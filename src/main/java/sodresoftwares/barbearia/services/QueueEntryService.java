@@ -19,6 +19,7 @@ import sodresoftwares.barbearia.repositories.QueueSessionRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +35,32 @@ import java.util.Optional;
     private final QueueCacheService queueCacheService;
     private final QueueMapper queueMapper;
     private final QueueNotificationService queueNotificationService;
+
+    public Optional<QueueEntryResponseDTO> findActiveEntryByUserId(String userId) {
+        return queueEntryRepository.findByUserIdAndStatusIn(
+                userId,
+                List.of(
+                        QueueEntryStatus.WAITING,
+                        QueueEntryStatus.CALLED,
+                        QueueEntryStatus.IN_SERVICE)
+        ).map(entry -> {
+
+            List<QueueEntry> activeEntries =
+                    queueCacheService.getActiveEntries(entry.getQueueSession().getId());
+
+            return queueMapper.toSingleDto(entry, activeEntries);
+        });
+    }
+
+    public Optional<QueueEntryResponseDTO> findLatestEntryByUserId(String userId) {
+        return queueEntryRepository.findFirstByUserIdOrderByJoinedAtDesc(userId)
+                .filter(entry -> {
+                    Instant twentyFourHoursAgo = Instant.now().minus(24, ChronoUnit.HOURS);
+
+                    return entry.getJoinedAt().isAfter(twentyFourHoursAgo);
+                })
+                .map(entry -> queueMapper.toSingleDto(entry, List.of(entry)));
+    }
 
     @Transactional
     public QueueEntryResponseDTO joinQueue(@NonNull JoinQueueDTO dto, String loggedUserId ) {
@@ -60,22 +87,6 @@ import java.util.Optional;
         queueNotificationService.notifyQueueUpdate(dto.queueSessionId());
 
         return queueMapper.toSingleDto(savedEntry, activeEntries);
-    }
-
-    public Optional<QueueEntryResponseDTO> findActiveEntryByUserId(String userId) {
-        return queueEntryRepository.findByUserIdAndStatusIn(
-                userId,
-                List.of(
-                        QueueEntryStatus.WAITING,
-                        QueueEntryStatus.CALLED,
-                        QueueEntryStatus.IN_SERVICE)
-        ).map(entry -> {
-
-            List<QueueEntry> activeEntries =
-                    queueCacheService.getActiveEntries(entry.getQueueSession().getId());
-
-            return queueMapper.toSingleDto(entry, activeEntries);
-        });
     }
 
     @Transactional
