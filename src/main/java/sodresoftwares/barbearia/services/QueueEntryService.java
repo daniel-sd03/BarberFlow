@@ -18,6 +18,7 @@ import sodresoftwares.barbearia.repositories.QueueEntryRepository;
 import sodresoftwares.barbearia.repositories.QueueSessionRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -96,6 +97,8 @@ import java.util.Optional;
         QueueEntry nextInLine = getEntryById(nextEntryId);
 
         nextInLine.setStatus(QueueEntryStatus.CALLED);
+        nextInLine.setCalledAt(Instant.now());
+
         QueueEntry savedEntry = queueEntryRepository.save(nextInLine);
 
         queueCacheService.evict(sessionId);

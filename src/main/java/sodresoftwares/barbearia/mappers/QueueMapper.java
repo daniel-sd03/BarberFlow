@@ -22,7 +22,8 @@ public class QueueMapper {
                     entry.getUser().getId(),
                     entry.getUser().getName(),
                     entry.getServiceName(),
-                    entry.getStatus()
+                    entry.getStatus(),
+                    entry.getCalledAt()
             ));
         }
         return dtos;
@@ -37,7 +38,8 @@ public class QueueMapper {
                         targetEntry.getUser().getId(),
                         targetEntry.getUser().getName(),
                         targetEntry.getServiceName(),
-                        targetEntry.getStatus()
+                        targetEntry.getStatus(),
+                        targetEntry.getCalledAt()
                 );
             }
         }

@@ -89,7 +89,8 @@ class QueueSessionControllerTest {
                 "client-123",
                 "João Silva",
                 "Corte Navalhado",
-                QueueEntryStatus.WAITING
+                QueueEntryStatus.WAITING,
+                null
         );
 
         dashboardDTO = new ProfessionalDashboardDTO(
