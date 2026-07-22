@@ -87,6 +87,7 @@ public class QueueSessionService {
                     professional.getBusinessName(),
                     null,
                     false,
+                    null,
                     List.of()
             );
         }
@@ -101,6 +102,7 @@ public class QueueSessionService {
                 session.getProfessional().getBusinessName(),
                 session.getTicketCode(),
                 session.getIsActive(),
+                session.getToleranceMinutes(),
                 queueDTOs
         );
     }
@@ -122,7 +124,8 @@ public class QueueSessionService {
                 session.getId(),
                 session.getProfessional().getBusinessName(),
                 peopleInQueue,
-                session.getIsActive()
+                session.getIsActive(),
+                session.getToleranceMinutes()
         );
     }
 

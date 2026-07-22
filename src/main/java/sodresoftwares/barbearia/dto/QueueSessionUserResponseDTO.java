@@ -4,5 +4,6 @@ public record QueueSessionUserResponseDTO(
         String sessionId,
         String businessName,
         int peopleInQueue,
-        boolean isActive
+        boolean isActive,
+        Integer toleranceMinutes
 ) {}

@@ -84,6 +84,7 @@ class QueueSessionServiceTest {
                 .professional(professional)
                 .ticketCode("BARBEA1234")
                 .isActive(false)
+                .toleranceMinutes(5)
                 .build();
 
         activeEntry = QueueEntry.builder()
@@ -219,6 +220,7 @@ class QueueSessionServiceTest {
         assertThat(dashboardData.businessName()).isEqualTo("Barbearia do Zé");
         assertThat(dashboardData.ticketCode()).isEqualTo("BARBEA1234");
         assertThat(dashboardData.isActive()).isFalse();
+        assertThat(dashboardData.toleranceMinutes()).isEqualTo(5);
 
         assertThat(dashboardData.activeQueue()).hasSize(1);
         var firstEntry = dashboardData.activeQueue().get(0);
@@ -246,6 +248,7 @@ class QueueSessionServiceTest {
         assertThat(dashboardData.sessionId()).isNull();
         assertThat(dashboardData.ticketCode()).isNull();
         assertThat(dashboardData.isActive()).isFalse();
+        assertThat(dashboardData.toleranceMinutes()).isNull();
         assertThat(dashboardData.businessName()).isEqualTo("Barbearia do Zé");
         assertThat(dashboardData.activeQueue()).isEmpty();
 
@@ -272,6 +275,7 @@ class QueueSessionServiceTest {
         assertThat(result.businessName()).isEqualTo("Barbearia do Zé");
         assertThat(result.peopleInQueue()).isEqualTo(2);
         assertThat(result.isActive()).isEqualTo(existingSession.getIsActive());
+        assertThat(result.toleranceMinutes()).isEqualTo(5);
 
         verify(queueSessionRepository).findByTicketCode(ticketCode);
         verify(queueCacheService).getActiveEntries(existingSession.getId());
