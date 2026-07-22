@@ -52,3 +52,7 @@
      CONSTRAINT fk_queue_sessions FOREIGN KEY (queue_sessions_id) REFERENCES queue_sessions (id) ON DELETE CASCADE,
      CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
  );
+
+ CREATE UNIQUE INDEX idx_unique_active_user_queue
+     ON queue_entries(user_id)
+     WHERE status IN ('WAITING', 'CALLED', 'IN_SERVICE');

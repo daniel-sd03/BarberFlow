@@ -27,7 +27,7 @@ import java.util.Optional;
 @Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-    public class QueueEntryService {
+public class QueueEntryService {
 
     private final QueueEntryRepository queueEntryRepository;
     private final QueueSessionRepository queueSessionRepository;
@@ -44,10 +44,7 @@ import java.util.Optional;
                         QueueEntryStatus.CALLED,
                         QueueEntryStatus.IN_SERVICE)
         ).map(entry -> {
-
-            List<QueueEntry> activeEntries =
-                    queueCacheService.getActiveEntries(entry.getQueueSession().getId());
-
+            List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(entry.getQueueSession().getId());
             return queueMapper.toSingleDto(entry, activeEntries);
         });
     }
@@ -56,14 +53,13 @@ import java.util.Optional;
         return queueEntryRepository.findFirstByUserIdOrderByJoinedAtDesc(userId)
                 .filter(entry -> {
                     Instant twentyFourHoursAgo = Instant.now().minus(24, ChronoUnit.HOURS);
-
                     return entry.getJoinedAt().isAfter(twentyFourHoursAgo);
                 })
                 .map(entry -> queueMapper.toSingleDto(entry, List.of(entry)));
     }
 
     @Transactional
-    public QueueEntryResponseDTO joinQueue(@NonNull JoinQueueDTO dto, String loggedUserId ) {
+    public QueueEntryResponseDTO joinQueue(@NonNull JoinQueueDTO dto, String loggedUserId) {
         QueueSession session = getAndValidateSession(dto.queueSessionId());
         User user = getAndValidateUser(loggedUserId);
         validateUserNotInAnyQueue(user.getId());
@@ -76,14 +72,11 @@ import java.util.Optional;
                 .build();
 
         QueueEntry savedEntry = queueEntryRepository.save(entry);
-        log.info("User successfully joined queue session {} with entry ID {}",
-                session.getId(), savedEntry.getId());
+        log.info("User successfully joined queue session {} with entry ID {}", session.getId(), savedEntry.getId());
 
         queueCacheService.evict(dto.queueSessionId());
 
-        List<QueueEntry> activeEntries =
-                queueEntryRepository.findActiveEntriesBySessionId(dto.queueSessionId());
-
+        List<QueueEntry> activeEntries = queueEntryRepository.findActiveEntriesBySessionId(dto.queueSessionId());
         queueNotificationService.notifyQueueUpdate(dto.queueSessionId());
 
         return queueMapper.toSingleDto(savedEntry, activeEntries);
@@ -95,6 +88,7 @@ import java.util.Optional;
         validateProfessionalOwnership(session, loggedUserId);
 
         List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
+        validateChairIsAvailableForCall(activeEntries);
 
         String nextEntryId = activeEntries.stream()
                 .filter(e -> e.getStatus() == QueueEntryStatus.WAITING)
@@ -106,17 +100,13 @@ import java.util.Optional;
                         "There are no clients waiting in the queue."));
 
         QueueEntry nextInLine = getEntryById(nextEntryId);
-
         nextInLine.setStatus(QueueEntryStatus.CALLED);
         nextInLine.setCalledAt(Instant.now());
 
         QueueEntry savedEntry = queueEntryRepository.save(nextInLine);
 
         queueCacheService.evict(sessionId);
-
-        List<QueueEntry> updatedActiveEntries =
-                queueEntryRepository.findActiveEntriesBySessionId(sessionId);
-
+        List<QueueEntry> updatedActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
         queueNotificationService.notifyQueueUpdate(sessionId);
 
         return queueMapper.toSingleDto(savedEntry, updatedActiveEntries);
@@ -125,52 +115,53 @@ import java.util.Optional;
     @Transactional
     public QueueEntryResponseDTO startService(String entryId, String loggedUserId) {
         QueueEntry entry = getEntryById(entryId);
-        validateProfessionalOwnership(entry.getQueueSession(), loggedUserId);
+        String sessionId = entry.getQueueSession().getId();
 
-        if (entry.getStatus() != QueueEntryStatus.CALLED && entry.getStatus() != QueueEntryStatus.WAITING) {
-            throw new AppException(
-                    HttpStatus.BAD_REQUEST,
-                    "INVALID_STATUS",
-                    "The client must be waiting or called to start the service.");
-        }
+        validateProfessionalOwnership(entry.getQueueSession(), loggedUserId);
+        validateChairIsAvailableForStart(sessionId);
+        validateStatusForStart(entry);
 
         entry.setStatus(QueueEntryStatus.IN_SERVICE);
         QueueEntry savedEntry = queueEntryRepository.save(entry);
 
-        queueCacheService.evict(entry.getQueueSession().getId());
+        queueCacheService.evict(sessionId);
+        List<QueueEntry> newActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+        queueNotificationService.notifyQueueUpdate(sessionId);
 
-        List<QueueEntry> activeEntries =
-                queueEntryRepository.findActiveEntriesBySessionId(entry.getQueueSession().getId());
-
-        queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
-        return queueMapper.toSingleDto(savedEntry, activeEntries);
+        return queueMapper.toSingleDto(savedEntry, newActiveEntries);
     }
 
     @Transactional
     public void finishService(String entryId, String loggedUserId) {
         QueueEntry entry = getEntryById(entryId);
+
         validateProfessionalOwnership(entry.getQueueSession(), loggedUserId);
+        validateStatusForFinish(entry);
 
         entry.setStatus(QueueEntryStatus.FINISHED);
         queueEntryRepository.save(entry);
 
         queueCacheService.evict(entry.getQueueSession().getId());
-
         queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
     }
 
     @Transactional
     public void cancelEntry(String entryId, String loggedUserId) {
         QueueEntry entry = getEntryById(entryId);
+
         validateCancelPermission(entry, loggedUserId);
+        validateStatusForCancellation(entry, loggedUserId);
 
         entry.setStatus(QueueEntryStatus.CANCELLED);
         queueEntryRepository.save(entry);
 
         queueCacheService.evict(entry.getQueueSession().getId());
-
         queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
     }
+
+    // ==========================================
+    // DATA FETCHING & CORE VALIDATIONS
+    // ==========================================
 
     private QueueEntry getEntryById(String entryId) {
         return queueEntryRepository.findById(entryId)
@@ -200,7 +191,6 @@ import java.util.Optional;
                     "QUEUE_CLOSED",
                     "This queue is currently closed.");
         }
-
         return session;
     }
 
@@ -214,6 +204,10 @@ import java.util.Optional;
                             "User not found");
                 });
     }
+
+    // ==========================================
+    // BUSINESS RULES & STATE MACHINE VALIDATIONS
+    // ==========================================
 
     private void validateUserNotInAnyQueue(String userId) {
         boolean alreadyInAnyQueue = queueEntryRepository.existsByUserIdAndStatusIn(
@@ -250,6 +244,68 @@ import java.util.Optional;
                     HttpStatus.FORBIDDEN,
                     "FORBIDDEN",
                     "You do not have permission to cancel this entry.");
+        }
+    }
+
+    private void validateChairIsAvailableForCall(List<QueueEntry> activeEntries) {
+        boolean isSomeoneBeingAttended = activeEntries.stream()
+                .anyMatch(e -> e.getStatus() == QueueEntryStatus.CALLED || e.getStatus() == QueueEntryStatus.IN_SERVICE);
+
+        if (isSomeoneBeingAttended) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "CHAIR_OCCUPIED",
+                    "Finish the current service or cancel the called client before calling the next one."
+            );
+        }
+    }
+
+    private void validateChairIsAvailableForStart(String sessionId) {
+        List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
+        boolean isSomeoneInService = activeEntries.stream()
+                .anyMatch(e -> e.getStatus() == QueueEntryStatus.IN_SERVICE);
+
+        if (isSomeoneInService) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "CHAIR_OCCUPIED",
+                    "There is already a client in service. Please finish their service first.");
+        }
+    }
+
+    private void validateStatusForStart(QueueEntry entry) {
+        if (entry.getStatus() != QueueEntryStatus.CALLED && entry.getStatus() != QueueEntryStatus.WAITING) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_STATUS",
+                    "The client must be waiting or called to start the service.");
+        }
+    }
+
+    private void validateStatusForFinish(QueueEntry entry) {
+        if (entry.getStatus() != QueueEntryStatus.IN_SERVICE) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_STATUS",
+                    "You can only finish a service that is currently in progress (IN_SERVICE).");
+        }
+    }
+
+    private void validateStatusForCancellation(QueueEntry entry, String loggedUserId) {
+        if (entry.getStatus() == QueueEntryStatus.CANCELLED || entry.getStatus() == QueueEntryStatus.FINISHED) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_STATUS",
+                    "This entry is already cancelled or finished.");
+        }
+
+        boolean isTheClient = entry.getUser().getId().equals(loggedUserId);
+        if (isTheClient && entry.getStatus() == QueueEntryStatus.IN_SERVICE) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "SERVICE_IN_PROGRESS",
+                    "You cannot cancel your spot while the service is in progress."
+            );
         }
     }
 }

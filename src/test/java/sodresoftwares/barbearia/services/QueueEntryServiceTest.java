@@ -4,6 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -364,13 +366,32 @@ class QueueEntryServiceTest {
         verify(queueCacheService, never()).evict(anyString());
     }
 
-// ==================== START SERVICE TESTS ====================
+    @ParameterizedTest
+    @EnumSource(value = QueueEntryStatus.class, names = {"CALLED", "IN_SERVICE"})
+    @DisplayName("Should block callNext if there is a client already CALLED or IN_SERVICE")
+    void testCallNext_ChairOccupied(QueueEntryStatus occupyingStatus) {
+        // Arrange
+        professional.setId(BARBER_USER_ID);
+        when(queueSessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(activeSession));
+
+        QueueEntry occupyingEntry = QueueEntry.builder().status(occupyingStatus).build();
+        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(occupyingEntry, waitingEntry));
+
+        // Act & Assert
+        assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, BARBER_USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Finish the current service or cancel the called client before calling the next one.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    // ==================== START SERVICE TESTS ====================
 
     @Test
     @DisplayName("Should start service successfully when client status is WAITING")
     void testStartService_Success() {
         // Arrange
         when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
         when(queueEntryRepository.save(any(QueueEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID))
@@ -385,9 +406,26 @@ class QueueEntryServiceTest {
         assertThat(result.status()).isEqualTo(QueueEntryStatus.IN_SERVICE);
 
         verify(queueEntryRepository).save(waitingEntry);
-
         verify(queueCacheService).evict(SESSION_ID);
         verify(queueEntryRepository).findActiveEntriesBySessionId(SESSION_ID);
+    }
+
+    @Test
+    @DisplayName("Should block startService if the chair is already occupied (IN_SERVICE)")
+    void testStartService_ChairOccupied() {
+        // Arrange
+        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+
+        QueueEntry inServiceEntry = QueueEntry.builder().status(QueueEntryStatus.IN_SERVICE).build();
+        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(inServiceEntry, waitingEntry));
+
+        // Act & Assert
+        assertThatThrownBy(() -> queueEntryService.startService(ENTRY_ID, BARBER_USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("There is already a client in service. Please finish their service first.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(queueEntryRepository, never()).save(any());
     }
 
     @Test
@@ -395,8 +433,8 @@ class QueueEntryServiceTest {
     void testStartService_InvalidStatus() {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.FINISHED);
-
         when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.startService(ENTRY_ID, BARBER_USER_ID))
@@ -405,7 +443,6 @@ class QueueEntryServiceTest {
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         verify(queueEntryRepository, never()).save(any());
-        verifyNoInteractions(queueCacheService);
     }
 
     // ==================== FINISH SERVICE TESTS ====================
@@ -414,6 +451,7 @@ class QueueEntryServiceTest {
     @DisplayName("Should finish service successfully and evict cache")
     void testFinishService_Success() {
         // Arrange
+        waitingEntry.setStatus(QueueEntryStatus.IN_SERVICE);
         when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         when(queueEntryRepository.save(any(QueueEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -426,6 +464,22 @@ class QueueEntryServiceTest {
 
         verify(queueEntryRepository).save(waitingEntry);
         verify(queueCacheService).evict(SESSION_ID);
+    }
+
+    @Test
+    @DisplayName("Should throw bad request exception when attempting to finish a service not IN_SERVICE")
+    void testFinishService_InvalidStatus() {
+        // Arrange:
+        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+
+        // Act & Assert
+        assertThatThrownBy(() -> queueEntryService.finishService(ENTRY_ID, BARBER_USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("You can only finish a service that is currently in progress (IN_SERVICE).")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(queueEntryRepository, never()).save(any());
+        verifyNoInteractions(queueCacheService);
     }
 
     // ==================== CANCEL ENTRY TESTS ====================
@@ -460,6 +514,7 @@ class QueueEntryServiceTest {
         // Assert
         assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.CANCELLED);
         verify(queueCacheService).evict(SESSION_ID);
+        verify(queueEntryRepository).save(waitingEntry);
     }
 
     @Test
@@ -477,5 +532,38 @@ class QueueEntryServiceTest {
 
         verify(queueEntryRepository, never()).save(any());
         verifyNoInteractions(queueCacheService);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = QueueEntryStatus.class, names = {"CANCELLED", "FINISHED"})
+    @DisplayName("Should block cancellation if entry is already CANCELLED or FINISHED")
+    void testCancelEntry_AlreadyFinishedOrCancelled(QueueEntryStatus invalidStatus) {
+        // Arrange
+        waitingEntry.setStatus(invalidStatus);
+        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+
+        // Act & Assert
+        assertThatThrownBy(() -> queueEntryService.cancelEntry(ENTRY_ID, CLIENT_USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("This entry is already cancelled or finished.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(queueEntryRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should block client from cancelling when service is IN_SERVICE")
+    void testCancelEntry_ByClient_ServiceInProgress() {
+        // Arrange
+        waitingEntry.setStatus(QueueEntryStatus.IN_SERVICE);
+        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+
+        // Act & Assert
+        assertThatThrownBy(() -> queueEntryService.cancelEntry(ENTRY_ID, CLIENT_USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("You cannot cancel your spot while the service is in progress.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(queueEntryRepository, never()).save(any());
     }
 }
