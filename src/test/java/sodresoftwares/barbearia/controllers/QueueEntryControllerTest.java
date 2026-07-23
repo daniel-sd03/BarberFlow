@@ -206,6 +206,19 @@ class QueueEntryControllerTest {
                 .andExpect(jsonPath("$.status").value("CALLED"));
     }
 
+    // ==================== REQUEUE ENTRY TESTS ====================
+
+    @Test
+    @DisplayName("POST /api/queue-entries/{entryId}/requeue -> Should requeue entry and return 200 OK")
+    void testRequeueEntry_Success() throws Exception {
+        when(queueEntryService.requeueEntry(any(), any())).thenReturn(entryResponseDTO);
+
+        mockMvc.perform(post("/api/queue-entries/{entryId}/requeue", "entry-123")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("entry-123"));
+    }
+
     // ==================== START SERVICE TESTS ====================
 
     @Test

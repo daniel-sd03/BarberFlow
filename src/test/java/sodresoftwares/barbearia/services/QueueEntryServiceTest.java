@@ -384,6 +384,51 @@ class QueueEntryServiceTest {
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    // ==================== REQUEUE ENTRY TESTS ====================
+
+    @Test
+    @DisplayName("Should successfully requeue entry, increment missed calls and reset status to WAITING")
+    void testRequeueEntry_Success() {
+        // Arrange
+        professional.setId(BARBER_USER_ID);
+        waitingEntry.setStatus(QueueEntryStatus.CALLED);
+        waitingEntry.setMissedCalls(0);
+
+        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.save(any(QueueEntry.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID))
+                .thenReturn(List.of(waitingEntry));
+
+        // Act
+        QueueEntryResponseDTO result = queueEntryService.requeueEntry(ENTRY_ID, BARBER_USER_ID);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.WAITING);
+        assertThat(waitingEntry.getMissedCalls()).isEqualTo(1);
+
+        verify(queueEntryRepository).save(waitingEntry);
+        verify(queueCacheService).evict(SESSION_ID);
+        verify(queueNotificationService).notifyQueueUpdate(SESSION_ID);
+    }
+
+    @Test
+    @DisplayName("Should throw bad request exception when trying to requeue an entry that is not CALLED")
+    void testRequeueEntry_InvalidStatus() {
+        // Arrange: status starts as WAITING
+        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+
+        // Act & Assert
+        assertThatThrownBy(() -> queueEntryService.requeueEntry(ENTRY_ID, BARBER_USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Only clients with CALLED status can be returned to the queue.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(queueEntryRepository, never()).save(any());
+        verifyNoInteractions(queueCacheService);
+    }
+
     // ==================== START SERVICE TESTS ====================
 
     @Test

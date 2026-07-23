@@ -51,6 +51,15 @@ public class QueueEntryController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/{entryId}/requeue")
+    public ResponseEntity<QueueEntryResponseDTO> requeueEntry(
+            @PathVariable String entryId,
+            @AuthenticationPrincipal User loggedUser) {
+
+        QueueEntryResponseDTO response = queueEntryService.requeueEntry(entryId, loggedUser.getId());
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/{entryId}/start")
     public ResponseEntity<QueueEntryResponseDTO> startService(
             @PathVariable String entryId,
