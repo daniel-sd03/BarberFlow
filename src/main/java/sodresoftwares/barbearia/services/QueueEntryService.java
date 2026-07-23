@@ -113,6 +113,27 @@ public class QueueEntryService {
     }
 
     @Transactional
+    public QueueEntryResponseDTO requeueEntry(String entryId, String loggedUserId) {
+        QueueEntry entry = getEntryById(entryId);
+        String sessionId = entry.getQueueSession().getId();
+
+        validateProfessionalOwnership(entry.getQueueSession(), loggedUserId);
+        validateStatusForRequeue(entry);
+
+        // Increment missed calls and reset state back to WAITING
+        entry.setMissedCalls(entry.getMissedCalls() + 1);
+        entry.setStatus(QueueEntryStatus.WAITING);
+
+        QueueEntry savedEntry = queueEntryRepository.save(entry);
+
+        queueCacheService.evict(sessionId);
+        List<QueueEntry> updatedActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+        queueNotificationService.notifyQueueUpdate(sessionId);
+
+        return queueMapper.toSingleDto(savedEntry, updatedActiveEntries);
+    }
+
+    @Transactional
     public QueueEntryResponseDTO startService(String entryId, String loggedUserId) {
         QueueEntry entry = getEntryById(entryId);
         String sessionId = entry.getQueueSession().getId();
@@ -306,6 +327,15 @@ public class QueueEntryService {
                     "SERVICE_IN_PROGRESS",
                     "You cannot cancel your spot while the service is in progress."
             );
+        }
+    }
+
+    private void validateStatusForRequeue(QueueEntry entry) {
+        if (entry.getStatus() != QueueEntryStatus.CALLED) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_STATUS",
+                    "Only clients with CALLED status can be returned to the queue.");
         }
     }
 }
