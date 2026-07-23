@@ -20,6 +20,7 @@ import sodresoftwares.barbearia.repositories.QueueSessionRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Slf4j
@@ -151,7 +152,8 @@ public class QueueSessionService {
         boolean codeExists;
 
         do {
-            String shortCode = UUID.randomUUID().toString().substring(0, 5).toUpperCase();
+            int randomNumber = ThreadLocalRandom.current().nextInt(1000, 10000);
+            String shortCode = String.format("%04d", randomNumber);
             generatedCode = prefix + shortCode;
 
             codeExists = queueSessionRepository.existsByTicketCode(generatedCode);
