@@ -98,6 +98,11 @@ class GlobalExceptionHandlerTest {
             throw new EntityNotFoundException("User not found in database");
         }
 
+        @PostMapping("/optimistic-locking")
+        public void throwOptimisticLockException() {
+            throw new jakarta.persistence.OptimisticLockException("Row was updated or deleted by another transaction");
+        }
+
         @PostMapping("/generic-exception")
         public void throwGenericException() {
             throw new RuntimeException("Test generic error");
@@ -200,6 +205,19 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.error").value("Not Found"))
                 .andExpect(jsonPath("$.message").value("The requested resource was not found."))
                 .andExpect(jsonPath("$.path").value("/test/entity-not-found"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    @DisplayName("Should handle OptimisticLockException with 409 Conflict")
+    void shouldHandleOptimisticLockingFailureException() throws Exception {
+        mockMvc.perform(post("/test/optimistic-locking"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.errorCode").value("CONCURRENT_MODIFICATION"))
+                .andExpect(jsonPath("$.message").value("This action was already performed by another device. The view will be updated."))
+                .andExpect(jsonPath("$.path").value("/test/optimistic-locking"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 

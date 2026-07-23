@@ -174,6 +174,30 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles concurrent modification conflicts (409 Conflict).
+     * Triggered by Hibernate/JPA (@Version) when two transactions attempt to modify the same entity simultaneously.
+     */
+    @ExceptionHandler({
+            org.springframework.orm.ObjectOptimisticLockingFailureException.class,
+            jakarta.persistence.OptimisticLockException.class
+    })
+    public ResponseEntity<ErrorResponseDTO> handleOptimisticLockingFailure(Exception ex, HttpServletRequest request) {
+
+        log.warn("Optimistic locking failure (Concurrent modification) at {}: {}", request.getRequestURI(), ex.getMessage());
+
+        ErrorResponseDTO error = new ErrorResponseDTO(
+                Instant.now(),
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                "CONCURRENT_MODIFICATION",
+                "This action was already performed by another device. The view will be updated.",
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    /**
      * Catch-all handler for unexpected server errors (500 Internal Server Error).
      * Captures unhandled RuntimeExceptions, database connection drops, NullPointerExceptions, etc.
      */
