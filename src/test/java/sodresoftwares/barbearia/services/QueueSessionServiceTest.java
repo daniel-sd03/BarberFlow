@@ -28,6 +28,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -202,6 +203,45 @@ class QueueSessionServiceTest {
         verify(queueSessionRepository, never()).save(any());
     }
 
+    // ==================== REFRESH TICKET CODE TESTS ====================
+
+    @Test
+    @DisplayName("Should successfully refresh ticket code and return new DTO")
+    void testRefreshTicketCode_Success() {
+        // Arrange
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID))
+                .thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
+
+        // Act
+        QueueSessionProfResponseDTO result = queueSessionService.refreshTicketCode(PROF_USER_ID);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(existingSession.getId());
+        assertThat(result.ticketCode()).isNotEqualTo("BARBEA1234");
+        assertThat(result.ticketCode()).startsWith("BARB");
+
+        verify(queueSessionRepository).findByProfessionalUserId(PROF_USER_ID);
+        verify(queueSessionRepository, atLeastOnce()).existsByTicketCode(anyString());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to refresh code without an active session")
+    void testRefreshTicketCode_SessionNotFound() {
+        // Arrange
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> queueSessionService.refreshTicketCode(PROF_USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Queue not found.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        verify(queueSessionRepository).findByProfessionalUserId(PROF_USER_ID);
+        verify(queueSessionRepository, never()).existsByTicketCode(anyString());
+    }
     // ==================== DASHBOARD TESTS ====================
 
     @Test

@@ -73,6 +73,23 @@ public class QueueSessionService {
         return mapToSessionDTO(savedSession);
     }
 
+    @Transactional
+    public QueueSessionProfResponseDTO refreshTicketCode(String loggedUserId) {
+        QueueSession session = queueSessionRepository.findByProfessionalUserId(loggedUserId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "SESSION_NOT_FOUND",
+                        "Queue not found."
+                ));
+
+        String prefix = determinePrefix(session.getProfessional().getBusinessName());
+        String newTicketCode = generateUniqueTicketCode(prefix);
+
+        session.setTicketCode(newTicketCode);
+
+        return mapToSessionDTO(session);
+    }
+
     public ProfessionalDashboardDTO getDashboardData(String loggedUserId) {
         Optional<QueueSession> sessionOpt = queueSessionRepository.findByProfessionalUserId(loggedUserId);
 

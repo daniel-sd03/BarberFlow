@@ -104,6 +104,7 @@ class QueueSessionControllerTest {
     }
 
     // ==================== CREATE SESSION TESTS ====================
+
     @Test
     @DisplayName("POST /api/queue-sessions -> Should create session and return 201 Created")
     void testCreateSession_Success() throws Exception {
@@ -157,6 +158,30 @@ class QueueSessionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(requestDTO).getJson()))
                 .andExpect(status().isBadRequest());
+    }
+
+    // ==================== REFRESH TICKET CODE  TESTS ====================
+
+    @Test
+    @DisplayName("Should refresh ticket code and return 200 OK")
+    void refreshTicketCode_Success() throws Exception {
+        // Arrange
+        QueueSessionProfResponseDTO refreshedSessionDTO = new QueueSessionProfResponseDTO(
+                sessionResponseDTO.id(),
+                "BARB9999",
+                sessionResponseDTO.isActive()
+        );
+
+        when(queueSessionService.refreshTicketCode(any())).thenReturn(refreshedSessionDTO);
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/queue-sessions/me/refresh-code")
+                        .requestAttr("userId", loggedInUser.getId())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(sessionResponseDTO.id()))
+                .andExpect(jsonPath("$.ticketCode").value("BARB9999"))
+                .andExpect(jsonPath("$.isActive").value(sessionResponseDTO.isActive()));
     }
 
     // ==================== DASHBOARD TESTS ====================
