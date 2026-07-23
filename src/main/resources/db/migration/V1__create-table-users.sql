@@ -58,3 +58,6 @@ CREATE TABLE queue_entries
 
 CREATE UNIQUE INDEX idx_unique_active_user_queue
     ON queue_entries (user_id) WHERE status IN ('WAITING', 'CALLED', 'IN_SERVICE');
+
+CREATE INDEX idx_queue_entries_session_status
+    ON queue_entries (queue_sessions_id, status, joined_at);
