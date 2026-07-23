@@ -32,6 +32,13 @@ public class QueueSessionController {
         return ResponseEntity.ok(session);
     }
 
+    @PatchMapping("/me/refresh-code")
+    public ResponseEntity<QueueSessionProfResponseDTO> refreshTicketCode(
+            @AuthenticationPrincipal User loggedInUser) {
+        QueueSessionProfResponseDTO updatedSession = queueSessionService.refreshTicketCode(loggedInUser.getId());
+        return ResponseEntity.ok(updatedSession);
+    }
+
     @GetMapping("/dashboard")
     public ResponseEntity<ProfessionalDashboardDTO> getDashboard(
             @AuthenticationPrincipal User loggedInUser) {
