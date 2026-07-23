@@ -46,6 +46,9 @@ public class QueueEntry {
     @Column(name = "missed_calls", nullable = false)
     private Integer missedCalls = 0;
 
+    @Version
+    private Long version;
+
     @CreatedDate
     @Column(name = "joined_at", nullable = false, updatable = false)
     private Instant joinedAt;
