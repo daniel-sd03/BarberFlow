@@ -33,6 +33,7 @@ CREATE TABLE queue_sessions
     ticket_code       VARCHAR(50) UNIQUE NOT NULL,
     is_active         BOOLEAN            NOT NULL DEFAULT FALSE,
     tolerance_minutes INTEGER            NOT NULL,
+    prefix            VARCHAR(10),
     created_at        TIMESTAMPTZ                 DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMPTZ,
     CONSTRAINT fk_professional FOREIGN KEY (professional_id) REFERENCES professionals (id) ON DELETE CASCADE
