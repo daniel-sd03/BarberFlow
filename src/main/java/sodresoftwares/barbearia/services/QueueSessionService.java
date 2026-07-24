@@ -19,7 +19,6 @@ import sodresoftwares.barbearia.repositories.QueueSessionRepository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -48,11 +47,12 @@ public class QueueSessionService {
                         "PROFESSIONAL_NOT_FOUND",
                         "Professional not found"));
 
-        String finalPrefix = determinePrefix(professional.getBusinessName());
-        String safeTicketCode = generateUniqueTicketCode(finalPrefix);
+        String initialPrefix = generateInitialPrefix(professional.getBusinessName());
+        String safeTicketCode = generateUniqueTicketCode(initialPrefix);
 
         QueueSession newSession = QueueSession.builder()
                 .professional(professional)
+                .prefix(initialPrefix)
                 .ticketCode(safeTicketCode)
                 .isActive(false)
                 .build();
@@ -74,6 +74,32 @@ public class QueueSessionService {
     }
 
     @Transactional
+    public QueueSessionProfResponseDTO updatePrefix(String loggedUserId, String newPrefix) {
+        QueueSession session = queueSessionRepository.findByProfessionalUserId(loggedUserId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "SESSION_NOT_FOUND",
+                        "Queue not found."
+                ));
+
+        String cleanPrefix = sanitize(newPrefix);
+
+        if (cleanPrefix.length() < 2) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_PREFIX",
+                    "Prefix must contain at least 2 valid alphanumeric characters."
+            );
+        }
+
+        String newTicketCode = generateUniqueTicketCode(cleanPrefix);
+        session.setTicketCode(newTicketCode);
+        session.setPrefix(cleanPrefix);
+
+        return mapToSessionDTO(session);
+    }
+
+    @Transactional
     public QueueSessionProfResponseDTO refreshTicketCode(String loggedUserId) {
         QueueSession session = queueSessionRepository.findByProfessionalUserId(loggedUserId)
                 .orElseThrow(() -> new AppException(
@@ -82,8 +108,7 @@ public class QueueSessionService {
                         "Queue not found."
                 ));
 
-        String prefix = determinePrefix(session.getProfessional().getBusinessName());
-        String newTicketCode = generateUniqueTicketCode(prefix);
+        String newTicketCode = generateUniqueTicketCode(session.getPrefix());
 
         session.setTicketCode(newTicketCode);
 
@@ -148,10 +173,10 @@ public class QueueSessionService {
     }
 
     // Generates prefix based on Business name or defaults to "FILA"
-    private String determinePrefix(String businessName) {
+    private String generateInitialPrefix(String businessName) {
         if (businessName != null && !businessName.isBlank()) {
             String sanitized = sanitize(businessName);
-            if (sanitized.length() >= 3) {
+            if (sanitized.length() >= 2) {
                 return sanitized.substring(0, Math.min(sanitized.length(), 4));
             }
         }

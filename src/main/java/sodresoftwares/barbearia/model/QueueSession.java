@@ -39,6 +39,9 @@ public class QueueSession {
     @Column(name = "tolerance_minutes", nullable = false)
     private Integer toleranceMinutes = 10;
 
+    @Column(name = "prefix", length = 10)
+    private String prefix;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
