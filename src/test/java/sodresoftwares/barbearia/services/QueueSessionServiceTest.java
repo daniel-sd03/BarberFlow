@@ -83,7 +83,8 @@ class QueueSessionServiceTest {
         existingSession = QueueSession.builder()
                 .id("session-123")
                 .professional(professional)
-                .ticketCode("BARBEA1234")
+                .prefix("BARB")
+                .ticketCode("BARB1234")
                 .isActive(false)
                 .toleranceMinutes(5)
                 .build();
@@ -203,6 +204,46 @@ class QueueSessionServiceTest {
         verify(queueSessionRepository, never()).save(any());
     }
 
+    // ==================== UPDATE PREFIX TESTS ====================
+
+    @Test
+    @DisplayName("Should successfully update queue prefix and generate code with new prefix")
+    void testUpdatePrefix_Success() {
+        // Arrange
+        String newPrefix = "CORTE";
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID))
+                .thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
+
+        // Act
+        QueueSessionProfResponseDTO result = queueSessionService.updatePrefix(PROF_USER_ID, newPrefix);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(existingSession.getId());
+        assertThat(result.ticketCode()).startsWith("CORTE");
+
+        verify(queueSessionRepository).findByProfessionalUserId(PROF_USER_ID);
+        verify(queueSessionRepository, atLeastOnce()).existsByTicketCode(anyString());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when updated prefix results in invalid sanitized string")
+    void testUpdatePrefix_InvalidSanitizedPrefix() {
+        // Arrange
+        String invalidPrefix = "!!";
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID))
+                .thenReturn(Optional.of(existingSession));
+
+        // Act & Assert
+        assertThatThrownBy(() -> queueSessionService.updatePrefix(PROF_USER_ID, invalidPrefix))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Prefix must contain at least 2 valid alphanumeric characters.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(queueSessionRepository, never()).existsByTicketCode(anyString());
+    }
+
     // ==================== REFRESH TICKET CODE TESTS ====================
 
     @Test
@@ -258,7 +299,7 @@ class QueueSessionServiceTest {
         assertThat(dashboardData).isNotNull();
         assertThat(dashboardData.sessionId()).isEqualTo(existingSession.getId());
         assertThat(dashboardData.businessName()).isEqualTo("Barbearia do Zé");
-        assertThat(dashboardData.ticketCode()).isEqualTo("BARBEA1234");
+        assertThat(dashboardData.ticketCode()).isEqualTo("BARB1234");
         assertThat(dashboardData.isActive()).isFalse();
         assertThat(dashboardData.toleranceMinutes()).isEqualTo(5);
 
