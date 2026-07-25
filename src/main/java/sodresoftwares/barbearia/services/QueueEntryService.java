@@ -20,6 +20,7 @@ import sodresoftwares.barbearia.repositories.UserRepository;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -120,17 +121,26 @@ public class QueueEntryService {
         validateProfessionalOwnership(entry.getQueueSession(), loggedUserId);
         validateStatusForRequeue(entry);
 
-        // Increment missed calls and reset state back to WAITING
         entry.setMissedCalls(entry.getMissedCalls() + 1);
         entry.setStatus(QueueEntryStatus.WAITING);
+
+        List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
+
+        List<QueueEntry> waitingList = activeEntries.stream()
+                .filter(e -> e.getStatus() == QueueEntryStatus.WAITING && !e.getId().equals(entryId))
+                .toList();
+
+        if (!waitingList.isEmpty()) {
+            QueueEntry newFirst = waitingList.get(0);
+            entry.setJoinedAt(newFirst.getJoinedAt().plusSeconds(1));
+        }
 
         QueueEntry savedEntry = queueEntryRepository.save(entry);
 
         queueCacheService.evict(sessionId);
-        List<QueueEntry> updatedActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+        List<QueueEntry> newActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
         queueNotificationService.notifyQueueUpdate(sessionId);
-
-        return queueMapper.toSingleDto(savedEntry, updatedActiveEntries);
+        return queueMapper.toSingleDto(savedEntry, newActiveEntries);
     }
 
     @Transactional

@@ -50,11 +50,15 @@ public class QueueEntry {
     private Long version;
 
     @CreatedDate
-    @Column(name = "joined_at", nullable = false, updatable = false)
+    @Column(name = "joined_at", nullable = false)
     private Instant joinedAt;
 
     @Column(name = "called_at")
     private Instant calledAt;
+
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at")
