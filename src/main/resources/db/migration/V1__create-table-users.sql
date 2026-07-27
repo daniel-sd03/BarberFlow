@@ -45,7 +45,7 @@ CREATE TABLE queue_entries
     queue_sessions_id TEXT             NOT NULL,
     user_id           TEXT             NOT NULL,
     service_name      VARCHAR(100)     NOT NULL,
-    status            VARCHAR(30)      NOT NULL DEFAULT 'WAITING',
+    status            VARCHAR(30)      NOT NULL,
     missed_calls      INTEGER          NOT NULL DEFAULT 0,
     version           BIGINT           NOT NULL DEFAULT 0,
     joined_at         TIMESTAMPTZ      NOT NULL,
