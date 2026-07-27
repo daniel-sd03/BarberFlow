@@ -305,11 +305,11 @@ public class QueueEntryService {
     }
 
     private void validateStatusForStart(QueueEntry entry) {
-        if (entry.getStatus() != QueueEntryStatus.CALLED && entry.getStatus() != QueueEntryStatus.WAITING) {
+        if (entry.getStatus() != QueueEntryStatus.CALLED) {
             throw new AppException(
                     HttpStatus.BAD_REQUEST,
                     "INVALID_STATUS",
-                    "The client must be waiting or called to start the service.");
+                    "The client must be called to start the service.");
         }
     }
 
