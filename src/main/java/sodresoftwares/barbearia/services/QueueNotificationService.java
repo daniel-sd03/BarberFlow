@@ -43,6 +43,6 @@ public class QueueNotificationService {
 
         messagingTemplate.convertAndSend(destination, payload);
 
-        log.info("📢 Notificação de atualização enviada para a fila: {}", sessionId);
+        log.info("Update notification sent to queue: {}", sessionId);
     }
 }
