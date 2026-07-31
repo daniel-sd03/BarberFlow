@@ -22,13 +22,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import sodresoftwares.barbearia.dto.JoinQueueDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
+import sodresoftwares.barbearia.dto.UserQueueStatusDTO;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
 import sodresoftwares.barbearia.model.QueueEntryStatus;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.QueueEntryService;
-
-import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -102,56 +101,20 @@ class QueueEntryControllerTest {
         SecurityContextHolder.clearContext();
     }
 
-    // ==================== GET ACTIVE ENTRY TESTS ====================
+    // ==================== GET USER QUEUE STATUS (BFF) TESTS ====================
 
     @Test
-    @DisplayName("GET /api/queue-entries/active/me -> Should return active entry and 200 OK")
-    void testGetActiveEntry_Found() throws Exception {
-        when(queueEntryService.findActiveEntryByUserId(any())).thenReturn(Optional.of(entryResponseDTO));
+    @DisplayName("GET /api/queue-entries/me/status -> Should return 200 OK and serialize JSON correctly")
+    void testGetMyStatus_JsonSerialization() throws Exception {
+        // Arrange:
+        UserQueueStatusDTO statusDTO = new UserQueueStatusDTO(entryResponseDTO, null);
+        when(queueEntryService.getUserQueueStatus(any())).thenReturn(statusDTO);
 
-        mockMvc.perform(get("/api/queue-entries/active/me")
+        // Act & Assert:
+        mockMvc.perform(get("/api/queue-entries/me/status")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("entry-123"))
-                .andExpect(jsonPath("$.status").value("WAITING"));
-    }
-
-    @Test
-    @DisplayName("GET /api/queue-entries/active/me -> Should return 204 No Content when no active entry exists")
-    void testGetActiveEntry_NotFound() throws Exception {
-        when(queueEntryService.findActiveEntryByUserId(any())).thenReturn(Optional.empty());
-
-        mockMvc.perform(get("/api/queue-entries/active/me")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent());
-    }
-
-    // ==================== GET LATEST ENTRY TESTS ====================
-
-    @Test
-    @DisplayName("GET /api/queue-entries/latest/me -> Should return recent entry and 200 OK")
-    void testGetLatestEntry_Found() throws Exception {
-        // Arrange
-        when(queueEntryService.findLatestEntryByUserId(any())).thenReturn(Optional.of(entryResponseDTO));
-
-        // Act & Assert
-        mockMvc.perform(get("/api/queue-entries/latest/me")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("entry-123"))
-                .andExpect(jsonPath("$.status").value("WAITING"));
-    }
-
-    @Test
-    @DisplayName("GET /api/queue-entries/latest/me -> Should return 204 No Content when no recent entry exists")
-    void testGetLatestEntry_NotFound() throws Exception {
-        // Arrange
-        when(queueEntryService.findLatestEntryByUserId(any())).thenReturn(Optional.empty());
-
-        // Act & Assert
-        mockMvc.perform(get("/api/queue-entries/latest/me")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent());
+                .andExpect(jsonPath("$.activeEntry.id").value("entry-123"));
     }
 
     // ==================== JOIN QUEUE TESTS ====================
