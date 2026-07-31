@@ -68,12 +68,17 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         String jwtToken = tokenService.generateToken(finalUser);
 
-        Cookie cookie = new Cookie("TEMP_AUTH_TOKEN", jwtToken);
-        cookie.setPath("/");
-        cookie.setMaxAge(60);
-        // cookie.setSecure(true); // Uncomment in production (HTTPS)
+        Cookie tokenCookie = new Cookie("TEMP_AUTH_TOKEN", jwtToken);
+        tokenCookie.setPath("/");
+        tokenCookie.setMaxAge(60);
+        // tokenCookie.setSecure(true); // Descomentar em produção (HTTPS)
+        response.addCookie(tokenCookie);
 
-        response.addCookie(cookie);
+        Cookie roleCookie = new Cookie("TEMP_ROLE", finalUser.getRole().name());
+        roleCookie.setPath("/");
+        roleCookie.setMaxAge(60);
+        // roleCookie.setSecure(true); // Descomentar em produção (HTTPS)
+        response.addCookie(roleCookie);
 
         String targetUrl = "http://localhost:5173/inicio";
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
