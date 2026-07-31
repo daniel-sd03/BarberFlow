@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import sodresoftwares.barbearia.dto.JoinQueueDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
+import sodresoftwares.barbearia.dto.UserQueueStatusDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.Professional;
@@ -99,6 +100,82 @@ class QueueEntryServiceTest {
                 .build();
 
         joinQueueDTO = new JoinQueueDTO(SESSION_ID, "Corte");
+    }
+
+    // ==================== GET USER QUEUE STATUS (BFF) TESTS ====================
+
+    @Test
+    @DisplayName("Should return active entry and ignore history when user has an active queue")
+    void testGetUserQueueStatus_WithActiveEntry() {
+        // Arrange
+        String userId = CLIENT_USER_ID;
+        when(queueEntryRepository.findByUserIdAndStatusIn(eq(userId), anyList()))
+                .thenReturn(Optional.of(waitingEntry));
+        when(queueCacheService.getActiveEntries(SESSION_ID))
+                .thenReturn(List.of(waitingEntry));
+
+        // Act
+        UserQueueStatusDTO result = queueEntryService.getUserQueueStatus(userId);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.activeEntry()).isNotNull();
+        assertThat(result.activeEntry().id()).isEqualTo(ENTRY_ID);
+        assertThat(result.activeEntry().status()).isEqualTo(QueueEntryStatus.WAITING);
+        assertThat(result.latestHistoricalEntry()).isNull();
+
+        verify(queueEntryRepository, never()).findFirstByUserIdOrderByJoinedAtDesc(anyString());
+    }
+
+    @Test
+    @DisplayName("Should return historical entry when user does NOT have an active queue")
+    void testGetUserQueueStatus_WithoutActiveEntry_WithHistory() {
+        // Arrange
+        String userId = CLIENT_USER_ID;
+        QueueEntry historicalEntry = QueueEntry.builder()
+                .id("hist-999")
+                .queueSession(activeSession)
+                .user(clientUser)
+                .serviceName("Corte e Barba")
+                .status(QueueEntryStatus.FINISHED)
+                .joinedAt(Instant.now().minus(2, ChronoUnit.HOURS))
+                .build();
+
+        when(queueEntryRepository.findByUserIdAndStatusIn(eq(userId), anyList()))
+                .thenReturn(Optional.empty());
+        when(queueEntryRepository.findFirstByUserIdOrderByJoinedAtDesc(userId))
+                .thenReturn(Optional.of(historicalEntry));
+
+        // Act
+        UserQueueStatusDTO result = queueEntryService.getUserQueueStatus(userId);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.activeEntry()).isNull();
+        assertThat(result.latestHistoricalEntry()).isNotNull();
+        assertThat(result.latestHistoricalEntry().id()).isEqualTo("hist-999");
+        assertThat(result.latestHistoricalEntry().serviceName()).isEqualTo("Corte e Barba");
+
+        verify(queueEntryRepository).findFirstByUserIdOrderByJoinedAtDesc(userId);
+    }
+
+    @Test
+    @DisplayName("Should return both null when user has NO active queue and NO history")
+    void testGetUserQueueStatus_WithoutActiveEntry_WithoutHistory() {
+        // Arrange
+        String userId = CLIENT_USER_ID;
+        when(queueEntryRepository.findByUserIdAndStatusIn(eq(userId), anyList()))
+                .thenReturn(Optional.empty());
+        when(queueEntryRepository.findFirstByUserIdOrderByJoinedAtDesc(userId))
+                .thenReturn(Optional.empty());
+
+        // Act
+        UserQueueStatusDTO result = queueEntryService.getUserQueueStatus(userId);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.activeEntry()).isNull();
+        assertThat(result.latestHistoricalEntry()).isNull();
     }
 
     // ==================== FIND ACTIVE ENTRY TESTS ====================
@@ -432,9 +509,10 @@ class QueueEntryServiceTest {
     // ==================== START SERVICE TESTS ====================
 
     @Test
-    @DisplayName("Should start service successfully when client status is WAITING")
+    @DisplayName("Should start service successfully when client status is CALLED") // Atualizei a descrição
     void testStartService_Success() {
         // Arrange
+        waitingEntry.setStatus(QueueEntryStatus.CALLED);
         when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
         when(queueEntryRepository.save(any(QueueEntry.class)))
@@ -484,7 +562,7 @@ class QueueEntryServiceTest {
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.startService(ENTRY_ID, BARBER_USER_ID))
                 .isInstanceOf(AppException.class)
-                .hasMessage("The client must be waiting or called to start the service.")
+                .hasMessage("The client must be called to start the service.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         verify(queueEntryRepository, never()).save(any());

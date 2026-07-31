@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sodresoftwares.barbearia.dto.JoinQueueDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
+import sodresoftwares.barbearia.dto.UserQueueStatusDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.QueueEntry;
@@ -36,6 +37,17 @@ public class QueueEntryService {
     private final QueueCacheService queueCacheService;
     private final QueueMapper queueMapper;
     private final QueueNotificationService queueNotificationService;
+
+    public UserQueueStatusDTO getUserQueueStatus(String userId) {
+        QueueEntryResponseDTO active = findActiveEntryByUserId(userId).orElse(null);
+        QueueEntryResponseDTO latest = null;
+
+        if (active == null) {
+            latest = findLatestEntryByUserId(userId).orElse(null);
+        }
+
+        return new UserQueueStatusDTO(active, latest);
+    }
 
     public Optional<QueueEntryResponseDTO> findActiveEntryByUserId(String userId) {
         return queueEntryRepository.findByUserIdAndStatusIn(

@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import sodresoftwares.barbearia.dto.JoinQueueDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
+import sodresoftwares.barbearia.dto.UserQueueStatusDTO;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.QueueEntryService;
 
@@ -18,20 +19,11 @@ public class QueueEntryController {
 
     private final QueueEntryService queueEntryService;
 
-    @GetMapping("/active/me")
-    public ResponseEntity<QueueEntryResponseDTO> getActiveEntry(
+    @GetMapping("/me/status")
+    public ResponseEntity<UserQueueStatusDTO> getMyQueueStatus(
             @AuthenticationPrincipal User loggedInUser) {
-        return queueEntryService.findActiveEntryByUserId(loggedInUser.getId())
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.noContent().build());
-    }
-
-
-    @GetMapping("/latest/me")
-    public ResponseEntity<QueueEntryResponseDTO> getLatestEntry(@AuthenticationPrincipal User user) {
-        return queueEntryService.findLatestEntryByUserId(user.getId())
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.noContent().build());
+        UserQueueStatusDTO status = queueEntryService.getUserQueueStatus(loggedInUser.getId());
+        return ResponseEntity.ok(status);
     }
 
     @PostMapping("/join")
