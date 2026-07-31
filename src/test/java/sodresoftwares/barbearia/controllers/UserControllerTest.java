@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -95,6 +96,23 @@ class UserControllerTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    // ==================== GET MY PROFILE TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/users/me -> Should return 200 OK and profile data")
+    void testGetMyProfile_Success() throws Exception {
+        // Arrange
+        when(userService.getMyProfile(any())).thenReturn(responseDTO);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/users/me")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("user-123"))
+                .andExpect(jsonPath("$.name").value("New Name"))
+                .andExpect(jsonPath("$.login").value("user@test.com"));
     }
 
     // ==================== UPDATE USER PROFILE TESTS ====================

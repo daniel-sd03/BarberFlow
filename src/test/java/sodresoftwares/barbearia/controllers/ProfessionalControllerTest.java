@@ -22,6 +22,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import sodresoftwares.barbearia.dto.ProfessionalResponseDTO;
 import sodresoftwares.barbearia.dto.UpdateProfessionalDTO;
+import sodresoftwares.barbearia.dto.UserResponseDTO;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -83,16 +85,41 @@ class ProfessionalControllerTest {
 
         updateDTO = new UpdateProfessionalDTO("New Business Name");
 
+        UserResponseDTO userDTO = UserResponseDTO.fromEntity(loggedInUser);
+
         responseDTO = new ProfessionalResponseDTO(
                 "prof-123",
                 "New Business Name",
-                true
+                true,
+                userDTO
         );
     }
 
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    // ==================== GET MY PROFESSIONAL PROFILE TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/professionals/me -> Should return 200 OK and profile data including user")
+    void testGetMyProfessionalProfile_Success() throws Exception {
+        // Arrange
+        UserResponseDTO mockUserDTO = new UserResponseDTO("user-123", "Barbeiro Zé", "ze@test.com", "3199999999", "PROFESSIONAL");
+        ProfessionalResponseDTO getResponseDTO = new ProfessionalResponseDTO("prof-123", "Barbearia do Zé", true, mockUserDTO);
+
+        when(professionalService.getMyProfessionalProfile(any())).thenReturn(getResponseDTO);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/professionals/me")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("prof-123"))
+                .andExpect(jsonPath("$.businessName").value("Barbearia do Zé"))
+                .andExpect(jsonPath("$.user.id").value("user-123"))
+                .andExpect(jsonPath("$.user.name").value("Barbeiro Zé"))
+                .andExpect(jsonPath("$.user.login").value("ze@test.com"));
     }
 
     // ==================== UPDATE PROFESSIONAL PROFILE TESTS ====================

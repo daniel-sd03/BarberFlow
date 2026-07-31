@@ -19,6 +19,22 @@ public class UserService {
 
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
+    public UserResponseDTO getMyProfile(String userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("User not found");
+                    return new AppException(
+                            HttpStatus.NOT_FOUND,
+                            "USER_NOT_FOUND",
+                            "User not found."
+                    );
+                });
+
+        return UserResponseDTO.fromEntity(user);
+    }
+
     @Transactional
     public UserResponseDTO updateUserProfile(String userId, UpdateUserDTO dto) {
         User user = userRepository.findById(userId)
