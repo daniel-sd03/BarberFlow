@@ -17,6 +17,8 @@ import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.repositories.UserRepository;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -135,13 +137,29 @@ class OAuth2AuthenticationSuccessHandlerTest {
 
     private void assertCookieAndRedirect() throws Exception {
         ArgumentCaptor<Cookie> cookieCaptor = ArgumentCaptor.forClass(Cookie.class);
-        verify(response).addCookie(cookieCaptor.capture());
 
-        Cookie capturedCookie = cookieCaptor.getValue();
-        assertEquals("TEMP_AUTH_TOKEN", capturedCookie.getName());
-        assertEquals(fakeToken, capturedCookie.getValue());
-        assertEquals("/", capturedCookie.getPath());
-        assertEquals(60, capturedCookie.getMaxAge());
+        verify(response, times(2)).addCookie(cookieCaptor.capture());
+
+        List<Cookie> capturedCookies = cookieCaptor.getAllValues();
+        assertEquals(2, capturedCookies.size());
+
+        Cookie tokenCookie = capturedCookies.stream()
+                .filter(c -> "TEMP_AUTH_TOKEN".equals(c.getName()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("TEMP_AUTH_TOKEN cookie not found"));
+
+        assertEquals(fakeToken, tokenCookie.getValue());
+        assertEquals("/", tokenCookie.getPath());
+        assertEquals(60, tokenCookie.getMaxAge());
+
+        Cookie roleCookie = capturedCookies.stream()
+                .filter(c -> "TEMP_ROLE".equals(c.getName()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("TEMP_ROLE cookie not found"));
+
+        assertEquals(UserRole.USER.name(), roleCookie.getValue());
+        assertEquals("/", roleCookie.getPath());
+        assertEquals(60, roleCookie.getMaxAge());
 
         verify(response).sendRedirect("http://localhost:5173/inicio");
     }
