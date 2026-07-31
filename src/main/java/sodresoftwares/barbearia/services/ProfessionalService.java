@@ -19,6 +19,22 @@ public class ProfessionalService {
 
     private final ProfessionalRepository professionalRepository;
 
+    @Transactional(readOnly = true)
+    public ProfessionalResponseDTO getMyProfessionalProfile(String userId) {
+
+        Professional professional = professionalRepository.findByUserId(userId)
+                .orElseThrow(() -> {
+                    log.warn("Professional not found");
+                    return new AppException(
+                            HttpStatus.NOT_FOUND,
+                            "PROFESSIONAL_NOT_FOUND",
+                            "Professional profile not found for this user."
+                    );
+                });
+
+        return ProfessionalResponseDTO.fromEntity(professional);
+    }
+
     @Transactional
     public ProfessionalResponseDTO updateProfessionalProfile(String userId, UpdateProfessionalDTO dto) {
         Professional professional = professionalRepository.findByUserId(userId)

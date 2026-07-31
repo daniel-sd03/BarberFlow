@@ -17,6 +17,13 @@ public class UserController {
 
     private final UserService userService;
 
+    @GetMapping("/me")
+    public ResponseEntity<UserResponseDTO> getMyProfile(
+            @AuthenticationPrincipal User loggedInUser) {
+        UserResponseDTO profile = userService.getMyProfile(loggedInUser.getId());
+        return ResponseEntity.ok(profile);
+    }
+
     @PatchMapping("/me")
     public ResponseEntity<UserResponseDTO> updateMyProfile(
             @AuthenticationPrincipal User loggedInUser,

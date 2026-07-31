@@ -46,6 +46,39 @@ class UserServiceTest {
                 .build();
     }
 
+    // ==================== GET MY PROFILE TESTS ====================
+
+    @Test
+    @DisplayName("Should return user profile when user exists")
+    void testGetMyProfile_Success() {
+        // Arrange
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+
+        // Act
+        UserResponseDTO result = userService.getMyProfile(USER_ID);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(USER_ID);
+        assertThat(result.name()).isEqualTo("Old Name");
+        assertThat(result.login()).isEqualTo("user@test.com");
+
+        verify(userRepository).findById(USER_ID);
+    }
+
+    @Test
+    @DisplayName("Should throw not found exception when user does not exist on get profile")
+    void testGetMyProfile_UserNotFound() {
+        // Arrange
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.getMyProfile(USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("User not found.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
     // ==================== UPDATE USER PROFILE TESTS ====================
 
     @Test

@@ -53,6 +53,42 @@ class ProfessionalServiceTest {
                 .build();
     }
 
+    // ==================== GET MY PROFESSIONAL PROFILE TESTS ====================
+
+    @Test
+    @DisplayName("Should return professional profile including user data when it exists")
+    void testGetMyProfessionalProfile_Success() {
+        // Arrange
+        when(professionalRepository.findByUserId(USER_ID)).thenReturn(Optional.of(testProfessional));
+
+        // Act
+        ProfessionalResponseDTO result = professionalService.getMyProfessionalProfile(USER_ID);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(PROF_ID);
+        assertThat(result.businessName()).isEqualTo("Old Business Name");
+
+        assertThat(result.user()).isNotNull();
+        assertThat(result.user().id()).isEqualTo(USER_ID);
+        assertThat(result.user().name()).isEqualTo("Barbeiro Zé");
+
+        verify(professionalRepository).findByUserId(USER_ID);
+    }
+
+    @Test
+    @DisplayName("Should throw not found exception when professional profile does not exist on get")
+    void testGetMyProfessionalProfile_NotFound() {
+        // Arrange
+        when(professionalRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> professionalService.getMyProfessionalProfile(USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Professional profile not found for this user.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
     // ==================== UPDATE PROFESSIONAL PROFILE TESTS ====================
 
     @Test
