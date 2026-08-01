@@ -160,6 +160,48 @@ class QueueSessionControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // ==================== UPDATE ME TESTS (PREFIX & TOLERANCE) ====================
+
+    @Test
+    @DisplayName("PATCH /api/queue-sessions/me -> Should update settings and return 200 OK")
+    void testUpdateSettings_Success() throws Exception {
+        // Arrange
+        UpdateQueueSessionDTO requestDTO = new UpdateQueueSessionDTO("CORTE", 15);
+        QueueSessionProfResponseDTO updatedSessionDTO = new QueueSessionProfResponseDTO(
+                "session-123",
+                "CORTE1234",
+                true
+        );
+
+        when(queueSessionService.updateSessionSettings(any(), any())).thenReturn(updatedSessionDTO);
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/queue-sessions/me")
+                        .with(user(loggedInUser))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(requestDTO).getJson()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("session-123"))
+                .andExpect(jsonPath("$.ticketCode").value("CORTE1234"))
+                .andExpect(jsonPath("$.isActive").value(true));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/queue-sessions/me -> Should return 400 Bad Request when prefix is too short")
+    void testUpdateSettings_ValidationError() throws Exception {
+        // Arrange
+        UpdateQueueSessionDTO requestDTO = new UpdateQueueSessionDTO("A", 15);
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/queue-sessions/me")
+                        .with(user(loggedInUser))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(requestDTO).getJson()))
+                .andExpect(status().isBadRequest());
+    }
+
     // ==================== REFRESH TICKET CODE  TESTS ====================
 
     @Test

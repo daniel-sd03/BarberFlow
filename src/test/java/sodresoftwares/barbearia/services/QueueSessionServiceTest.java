@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import sodresoftwares.barbearia.dto.ProfessionalDashboardDTO;
 import sodresoftwares.barbearia.dto.QueueSessionProfResponseDTO;
+import sodresoftwares.barbearia.dto.UpdateQueueSessionDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.Professional;
@@ -204,44 +205,109 @@ class QueueSessionServiceTest {
         verify(queueSessionRepository, never()).save(any());
     }
 
-    // ==================== UPDATE PREFIX TESTS ====================
+    // ==================== UPDATE SESSION SETTINGS TESTS ====================
 
     @Test
-    @DisplayName("Should successfully update queue prefix and generate code with new prefix")
-    void testUpdatePrefix_Success() {
+    @DisplayName("Should successfully update both prefix and tolerance")
+    void testUpdateSessionSettings_UpdateBoth() {
         // Arrange
-        String newPrefix = "CORTE";
+        UpdateQueueSessionDTO dto = new UpdateQueueSessionDTO("CORTE", 15);
         when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID))
                 .thenReturn(Optional.of(existingSession));
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
 
         // Act
-        QueueSessionProfResponseDTO result = queueSessionService.updatePrefix(PROF_USER_ID, newPrefix);
+        QueueSessionProfResponseDTO result = queueSessionService.updateSessionSettings(PROF_USER_ID, dto);
 
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.id()).isEqualTo(existingSession.getId());
         assertThat(result.ticketCode()).startsWith("CORTE");
+        assertThat(existingSession.getToleranceMinutes()).isEqualTo(15);
 
-        verify(queueSessionRepository).findByProfessionalUserId(PROF_USER_ID);
+        verify(queueSessionRepository).save(existingSession);
         verify(queueSessionRepository, atLeastOnce()).existsByTicketCode(anyString());
     }
 
     @Test
-    @DisplayName("Should throw exception when updated prefix results in invalid sanitized string")
-    void testUpdatePrefix_InvalidSanitizedPrefix() {
+    @DisplayName("Should successfully update only tolerance when prefix is null")
+    void testUpdateSessionSettings_UpdateOnlyTolerance() {
         // Arrange
-        String invalidPrefix = "!!";
+        UpdateQueueSessionDTO dto = new UpdateQueueSessionDTO(null, 20);
+        String oldTicketCode = existingSession.getTicketCode();
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID))
+                .thenReturn(Optional.of(existingSession));
+
+        // Act
+        QueueSessionProfResponseDTO result = queueSessionService.updateSessionSettings(PROF_USER_ID, dto);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(existingSession.getToleranceMinutes()).isEqualTo(20);
+        assertThat(result.ticketCode()).isEqualTo(oldTicketCode);
+
+        verify(queueSessionRepository).save(existingSession);
+        verify(queueSessionRepository, never()).existsByTicketCode(anyString());
+    }
+
+    @Test
+    @DisplayName("Should successfully update only prefix when tolerance is null")
+    void testUpdateSessionSettings_UpdateOnlyPrefix() {
+        // Arrange
+        String newPrefix = "NOVO";
+        UpdateQueueSessionDTO dto = new UpdateQueueSessionDTO(newPrefix, null);
+        Integer oldTolerance = existingSession.getToleranceMinutes();
+
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID))
+                .thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
+
+        // Act
+        QueueSessionProfResponseDTO result = queueSessionService.updateSessionSettings(PROF_USER_ID, dto);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(existingSession.getId());
+        assertThat(result.ticketCode()).startsWith(newPrefix);
+        assertThat(existingSession.getToleranceMinutes()).isEqualTo(oldTolerance);
+
+        verify(queueSessionRepository).save(existingSession);
+        verify(queueSessionRepository, atLeastOnce()).existsByTicketCode(anyString());
+    }
+
+    @Test
+    @DisplayName("Should not call save to database when all fields in DTO are null")
+    void testUpdateSessionSettings_UpdateNothing() {
+        // Arrange
+        UpdateQueueSessionDTO dto = new UpdateQueueSessionDTO(null, null);
+        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID))
+                .thenReturn(Optional.of(existingSession));
+
+        // Act
+        QueueSessionProfResponseDTO result = queueSessionService.updateSessionSettings(PROF_USER_ID, dto);
+
+        // Assert
+        assertThat(result).isNotNull();
+
+        verify(queueSessionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when updated prefix results in invalid sanitized string")
+    void testUpdateSessionSettings_InvalidSanitizedPrefix() {
+        // Arrange
+        UpdateQueueSessionDTO dto = new UpdateQueueSessionDTO("!!", null);
         when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID))
                 .thenReturn(Optional.of(existingSession));
 
         // Act & Assert
-        assertThatThrownBy(() -> queueSessionService.updatePrefix(PROF_USER_ID, invalidPrefix))
+        assertThatThrownBy(() -> queueSessionService.updateSessionSettings(PROF_USER_ID, dto))
                 .isInstanceOf(AppException.class)
                 .hasMessage("Prefix must contain at least 2 valid alphanumeric characters.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         verify(queueSessionRepository, never()).existsByTicketCode(anyString());
+        verify(queueSessionRepository, never()).save(any());
     }
 
     // ==================== REFRESH TICKET CODE TESTS ====================

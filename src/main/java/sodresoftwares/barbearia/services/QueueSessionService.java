@@ -5,10 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sodresoftwares.barbearia.dto.ProfessionalDashboardDTO;
-import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
-import sodresoftwares.barbearia.dto.QueueSessionProfResponseDTO;
-import sodresoftwares.barbearia.dto.QueueSessionUserResponseDTO;
+import sodresoftwares.barbearia.dto.*;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.Professional;
@@ -74,7 +71,7 @@ public class QueueSessionService {
     }
 
     @Transactional
-    public QueueSessionProfResponseDTO updatePrefix(String loggedUserId, String newPrefix) {
+    public QueueSessionProfResponseDTO updateSessionSettings(String loggedUserId, UpdateQueueSessionDTO dto) {
         QueueSession session = queueSessionRepository.findByProfessionalUserId(loggedUserId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
@@ -82,19 +79,33 @@ public class QueueSessionService {
                         "Queue not found."
                 ));
 
-        String cleanPrefix = sanitize(newPrefix);
+        boolean wasUpdated = false;
 
-        if (cleanPrefix.length() < 2) {
-            throw new AppException(
-                    HttpStatus.BAD_REQUEST,
-                    "INVALID_PREFIX",
-                    "Prefix must contain at least 2 valid alphanumeric characters."
-            );
+        if (dto.toleranceMinutes() != null) {
+            session.setToleranceMinutes(dto.toleranceMinutes());
+            wasUpdated = true;
         }
 
-        String newTicketCode = generateUniqueTicketCode(cleanPrefix);
-        session.setTicketCode(newTicketCode);
-        session.setPrefix(cleanPrefix);
+        if (dto.prefix() != null && !dto.prefix().isBlank()) {
+            String cleanPrefix = sanitize(dto.prefix());
+
+            if (cleanPrefix.length() < 2) {
+                throw new AppException(
+                        HttpStatus.BAD_REQUEST,
+                        "INVALID_PREFIX",
+                        "Prefix must contain at least 2 valid alphanumeric characters."
+                );
+            }
+
+            String newTicketCode = generateUniqueTicketCode(cleanPrefix);
+            session.setTicketCode(newTicketCode);
+            session.setPrefix(cleanPrefix);
+            wasUpdated = true;
+        }
+
+        if (wasUpdated) {
+            queueSessionRepository.save(session);
+        }
 
         return mapToSessionDTO(session);
     }

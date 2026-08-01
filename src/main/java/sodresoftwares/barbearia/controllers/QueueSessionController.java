@@ -32,15 +32,14 @@ public class QueueSessionController {
         return ResponseEntity.ok(session);
     }
 
-    @PatchMapping("/me/prefix")
-    public ResponseEntity<QueueSessionProfResponseDTO> updatePrefix(
+    @PatchMapping("/me")
+    public ResponseEntity<QueueSessionProfResponseDTO> updateSession(
             @AuthenticationPrincipal User loggedInUser,
-            @Valid @RequestBody UpdatePrefixRequestDTO request) {
+            @Valid @RequestBody UpdateQueueSessionDTO request) {
         QueueSessionProfResponseDTO updatedSession =
-                queueSessionService.updatePrefix(loggedInUser.getId(), request.prefix());
+                queueSessionService.updateSessionSettings(loggedInUser.getId(), request);
         return ResponseEntity.ok(updatedSession);
     }
-
     @PatchMapping("/me/refresh-code")
     public ResponseEntity<QueueSessionProfResponseDTO> refreshTicketCode(
             @AuthenticationPrincipal User loggedInUser) {
