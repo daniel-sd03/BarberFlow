@@ -4,15 +4,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import sodresoftwares.barbearia.dto.AuthenticationDTO;
-import sodresoftwares.barbearia.dto.LoginResponseDTO;
-import sodresoftwares.barbearia.dto.RegisterDTO;
-import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
+import org.springframework.web.bind.annotation.*;
+import sodresoftwares.barbearia.dto.*;
 import sodresoftwares.barbearia.services.AuthenticationService;
+import sodresoftwares.barbearia.services.PasswordResetService;
 
 @RestController
 @RequestMapping("auth")
@@ -20,22 +15,44 @@ import sodresoftwares.barbearia.services.AuthenticationService;
 public class AuthenticationController {
 
 	private final AuthenticationService authenticationService;
+	private final PasswordResetService passwordResetService;
 
 	@PostMapping("/login")
-	public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid AuthenticationDTO data) {
+	public ResponseEntity<LoginResponseDTO> login(
+			@RequestBody @Valid AuthenticationDTO data) {
 		LoginResponseDTO response = authenticationService.login(data);
 		return ResponseEntity.ok(response);
 	}
 	
 	@PostMapping("/register")
-	public ResponseEntity<Void> register(@RequestBody @Valid RegisterDTO data ) {
+	public ResponseEntity<Void> register(
+			@RequestBody @Valid RegisterDTO data ) {
 		authenticationService.register(data);
 		return ResponseEntity.status(HttpStatus.CREATED).build();
 	}
 
 	@PostMapping("/register/professional")
-	public ResponseEntity<Void> registerProfessional(@RequestBody @Valid RegisterProfessionalDTO data) {
+	public ResponseEntity<Void> registerProfessional(
+			@RequestBody @Valid RegisterProfessionalDTO data) {
 		authenticationService.registerProfessional(data);
 		return ResponseEntity.status(HttpStatus.CREATED).build();
+	}
+
+	@PostMapping("/password-resets")
+	public ResponseEntity<Void> requestPasswordReset(@Valid @RequestBody ForgotPasswordDTO dto) {
+		passwordResetService.requestPasswordReset(dto.email());
+		return ResponseEntity.ok().build();
+	}
+
+	@PostMapping("/password-resets/validate")
+	public ResponseEntity<Void> validateResetToken(@Valid @RequestBody ValidateTokenDTO dto) {
+		passwordResetService.validateToken(dto.email(), dto.code());
+		return ResponseEntity.ok().build();
+	}
+
+	@PatchMapping("/passwords")
+	public ResponseEntity<Void> updatePassword(@Valid @RequestBody ResetPasswordDTO dto) {
+		passwordResetService.resetPassword(dto);
+		return ResponseEntity.noContent().build();
 	}
 }
