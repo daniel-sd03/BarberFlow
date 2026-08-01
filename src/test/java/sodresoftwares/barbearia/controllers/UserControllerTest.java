@@ -20,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import sodresoftwares.barbearia.dto.ChangePasswordDTO;
 import sodresoftwares.barbearia.dto.UpdateUserDTO;
 import sodresoftwares.barbearia.dto.UserResponseDTO;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
@@ -29,6 +30,7 @@ import sodresoftwares.barbearia.services.UserService;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -58,7 +60,7 @@ class UserControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private JacksonTester<UpdateUserDTO> updateUserJson;
+    private JacksonTester<Object> updateUserJson;
 
     @MockitoBean
     private UserService userService;
@@ -139,6 +141,35 @@ class UserControllerTest {
         mockMvc.perform(patch("/api/users/me")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateUserJson.write(invalidDTO).getJson()))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ==================== CHANGE PASSWORD TESTS ====================
+
+    @Test
+    @DisplayName("PATCH /api/users/me/password -> Should change password and return 204 No Content")
+    void testChangeMyPassword_Success() throws Exception {
+        // Arrange
+        ChangePasswordDTO dto = new ChangePasswordDTO("oldPass123", "newPass123", "newPass123");
+        doNothing().when(userService).changePassword(eq("user-123"), any(ChangePasswordDTO.class));
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/users/me/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateUserJson.write(dto).getJson()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/users/me/password -> Should return 400 Bad Request when DTO has validation errors")
+    void testChangeMyPassword_ValidationError() throws Exception {
+        // Arrange:
+        ChangePasswordDTO invalidDto = new ChangePasswordDTO("oldPass123", "123", "123");
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/users/me/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateUserJson.write(invalidDto).getJson()))
                 .andExpect(status().isBadRequest());
     }
 }

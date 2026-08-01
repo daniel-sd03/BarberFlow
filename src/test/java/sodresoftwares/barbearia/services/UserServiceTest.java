@@ -8,6 +8,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import sodresoftwares.barbearia.dto.ChangePasswordDTO;
 import sodresoftwares.barbearia.dto.UpdateUserDTO;
 import sodresoftwares.barbearia.dto.UserResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
@@ -28,6 +30,9 @@ class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserService userService;
@@ -155,5 +160,78 @@ class UserServiceTest {
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
         verify(userRepository, never()).save(any());
+    }
+
+    // ==================== CHANGE PASSWORD TESTS ====================
+
+    @Test
+    @DisplayName("Should change password successfully when all data is valid")
+    void testChangePassword_Success() {
+        // Arrange
+        ChangePasswordDTO dto = new ChangePasswordDTO("oldPass123", "newPass123", "newPass123");
+        testUser.setPassword("hashedOldPass");
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("oldPass123", "hashedOldPass")).thenReturn(true);
+        when(passwordEncoder.encode("newPass123")).thenReturn("hashedNewPass");
+
+        // Act
+        userService.changePassword(USER_ID, dto);
+
+        // Assert
+        verify(userRepository).save(testUser);
+        assertThat(testUser.getPassword()).isEqualTo("hashedNewPass");
+    }
+
+    @Test
+    @DisplayName("Should throw exception when current password does not match")
+    void testChangePassword_IncorrectCurrentPassword() {
+        // Arrange
+        ChangePasswordDTO dto = new ChangePasswordDTO("wrongOldPass", "newPass123", "newPass123");
+        testUser.setPassword("hashedOldPass");
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("wrongOldPass", "hashedOldPass")).thenReturn(false);
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.changePassword(USER_ID, dto))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Current password does not match.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when new password and confirmation do not match")
+    void testChangePassword_PasswordsDoNotMatch() {
+        // Arrange
+        ChangePasswordDTO dto = new ChangePasswordDTO("oldPass123", "newPass123", "differentPass");
+        testUser.setPassword("hashedOldPass");
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("oldPass123", "hashedOldPass")).thenReturn(true);
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.changePassword(USER_ID, dto))
+                .isInstanceOf(AppException.class)
+                .hasMessage("New password and confirmation do not match.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when user is not found on change password")
+    void testChangePassword_UserNotFound() {
+        // Arrange
+        ChangePasswordDTO dto = new ChangePasswordDTO("oldPass123", "newPass123", "newPass123");
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.changePassword(USER_ID, dto))
+                .isInstanceOf(AppException.class)
+                .hasMessage("User not found.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 }

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import sodresoftwares.barbearia.dto.ChangePasswordDTO;
 import sodresoftwares.barbearia.dto.UpdateUserDTO;
 import sodresoftwares.barbearia.dto.UserResponseDTO;
 import sodresoftwares.barbearia.model.user.User;
@@ -31,5 +32,14 @@ public class UserController {
 
         UserResponseDTO updatedProfile = userService.updateUserProfile(loggedInUser.getId(), dto);
         return ResponseEntity.ok(updatedProfile);
+    }
+
+    @PatchMapping("/me/password")
+    public ResponseEntity<Void> changeMyPassword(
+            @AuthenticationPrincipal User loggedInUser,
+            @Valid @RequestBody ChangePasswordDTO dto) {
+
+        userService.changePassword(loggedInUser.getId(), dto);
+        return ResponseEntity.noContent().build();
     }
 }
