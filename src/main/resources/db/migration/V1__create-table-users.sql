@@ -58,6 +58,18 @@ CREATE TABLE queue_entries
     CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
+CREATE TABLE password_reset_tokens
+(
+    id          TEXT PRIMARY KEY UNIQUE NOT NULL,
+    email       TEXT                    NOT NULL,
+    code        VARCHAR(10)             NOT NULL,
+    expiry_date TIMESTAMPTZ             NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_password_reset_email_code
+    ON password_reset_tokens (email, code);
+
 CREATE UNIQUE INDEX idx_unique_active_user_queue
     ON queue_entries (user_id) WHERE status IN ('WAITING', 'CALLED', 'IN_SERVICE');
 

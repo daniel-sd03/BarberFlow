@@ -18,18 +18,17 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import sodresoftwares.barbearia.dto.AuthenticationDTO;
-import sodresoftwares.barbearia.dto.LoginResponseDTO;
-import sodresoftwares.barbearia.dto.RegisterDTO;
-import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
+import sodresoftwares.barbearia.dto.*;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.AuthenticationService;
+import sodresoftwares.barbearia.services.PasswordResetService;
 
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -66,9 +65,15 @@ class AuthenticationControllerTest {
     @MockitoBean
     private AuthenticationService authService;
 
+    @MockitoBean
+    private PasswordResetService passwordResetService;
+
     private AuthenticationDTO authenticationDTO;
     private RegisterDTO registerDTO;
     private RegisterProfessionalDTO registerProfessionalDTO;
+    private ForgotPasswordDTO forgotPasswordDTO;
+    private ValidateTokenDTO validateTokenDTO;
+    private ResetPasswordDTO resetPasswordDTO;
 
     @BeforeEach
     void setUp() {
@@ -86,6 +91,10 @@ class AuthenticationControllerTest {
                 "11999999999",
                 "Barbearia do Zé"
         );
+
+        forgotPasswordDTO = new ForgotPasswordDTO("user@test.com");
+        validateTokenDTO = new ValidateTokenDTO("user@test.com", "123456");
+        resetPasswordDTO = new ResetPasswordDTO("user@test.com", "123456", "newPass123", "newPass123");
     }
 
     // ==================== LOGIN TESTS ====================
@@ -189,5 +198,101 @@ class AuthenticationControllerTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(authService);
+    }
+
+    // ==================== FORGOT PASSWORD TESTS ====================
+
+    @Test
+    @DisplayName("Should request password reset successfully (HTTP 200)")
+    void testForgotPassword_Success() throws Exception {
+        // Arrange
+        doNothing().when(passwordResetService).requestPasswordReset(anyString());
+
+        // Act & Assert
+        mockMvc.perform(post("/auth/password-resets")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(forgotPasswordDTO).getJson()))
+                .andExpect(status().isOk());
+
+        verify(passwordResetService).requestPasswordReset(forgotPasswordDTO.email());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when forgot password email is blank or invalid")
+    void testForgotPassword_ValidationErrors() throws Exception {
+        // Arrange
+        ForgotPasswordDTO invalidDTO = new ForgotPasswordDTO("invalid-email");
+
+        // Act & Assert
+        mockMvc.perform(post("/auth/password-resets")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(invalidDTO).getJson()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(passwordResetService);
+    }
+
+    // ==================== VALIDATE TOKEN TESTS ====================
+
+    @Test
+    @DisplayName("Should validate token successfully (HTTP 200)")
+    void testValidateToken_Success() throws Exception {
+        // Arrange
+        doNothing().when(passwordResetService).validateToken(anyString(), anyString());
+
+        // Act & Assert
+        mockMvc.perform(post("/auth/password-resets/validate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(validateTokenDTO).getJson()))
+                .andExpect(status().isOk());
+
+        verify(passwordResetService).validateToken(validateTokenDTO.email(), validateTokenDTO.code());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when validate token fields are blank")
+    void testValidateToken_ValidationErrors() throws Exception {
+        // Arrange
+        ValidateTokenDTO invalidDTO = new ValidateTokenDTO("", "");
+
+        // Act & Assert
+        mockMvc.perform(post("/auth/password-resets/validate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(invalidDTO).getJson()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(passwordResetService);
+    }
+
+    // ==================== RESET PASSWORD TESTS ====================
+
+    @Test
+    @DisplayName("Should reset password successfully (HTTP 204)")
+    void testResetPassword_Success() throws Exception {
+        // Arrange
+        doNothing().when(passwordResetService).resetPassword(any(ResetPasswordDTO.class));
+
+        // Act & Assert
+        mockMvc.perform(patch("/auth/passwords")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(resetPasswordDTO).getJson()))
+                .andExpect(status().isNoContent());
+
+        verify(passwordResetService).resetPassword(any(ResetPasswordDTO.class));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when reset password fields are blank")
+    void testResetPassword_ValidationErrors() throws Exception {
+        // Arrange
+        ResetPasswordDTO invalidDTO = new ResetPasswordDTO("", "", "", "");
+
+        // Act & Assert
+        mockMvc.perform(patch("/auth/passwords")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(invalidDTO).getJson()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(passwordResetService);
     }
 }
