@@ -32,7 +32,6 @@ public class UserService {
     @Transactional
     public User createUser(RegisterDTO data, UserRole role) {
         if (this.userRepository.existsByLogin(data.login())) {
-            log.warn("Registration failed: user already exists");
             throw new AppException(
                     HttpStatus.CONFLICT,
                     "USER_ALREADY_EXISTS",
@@ -59,7 +58,6 @@ public class UserService {
     public UserResponseDTO updateUserProfile(String userId, UpdateUserDTO dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> {
-                    log.warn("User update failed. User not found");
                     return new AppException(
                             HttpStatus.NOT_FOUND,
                             "USER_NOT_FOUND",
@@ -86,7 +84,6 @@ public class UserService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> {
-                    log.warn("Password change failed. User not found");
                     return new AppException(
                             HttpStatus.NOT_FOUND,
                             "USER_NOT_FOUND",
@@ -95,7 +92,6 @@ public class UserService {
                 });
 
         if (!passwordEncoder.matches(dto.currentPassword(), user.getPassword())) {
-            log.warn("Password change failed. Incorrect current password");
             throw new AppException(
                     HttpStatus.BAD_REQUEST,
                     "INVALID_CURRENT_PASSWORD",
@@ -104,7 +100,6 @@ public class UserService {
         }
 
         if (!dto.newPassword().equals(dto.confirmPassword())) {
-            log.warn("Password change failed. New passwords do not match");
             throw new AppException(
                     HttpStatus.BAD_REQUEST,
                     "PASSWORDS_DO_NOT_MATCH",
@@ -123,7 +118,6 @@ public class UserService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> {
-                    log.warn("User not found");
                     return new AppException(
                             HttpStatus.NOT_FOUND,
                             "USER_NOT_FOUND",

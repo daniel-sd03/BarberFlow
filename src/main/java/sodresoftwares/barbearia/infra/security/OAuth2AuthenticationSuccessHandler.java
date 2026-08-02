@@ -4,6 +4,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -17,12 +19,11 @@ import java.io.IOException;
 import java.util.UUID;
 
 @Component
+@Slf4j
+@RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    @Autowired
     private TokenService tokenService;
-
-    @Autowired
     private UserRepository userRepository;
 
     @Override
@@ -45,6 +46,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             if (!finalUser.getLogin().equals(email)) {
                 finalUser.setLogin(email);
                 userRepository.save(finalUser);
+                log.info("Google account email synchronized");
             }
         }
         // Scenario 2: Existing standard user logging in with Google for the first time
@@ -54,6 +56,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             // Link Google account to the existing profile
             finalUser.setGoogleId(googleId);
             userRepository.save(finalUser);
+
+            log.info("Google account linked successfully");
         }
         // Scenario 3: Brand new user
         else {
@@ -64,6 +68,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                     .role(UserRole.USER)
                     .build();
             userRepository.save(finalUser);
+
+            log.info("New user registered via Google OAuth2");
         }
 
         String jwtToken = tokenService.generateToken(finalUser);
@@ -81,6 +87,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         response.addCookie(roleCookie);
 
         String targetUrl = "http://localhost:5173/inicio";
+        log.info("OAuth2 authentication completed successfully for user {}", finalUser.getId());
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }

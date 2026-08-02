@@ -29,7 +29,7 @@ public class TokenService {
                     .withExpiresAt(genExpirationDate())
                     .sign(algorithm);
         } catch (JWTCreationException ex) {
-            log.error("Failed to generate JWT ", ex);
+            log.error("Failed to generate JWT", ex);
             throw new AppException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "TOKEN_GENERATION_ERROR",

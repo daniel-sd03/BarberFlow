@@ -85,7 +85,7 @@ public class QueueEntryService {
                 .build();
 
         QueueEntry savedEntry = queueEntryRepository.save(entry);
-        log.info("User successfully joined queue session {} with entry ID {}", session.getId(), savedEntry.getId());
+        log.info("User joined queue successfully");
 
         queueCacheService.evict(dto.queueSessionId());
 
@@ -117,6 +117,7 @@ public class QueueEntryService {
         nextInLine.setCalledAt(Instant.now());
 
         QueueEntry savedEntry = queueEntryRepository.save(nextInLine);
+        log.info("Next client called");
 
         queueCacheService.evict(sessionId);
         List<QueueEntry> updatedActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
@@ -148,6 +149,7 @@ public class QueueEntryService {
         }
 
         QueueEntry savedEntry = queueEntryRepository.save(entry);
+        log.info("Client returned to queue");
 
         queueCacheService.evict(sessionId);
         List<QueueEntry> newActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
@@ -166,6 +168,7 @@ public class QueueEntryService {
 
         entry.setStatus(QueueEntryStatus.IN_SERVICE);
         QueueEntry savedEntry = queueEntryRepository.save(entry);
+        log.info("Service started");
 
         queueCacheService.evict(sessionId);
         List<QueueEntry> newActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
@@ -183,6 +186,7 @@ public class QueueEntryService {
 
         entry.setStatus(QueueEntryStatus.FINISHED);
         queueEntryRepository.save(entry);
+        log.info("Service finished");
 
         queueCacheService.evict(entry.getQueueSession().getId());
         queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
@@ -197,6 +201,7 @@ public class QueueEntryService {
 
         entry.setStatus(QueueEntryStatus.CANCELLED);
         queueEntryRepository.save(entry);
+        log.info("Queue entry cancelled");
 
         queueCacheService.evict(entry.getQueueSession().getId());
         queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
@@ -208,27 +213,20 @@ public class QueueEntryService {
 
     private QueueEntry getEntryById(String entryId) {
         return queueEntryRepository.findById(entryId)
-                .orElseThrow(() -> {
-                    log.warn("Entry lookup failed: entry {} not found", entryId);
-                    return new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "ENTRY_NOT_FOUND",
-                            "Entry Id not found");
-                });
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "ENTRY_NOT_FOUND",
+                        "Entry Id not found"));
     }
 
     private QueueSession getAndValidateSession(String sessionId) {
         QueueSession session = queueSessionRepository.findById(sessionId)
-                .orElseThrow(() -> {
-                    log.warn("Join queue failed: session {} not found", sessionId);
-                    return new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "SESSION_NOT_FOUND",
-                            "Queue session not found");
-                });
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "SESSION_NOT_FOUND",
+                        "Queue session not found"));
 
         if (!session.getIsActive()) {
-            log.warn("Join queue failed: session {} is closed", session.getId());
             throw new AppException(
                     HttpStatus.BAD_REQUEST,
                     "QUEUE_CLOSED",
@@ -239,13 +237,10 @@ public class QueueEntryService {
 
     private User getAndValidateUser(String userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.warn("Join queue failed: user {} not found", userId);
-                    return new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "USER_NOT_FOUND",
-                            "User not found");
-                });
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "USER_NOT_FOUND",
+                        "User not found"));
     }
 
     // ==========================================
@@ -259,7 +254,6 @@ public class QueueEntryService {
         );
 
         if (alreadyInAnyQueue) {
-            log.warn("Join queue failed: user {} is already active in a queue", userId);
             throw new AppException(
                     HttpStatus.CONFLICT,
                     "ALREADY_IN_QUEUE",
