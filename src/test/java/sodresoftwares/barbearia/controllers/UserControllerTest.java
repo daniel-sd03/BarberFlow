@@ -21,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import sodresoftwares.barbearia.dto.ChangePasswordDTO;
+import sodresoftwares.barbearia.dto.RegisterDTO;
 import sodresoftwares.barbearia.dto.UpdateUserDTO;
 import sodresoftwares.barbearia.dto.UserResponseDTO;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
@@ -30,10 +31,8 @@ import sodresoftwares.barbearia.services.UserService;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -60,7 +59,7 @@ class UserControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private JacksonTester<Object> updateUserJson;
+    private JacksonTester<Object> jsonTester;
 
     @MockitoBean
     private UserService userService;
@@ -69,8 +68,10 @@ class UserControllerTest {
     private CacheManager cacheManager;
 
     private User loggedInUser;
+    private RegisterDTO registerDTO;
     private UpdateUserDTO updateDTO;
     private UserResponseDTO responseDTO;
+
 
     @BeforeEach
     void setUp() {
@@ -80,11 +81,16 @@ class UserControllerTest {
                 .role(UserRole.USER)
                 .build();
 
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(loggedInUser, null, loggedInUser.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(auth);
+        registerDTO = new RegisterDTO(
+                "user@test.com",
+                "password123",
+                "Cliente Teste",
+                "11999999999")
+        ;
 
-        updateDTO = new UpdateUserDTO("New Name", "111111111");
+        updateDTO = new UpdateUserDTO(
+                "New Name",
+                "111111111");
 
         responseDTO = new UserResponseDTO(
                 "user-123",
@@ -93,6 +99,9 @@ class UserControllerTest {
                 "111111111",
                 "USER"
         );
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(loggedInUser, null, loggedInUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     @AfterEach
@@ -117,7 +126,39 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.login").value("user@test.com"));
     }
 
-    // ==================== UPDATE USER PROFILE TESTS ====================
+    // ==================== POST REGISTER TESTS ====================
+
+    @Test
+    @DisplayName("POST /api/users -> Should register new user successfully (HTTP 201)")
+    void testRegister_Success() throws Exception {
+        // Arrange
+        User userMock = new User();
+        when(userService.registerClient(any(RegisterDTO.class))).thenReturn(userMock);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(registerDTO).getJson()))
+                .andExpect(status().isCreated());
+
+        verify(userService).registerClient(any(RegisterDTO.class));
+    }
+
+    @Test
+    @DisplayName("POST /api/users -> Should return 400 when register fields are blank")
+    void testRegister_ValidationErrors() throws Exception {
+        RegisterDTO invalidDTO = new RegisterDTO("", "", "", "123");
+
+        // Act & Assert
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(invalidDTO).getJson()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(userService);
+    }
+
+    // ==================== PATCH UPDATE USER PROFILE TESTS ====================
 
     @Test
     @DisplayName("PATCH /api/users/me -> Should update profile and return 200 OK")
@@ -126,7 +167,7 @@ class UserControllerTest {
 
         mockMvc.perform(patch("/api/users/me")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(updateUserJson.write(updateDTO).getJson()))
+                        .content(jsonTester.write(updateDTO).getJson()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("user-123"))
                 .andExpect(jsonPath("$.name").value("New Name"))
@@ -140,11 +181,11 @@ class UserControllerTest {
 
         mockMvc.perform(patch("/api/users/me")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(updateUserJson.write(invalidDTO).getJson()))
+                        .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());
     }
 
-    // ==================== CHANGE PASSWORD TESTS ====================
+    // ==================== PATCH CHANGE PASSWORD TESTS ====================
 
     @Test
     @DisplayName("PATCH /api/users/me/password -> Should change password and return 204 No Content")
@@ -156,7 +197,7 @@ class UserControllerTest {
         // Act & Assert
         mockMvc.perform(patch("/api/users/me/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(updateUserJson.write(dto).getJson()))
+                        .content(jsonTester.write(dto).getJson()))
                 .andExpect(status().isNoContent());
     }
 
@@ -169,7 +210,7 @@ class UserControllerTest {
         // Act & Assert
         mockMvc.perform(patch("/api/users/me/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(updateUserJson.write(invalidDto).getJson()))
+                        .content(jsonTester.write(invalidDto).getJson()))
                 .andExpect(status().isBadRequest());
     }
 }

@@ -2,10 +2,12 @@ package sodresoftwares.barbearia.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import sodresoftwares.barbearia.dto.ProfessionalResponseDTO;
+import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
 import sodresoftwares.barbearia.dto.UpdateProfessionalDTO;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.ProfessionalService;
@@ -22,6 +24,13 @@ public class ProfessionalController {
             @AuthenticationPrincipal User loggedInUser) {
         ProfessionalResponseDTO profile = professionalService.getMyProfessionalProfile(loggedInUser.getId());
         return ResponseEntity.ok(profile);
+    }
+
+    @PostMapping
+    public ResponseEntity<Void> registerProfessional(
+            @RequestBody @Valid RegisterProfessionalDTO data) {
+        professionalService.registerProfessional(data);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PatchMapping("/me")
