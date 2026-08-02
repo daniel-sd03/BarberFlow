@@ -55,6 +55,7 @@ public class QueueSessionService {
                 .build();
 
         QueueSession savedSession = queueSessionRepository.save(newSession);
+        log.info("Queue session created");
 
         return mapToSessionDTO(savedSession);
     }
@@ -66,6 +67,7 @@ public class QueueSessionService {
 
         session.setIsActive(activate);
         QueueSession savedSession = queueSessionRepository.save(session);
+        log.info("Queue session {}", activate ? "opened" : "closed");
 
         return mapToSessionDTO(savedSession);
     }
@@ -105,6 +107,7 @@ public class QueueSessionService {
 
         if (wasUpdated) {
             queueSessionRepository.save(session);
+            log.info("Queue session settings updated");
         }
 
         return mapToSessionDTO(session);
@@ -123,7 +126,11 @@ public class QueueSessionService {
 
         session.setTicketCode(newTicketCode);
 
-        return mapToSessionDTO(session);
+        QueueSession savedSession = queueSessionRepository.save(session);
+
+        log.info("Ticket code regenerated");
+
+        return mapToSessionDTO(savedSession);
     }
 
     public ProfessionalDashboardDTO getDashboardData(String loggedUserId) {
@@ -163,14 +170,10 @@ public class QueueSessionService {
 
     public QueueSessionUserResponseDTO getSessionInfoByCode(String ticketCode) {
         QueueSession session = queueSessionRepository.findByTicketCode(ticketCode.toUpperCase())
-                .orElseThrow(() -> {
-                    log.warn("Session search failed: code {} not found", ticketCode);
-                    return new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "SESSION_NOT_FOUND",
-                            "Queue not found for the Ticket code.");
-
-                });
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "SESSION_NOT_FOUND",
+                        "Queue not found for the Ticket code."));
 
         int peopleInQueue = queueCacheService.getActiveEntries(session.getId()).size();
 
