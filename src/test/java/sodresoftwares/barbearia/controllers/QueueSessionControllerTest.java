@@ -106,13 +106,13 @@ class QueueSessionControllerTest {
     // ==================== CREATE SESSION TESTS ====================
 
     @Test
-    @DisplayName("POST /api/queue-sessions -> Should create session and return 201 Created")
+    @DisplayName("POST /queue-sessions -> Should create session and return 201 Created")
     void testCreateSession_Success() throws Exception {
         // Arrange
         when(queueSessionService.createQueueSession(any())).thenReturn(sessionResponseDTO);
 
         // Act & Assert
-        mockMvc.perform(post("/api/queue-sessions")
+        mockMvc.perform(post("/queue-sessions")
                         .with(user(loggedInUser))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON))
@@ -125,7 +125,7 @@ class QueueSessionControllerTest {
     // ==================== UPDATE STATUS TESTS ====================
 
     @Test
-    @DisplayName("PATCH /api/queue-sessions/status -> Should update status and return 200 OK")
+    @DisplayName("PATCH /queue-sessions/status -> Should update status and return 200 OK")
     void testUpdateStatus_Success() throws Exception {
         // Arrange
         UpdateQueueStatusDTO requestDTO = new UpdateQueueStatusDTO(true);
@@ -134,7 +134,7 @@ class QueueSessionControllerTest {
         when(queueSessionService.updateQueueStatus(any(), anyBoolean())).thenReturn(activeSessionDTO);
 
         // Act & Assert
-        mockMvc.perform(patch("/api/queue-sessions/status")
+        mockMvc.perform(patch("/queue-sessions/status")
                         .with(user(loggedInUser))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -146,13 +146,13 @@ class QueueSessionControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /api/queue-sessions/status -> Should return 400 Bad Request when body is invalid")
+    @DisplayName("PATCH /queue-sessions/status -> Should return 400 Bad Request when body is invalid")
     void testUpdateStatus_ValidationError() throws Exception {
         // Arrange
         UpdateQueueStatusDTO requestDTO = new UpdateQueueStatusDTO(null);
 
         // Act & Assert
-        mockMvc.perform(patch("/api/queue-sessions/status")
+        mockMvc.perform(patch("/queue-sessions/status")
                         .with(user(loggedInUser))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -163,7 +163,7 @@ class QueueSessionControllerTest {
     // ==================== UPDATE ME TESTS (PREFIX & TOLERANCE) ====================
 
     @Test
-    @DisplayName("PATCH /api/queue-sessions/me -> Should update settings and return 200 OK")
+    @DisplayName("PATCH /queue-sessions/me -> Should update settings and return 200 OK")
     void testUpdateSettings_Success() throws Exception {
         // Arrange
         UpdateQueueSessionDTO requestDTO = new UpdateQueueSessionDTO("CORTE", 15);
@@ -176,7 +176,7 @@ class QueueSessionControllerTest {
         when(queueSessionService.updateSessionSettings(any(), any())).thenReturn(updatedSessionDTO);
 
         // Act & Assert
-        mockMvc.perform(patch("/api/queue-sessions/me")
+        mockMvc.perform(patch("/queue-sessions/me")
                         .with(user(loggedInUser))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -188,13 +188,13 @@ class QueueSessionControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /api/queue-sessions/me -> Should return 400 Bad Request when prefix is too short")
+    @DisplayName("PATCH /queue-sessions/me -> Should return 400 Bad Request when prefix is too short")
     void testUpdateSettings_ValidationError() throws Exception {
         // Arrange
         UpdateQueueSessionDTO requestDTO = new UpdateQueueSessionDTO("A", 15);
 
         // Act & Assert
-        mockMvc.perform(patch("/api/queue-sessions/me")
+        mockMvc.perform(patch("/queue-sessions/me")
                         .with(user(loggedInUser))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -217,7 +217,7 @@ class QueueSessionControllerTest {
         when(queueSessionService.refreshTicketCode(any())).thenReturn(refreshedSessionDTO);
 
         // Act & Assert
-        mockMvc.perform(patch("/api/queue-sessions/me/refresh-code")
+        mockMvc.perform(patch("/queue-sessions/me/refresh-code")
                         .requestAttr("userId", loggedInUser.getId())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -229,13 +229,13 @@ class QueueSessionControllerTest {
     // ==================== DASHBOARD TESTS ====================
 
     @Test
-    @DisplayName("GET /api/queue-sessions/dashboard -> Should return dashboard payload and 200 OK")
+    @DisplayName("GET /queue-sessions/dashboard -> Should return dashboard payload and 200 OK")
     void testGetDashboard_Success() throws Exception {
         // Arrange
         when(queueSessionService.getDashboardData(any())).thenReturn(dashboardDTO);
 
         // Act & Assert
-        mockMvc.perform(get("/api/queue-sessions/dashboard")
+        mockMvc.perform(get("/queue-sessions/dashboard")
                         .with(user(loggedInUser))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -255,7 +255,7 @@ class QueueSessionControllerTest {
     // ==================== GET SESSION INFO BY CODE TESTS ====================
 
     @Test
-    @DisplayName("GET /api/queue-sessions/code/{ticketCode} - Should return 200 OK and session preview DTO")
+    @DisplayName("GET /queue-sessions/code/{ticketCode} - Should return 200 OK and session preview DTO")
     void testGetSessionByCode_Success() throws Exception {
         // Arrange
         String ticketCode = "BARB1";
@@ -270,7 +270,7 @@ class QueueSessionControllerTest {
         when(queueSessionService.getSessionInfoByCode(ticketCode)).thenReturn(mockResponse);
 
         // Act & Assert
-        mockMvc.perform(get("/api/queue-sessions/code/{ticketCode}", ticketCode)
+        mockMvc.perform(get("/queue-sessions/code/{ticketCode}", ticketCode)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessionId").value("session-123"))
