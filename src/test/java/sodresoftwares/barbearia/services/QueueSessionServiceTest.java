@@ -319,6 +319,7 @@ class QueueSessionServiceTest {
         when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID))
                 .thenReturn(Optional.of(existingSession));
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
+        when(queueSessionRepository.save(any(QueueSession.class))).thenReturn(existingSession);
 
         // Act
         QueueSessionProfResponseDTO result = queueSessionService.refreshTicketCode(PROF_USER_ID);
