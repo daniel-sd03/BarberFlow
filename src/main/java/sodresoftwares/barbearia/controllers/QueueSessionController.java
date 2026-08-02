@@ -11,7 +11,7 @@ import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.QueueSessionService;
 
 @RestController
-@RequestMapping("/api/queue-sessions")
+@RequestMapping("/queue-sessions")
 @RequiredArgsConstructor
 public class QueueSessionController {
 

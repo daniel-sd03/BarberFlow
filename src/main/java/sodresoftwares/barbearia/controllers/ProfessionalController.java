@@ -13,7 +13,7 @@ import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.ProfessionalService;
 
 @RestController
-@RequestMapping("/api/professionals")
+@RequestMapping("/professionals")
 @RequiredArgsConstructor
 public class ProfessionalController {
 

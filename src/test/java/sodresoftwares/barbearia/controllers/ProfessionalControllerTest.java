@@ -107,7 +107,7 @@ class ProfessionalControllerTest {
     // ==================== GET MY PROFESSIONAL PROFILE TESTS ====================
 
     @Test
-    @DisplayName("GET /api/professionals/me -> Should return 200 OK and profile data including user")
+    @DisplayName("GET /professionals/me -> Should return 200 OK and profile data including user")
     void testGetMyProfessionalProfile_Success() throws Exception {
         // Arrange
         UserResponseDTO mockUserDTO = new UserResponseDTO("user-123", "Barbeiro Zé", "ze@test.com", "3199999999", "PROFESSIONAL");
@@ -116,7 +116,7 @@ class ProfessionalControllerTest {
         when(professionalService.getMyProfessionalProfile(any())).thenReturn(getResponseDTO);
 
         // Act & Assert
-        mockMvc.perform(get("/api/professionals/me")
+        mockMvc.perform(get("/professionals/me")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("prof-123"))
@@ -129,13 +129,13 @@ class ProfessionalControllerTest {
     // ==================== POST REGISTER PROFESSIONAL TESTS ====================
 
     @Test
-    @DisplayName("POST /api/professionals -> Should register new professional successfully (HTTP 201)")
+    @DisplayName("POST /professionals -> Should register new professional successfully (HTTP 201)")
     void testRegisterProfessional_Success() throws Exception {
         // Arrange
         doNothing().when(professionalService).registerProfessional(any(RegisterProfessionalDTO.class));
 
         // Act & Assert
-        mockMvc.perform(post("/api/professionals")
+        mockMvc.perform(post("/professionals")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(registerProfessionalDTO).getJson()))
                 .andExpect(status().isCreated());
@@ -144,14 +144,14 @@ class ProfessionalControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/professionals -> Should return 400 when professional register fields are blank")
+    @DisplayName("POST /professionals -> Should return 400 when professional register fields are blank")
     void testRegisterProfessional_ValidationErrors() throws Exception {
         // Arrange
         RegisterProfessionalDTO invalidDTO = new RegisterProfessionalDTO(
                 "", "", "", "123", "");
 
         // Act & Assert
-        mockMvc.perform(post("/api/professionals")
+        mockMvc.perform(post("/professionals")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());
@@ -162,12 +162,12 @@ class ProfessionalControllerTest {
     // ==================== PATCH UPDATE PROFESSIONAL PROFILE TESTS ====================
 
     @Test
-    @DisplayName("PATCH /api/professionals/me -> Should update business profile and return 200 OK")
+    @DisplayName("PATCH /professionals/me -> Should update business profile and return 200 OK")
     void testUpdateMyProfessionalProfile_Success() throws Exception {
         when(professionalService.updateProfessionalProfile(any(), any()))
                 .thenReturn(responseDTO);
 
-        mockMvc.perform(patch("/api/professionals/me")
+        mockMvc.perform(patch("/professionals/me")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(updateDTO).getJson()))
                 .andExpect(status().isOk())
@@ -177,11 +177,11 @@ class ProfessionalControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /api/professionals/me -> Should return 400 Bad Request when DTO has validation errors")
+    @DisplayName("PATCH /professionals/me -> Should return 400 Bad Request when DTO has validation errors")
     void testUpdateMyProfessionalProfile_ValidationError() throws Exception {
         UpdateProfessionalDTO invalidDTO = new UpdateProfessionalDTO("A");
 
-        mockMvc.perform(patch("/api/professionals/me")
+        mockMvc.perform(patch("/professionals/me")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());

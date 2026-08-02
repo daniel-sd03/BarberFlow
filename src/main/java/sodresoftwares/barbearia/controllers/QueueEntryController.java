@@ -13,7 +13,7 @@ import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.QueueEntryService;
 
 @RestController
-@RequestMapping("/api/queue-entries")
+@RequestMapping("/queue-entries")
 @RequiredArgsConstructor
 public class QueueEntryController {
 

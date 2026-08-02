@@ -14,7 +14,7 @@ import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.UserService;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
 

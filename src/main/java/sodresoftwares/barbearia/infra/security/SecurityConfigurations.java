@@ -53,14 +53,14 @@ public class SecurityConfigurations {
                         // 2. PROFESSIONAL ONLY ENDPOINTS
                         // ==========================================
                         // Queue Session Management
-                        .requestMatchers(HttpMethod.POST, "/api/queue-sessions").hasRole("PROFESSIONAL")
-                        .requestMatchers(HttpMethod.PATCH, "/api/queue-sessions/status").hasRole("PROFESSIONAL")
-                        .requestMatchers(HttpMethod.GET, "/api/queue-sessions/dashboard").hasRole("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.POST, "/queue-sessions").hasRole("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.PATCH, "/queue-sessions/status").hasRole("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.GET, "/queue-sessions/dashboard").hasRole("PROFESSIONAL")
 
                         // Queue Entry Management (Call, Start, Finish)
-                        .requestMatchers(HttpMethod.POST, "/api/queue-entries/session/*/call-next").hasRole("PROFESSIONAL")
-                        .requestMatchers(HttpMethod.POST, "/api/queue-entries/*/start").hasRole("PROFESSIONAL")
-                        .requestMatchers(HttpMethod.POST, "/api/queue-entries/*/finish").hasRole("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.POST, "/queue-entries/session/*/call-next").hasRole("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.POST, "/queue-entries/*/start").hasRole("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.POST, "/queue-entries/*/finish").hasRole("PROFESSIONAL")
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

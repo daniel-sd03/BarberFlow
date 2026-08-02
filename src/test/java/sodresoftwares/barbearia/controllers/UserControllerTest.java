@@ -112,13 +112,13 @@ class UserControllerTest {
     // ==================== GET MY PROFILE TESTS ====================
 
     @Test
-    @DisplayName("GET /api/users/me -> Should return 200 OK and profile data")
+    @DisplayName("GET /users/me -> Should return 200 OK and profile data")
     void testGetMyProfile_Success() throws Exception {
         // Arrange
         when(userService.getMyProfile(any())).thenReturn(responseDTO);
 
         // Act & Assert
-        mockMvc.perform(get("/api/users/me")
+        mockMvc.perform(get("/users/me")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("user-123"))
@@ -129,14 +129,14 @@ class UserControllerTest {
     // ==================== POST REGISTER TESTS ====================
 
     @Test
-    @DisplayName("POST /api/users -> Should register new user successfully (HTTP 201)")
+    @DisplayName("POST /users -> Should register new user successfully (HTTP 201)")
     void testRegister_Success() throws Exception {
         // Arrange
         User userMock = new User();
         when(userService.registerClient(any(RegisterDTO.class))).thenReturn(userMock);
 
         // Act & Assert
-        mockMvc.perform(post("/api/users")
+        mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(registerDTO).getJson()))
                 .andExpect(status().isCreated());
@@ -145,12 +145,12 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/users -> Should return 400 when register fields are blank")
+    @DisplayName("POST /users -> Should return 400 when register fields are blank")
     void testRegister_ValidationErrors() throws Exception {
         RegisterDTO invalidDTO = new RegisterDTO("", "", "", "123");
 
         // Act & Assert
-        mockMvc.perform(post("/api/users")
+        mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());
@@ -161,11 +161,11 @@ class UserControllerTest {
     // ==================== PATCH UPDATE USER PROFILE TESTS ====================
 
     @Test
-    @DisplayName("PATCH /api/users/me -> Should update profile and return 200 OK")
+    @DisplayName("PATCH /users/me -> Should update profile and return 200 OK")
     void testUpdateMyProfile_Success() throws Exception {
         when(userService.updateUserProfile(any(), any())).thenReturn(responseDTO);
 
-        mockMvc.perform(patch("/api/users/me")
+        mockMvc.perform(patch("/users/me")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(updateDTO).getJson()))
                 .andExpect(status().isOk())
@@ -175,11 +175,11 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /api/users/me -> Should return 400 Bad Request when DTO has validation errors")
+    @DisplayName("PATCH /users/me -> Should return 400 Bad Request when DTO has validation errors")
     void testUpdateMyProfile_ValidationError() throws Exception {
         UpdateUserDTO invalidDTO = new UpdateUserDTO("A", "111111111");
 
-        mockMvc.perform(patch("/api/users/me")
+        mockMvc.perform(patch("/users/me")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());
@@ -188,27 +188,27 @@ class UserControllerTest {
     // ==================== PATCH CHANGE PASSWORD TESTS ====================
 
     @Test
-    @DisplayName("PATCH /api/users/me/password -> Should change password and return 204 No Content")
+    @DisplayName("PATCH /users/me/password -> Should change password and return 204 No Content")
     void testChangeMyPassword_Success() throws Exception {
         // Arrange
         ChangePasswordDTO dto = new ChangePasswordDTO("oldPass123", "newPass123", "newPass123");
         doNothing().when(userService).changePassword(eq("user-123"), any(ChangePasswordDTO.class));
 
         // Act & Assert
-        mockMvc.perform(patch("/api/users/me/password")
+        mockMvc.perform(patch("/users/me/password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(dto).getJson()))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    @DisplayName("PATCH /api/users/me/password -> Should return 400 Bad Request when DTO has validation errors")
+    @DisplayName("PATCH /users/me/password -> Should return 400 Bad Request when DTO has validation errors")
     void testChangeMyPassword_ValidationError() throws Exception {
         // Arrange:
         ChangePasswordDTO invalidDto = new ChangePasswordDTO("oldPass123", "123", "123");
 
         // Act & Assert
-        mockMvc.perform(patch("/api/users/me/password")
+        mockMvc.perform(patch("/users/me/password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(invalidDto).getJson()))
                 .andExpect(status().isBadRequest());
