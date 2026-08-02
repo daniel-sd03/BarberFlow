@@ -32,8 +32,7 @@ import sodresoftwares.barbearia.services.QueueEntryService;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -117,14 +116,14 @@ class QueueEntryControllerTest {
                 .andExpect(jsonPath("$.activeEntry.id").value("entry-123"));
     }
 
-    // ==================== JOIN QUEUE TESTS ====================
+    // ==================== POST JOIN QUEUE TESTS ====================
 
     @Test
-    @DisplayName("POST /queue-entries/join -> Should join queue and return 201 Created")
+    @DisplayName("POST /queue-entries -> Should join queue and return 201 Created")
     void testJoinQueue_Success() throws Exception {
         when(queueEntryService.joinQueue(any(), any())).thenReturn(entryResponseDTO);
 
-        mockMvc.perform(post("/queue-entries/join")
+        mockMvc.perform(post("/queue-entries")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(joinQueueJson.write(joinQueueDTO).getJson()))
                 .andExpect(status().isCreated())
@@ -135,20 +134,20 @@ class QueueEntryControllerTest {
     }
 
     @Test
-    @DisplayName("POST /queue-entries/join -> Should return 400 Bad Request when DTO is invalid")
+    @DisplayName("POST /queue-entries -> Should return 400 Bad Request when DTO is invalid")
     void testJoinQueue_ValidationError() throws Exception {
         JoinQueueDTO invalidDTO = new JoinQueueDTO(null, "");
 
-        mockMvc.perform(post("/queue-entries/join")
+        mockMvc.perform(post("/queue-entries")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(joinQueueJson.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());
     }
 
-    // ==================== CALL NEXT TESTS ====================
+    // ==================== POST CALL NEXT TESTS ====================
 
     @Test
-    @DisplayName("POST /queue-entries/session/{sessionId}/call-next -> Should call next and return 200 OK")
+    @DisplayName("POST /queue-entries/sessions/{sessionId}/next -> Should call next and return 200 OK")
     void testCallNext_Success() throws Exception {
         QueueEntryResponseDTO calledEntry = new QueueEntryResponseDTO(
                 "entry-123",
@@ -162,30 +161,30 @@ class QueueEntryControllerTest {
 
         when(queueEntryService.callNext(any(), any())).thenReturn(calledEntry);
 
-        mockMvc.perform(post("/queue-entries/session/{sessionId}/call-next", "session-789")
+        mockMvc.perform(post("/queue-entries/sessions/{sessionId}/next", "session-789")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("entry-123"))
                 .andExpect(jsonPath("$.status").value("CALLED"));
     }
 
-    // ==================== REQUEUE ENTRY TESTS ====================
+    // ==================== PATCH REQUEUE ENTRY TESTS ====================
 
     @Test
-    @DisplayName("POST /queue-entries/{entryId}/requeue -> Should requeue entry and return 200 OK")
+    @DisplayName("PATCH /queue-entries/{entryId}/requeue -> Should requeue entry and return 200 OK")
     void testRequeueEntry_Success() throws Exception {
         when(queueEntryService.requeueEntry(any(), any())).thenReturn(entryResponseDTO);
 
-        mockMvc.perform(post("/queue-entries/{entryId}/requeue", "entry-123")
+        mockMvc.perform(patch("/queue-entries/{entryId}/requeue", "entry-123")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("entry-123"));
     }
 
-    // ==================== START SERVICE TESTS ====================
+    // ==================== PATCH START SERVICE TESTS ====================
 
     @Test
-    @DisplayName("POST /queue-entries/{entryId}/start -> Should start service and return 200 OK")
+    @DisplayName("PATCH /queue-entries/{entryId}/start -> Should start service and return 200 OK")
     void testStartService_Success() throws Exception {
         QueueEntryResponseDTO inServiceEntry = new QueueEntryResponseDTO(
                 "entry-123",
@@ -198,33 +197,33 @@ class QueueEntryControllerTest {
         );
         when(queueEntryService.startService(any(), any())).thenReturn(inServiceEntry);
 
-        mockMvc.perform(post("/queue-entries/{entryId}/start", "entry-123")
+        mockMvc.perform(patch("/queue-entries/{entryId}/start", "entry-123")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("entry-123"))
                 .andExpect(jsonPath("$.status").value("IN_SERVICE"));
     }
 
-    // ==================== FINISH SERVICE TESTS ====================
+    // ==================== PATCH FINISH SERVICE TESTS ====================
 
     @Test
-    @DisplayName("POST /queue-entries/{entryId}/finish -> Should finish service and return 204 No Content")
+    @DisplayName("PATCH /queue-entries/{entryId}/finish -> Should finish service and return 204 No Content")
     void testFinishService_Success() throws Exception {
         doNothing().when(queueEntryService).finishService(any(), any());
 
-        mockMvc.perform(post("/queue-entries/{entryId}/finish", "entry-123")
+        mockMvc.perform(patch("/queue-entries/{entryId}/finish", "entry-123")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
 
-    // ==================== CANCEL ENTRY TESTS ====================
+    // ==================== PATCH CANCEL ENTRY TESTS ====================
 
     @Test
-    @DisplayName("POST /queue-entries/{entryId}/cancel -> Should cancel entry and return 204 No Content")
+    @DisplayName("PATCH /queue-entries/{entryId}/cancel -> Should cancel entry and return 204 No Content")
     void testCancelEntry_Success() throws Exception {
         doNothing().when(queueEntryService).cancelEntry(any(), any());
 
-        mockMvc.perform(post("/queue-entries/{entryId}/cancel", "entry-123")
+        mockMvc.perform(patch("/queue-entries/{entryId}/cancel", "entry-123")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }

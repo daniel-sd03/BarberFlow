@@ -17,6 +17,20 @@ public class QueueSessionController {
 
     private final QueueSessionService queueSessionService;
 
+    @GetMapping("/me/dashboard")
+    public ResponseEntity<ProfessionalDashboardDTO> getDashboard(
+            @AuthenticationPrincipal User loggedInUser) {
+        ProfessionalDashboardDTO dashboard = queueSessionService.getDashboardData(loggedInUser.getId());
+        return ResponseEntity.ok(dashboard);
+    }
+
+    @GetMapping("/tickets/{ticketCode}")
+    public ResponseEntity<QueueSessionUserResponseDTO> getSessionByCode(
+            @PathVariable String ticketCode) {
+        QueueSessionUserResponseDTO response = queueSessionService.getSessionInfoByCode(ticketCode);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping
     public ResponseEntity<QueueSessionProfResponseDTO> createSession(
             @AuthenticationPrincipal User loggedInUser) {
@@ -24,12 +38,11 @@ public class QueueSessionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(session);
     }
 
-    @PatchMapping("/status")
-    public ResponseEntity<QueueSessionProfResponseDTO> updateStatus(
-            @AuthenticationPrincipal User loggedInUser,
-            @RequestBody @Valid UpdateQueueStatusDTO dto) {
-        QueueSessionProfResponseDTO session = queueSessionService.updateQueueStatus(loggedInUser.getId(),dto.activate());
-        return ResponseEntity.ok(session);
+    @PostMapping("/me/ticket-code")
+    public ResponseEntity<QueueSessionProfResponseDTO> refreshTicketCode(
+            @AuthenticationPrincipal User loggedInUser) {
+        QueueSessionProfResponseDTO updatedSession = queueSessionService.refreshTicketCode(loggedInUser.getId());
+        return ResponseEntity.ok(updatedSession);
     }
 
     @PatchMapping("/me")
@@ -40,24 +53,12 @@ public class QueueSessionController {
                 queueSessionService.updateSessionSettings(loggedInUser.getId(), request);
         return ResponseEntity.ok(updatedSession);
     }
-    @PatchMapping("/me/refresh-code")
-    public ResponseEntity<QueueSessionProfResponseDTO> refreshTicketCode(
-            @AuthenticationPrincipal User loggedInUser) {
-        QueueSessionProfResponseDTO updatedSession = queueSessionService.refreshTicketCode(loggedInUser.getId());
-        return ResponseEntity.ok(updatedSession);
-    }
 
-    @GetMapping("/dashboard")
-    public ResponseEntity<ProfessionalDashboardDTO> getDashboard(
-            @AuthenticationPrincipal User loggedInUser) {
-        ProfessionalDashboardDTO dashboard = queueSessionService.getDashboardData(loggedInUser.getId());
-        return ResponseEntity.ok(dashboard);
-    }
-
-    @GetMapping("/code/{ticketCode}")
-    public ResponseEntity<QueueSessionUserResponseDTO> getSessionByCode(
-            @PathVariable String ticketCode) {
-        QueueSessionUserResponseDTO response = queueSessionService.getSessionInfoByCode(ticketCode);
-        return ResponseEntity.ok(response);
+    @PatchMapping("/me/status")
+    public ResponseEntity<QueueSessionProfResponseDTO> updateStatus(
+            @AuthenticationPrincipal User loggedInUser,
+            @RequestBody @Valid UpdateQueueStatusDTO dto) {
+        QueueSessionProfResponseDTO session = queueSessionService.updateQueueStatus(loggedInUser.getId(),dto.activate());
+        return ResponseEntity.ok(session);
     }
 }

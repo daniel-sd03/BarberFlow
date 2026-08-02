@@ -103,7 +103,61 @@ class QueueSessionControllerTest {
         );
     }
 
-    // ==================== CREATE SESSION TESTS ====================
+    // ==================== GET DASHBOARD TESTS ====================
+
+    @Test
+    @DisplayName("GET /queue-sessions/me/dashboard -> Should return dashboard payload and 200 OK")
+    void testGetDashboard_Success() throws Exception {
+        // Arrange
+        when(queueSessionService.getDashboardData(any())).thenReturn(dashboardDTO);
+
+        // Act & Assert
+        mockMvc.perform(get("/queue-sessions/me/dashboard")
+                        .with(user(loggedInUser))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").value("session-123"))
+                .andExpect(jsonPath("$.businessName").value("Barbearia do Zé"))
+                .andExpect(jsonPath("$.ticketCode").value("BARB1234"))
+                .andExpect(jsonPath("$.isActive").value(true))
+                .andExpect(jsonPath("$.toleranceMinutes").value(5))
+                .andExpect(jsonPath("$.activeQueue[0].id").value("entry-123"))
+                .andExpect(jsonPath("$.activeQueue[0].position").value(1))
+                .andExpect(jsonPath("$.activeQueue[0].userId").value("client-123"))
+                .andExpect(jsonPath("$.activeQueue[0].clientName").value("João Silva"))
+                .andExpect(jsonPath("$.activeQueue[0].serviceName").value("Corte Navalhado"))
+                .andExpect(jsonPath("$.activeQueue[0].status").value("WAITING"));
+    }
+
+    // ==================== GET SESSION INFO BY CODE TESTS ====================
+
+    @Test
+    @DisplayName("GET /queue-sessions/tickets/{ticketCode} - Should return 200 OK and session preview DTO")
+    void testGetSessionByCode_Success() throws Exception {
+        // Arrange
+        String ticketCode = "BARB1";
+        QueueSessionUserResponseDTO mockResponse = new QueueSessionUserResponseDTO(
+                "session-123",
+                "Barbearia do Zé",
+                3,
+                true,
+                5
+        );
+
+        when(queueSessionService.getSessionInfoByCode(ticketCode)).thenReturn(mockResponse);
+
+        // Act & Assert
+        mockMvc.perform(get("/queue-sessions/tickets/{ticketCode}", ticketCode)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").value("session-123"))
+                .andExpect(jsonPath("$.businessName").value("Barbearia do Zé"))
+                .andExpect(jsonPath("$.peopleInQueue").value(3))
+                .andExpect(jsonPath("$.isActive").value(true))
+                .andExpect(jsonPath("$.toleranceMinutes").value(5));
+    }
+
+    // ==================== POST CREATE SESSION TESTS ====================
 
     @Test
     @DisplayName("POST /queue-sessions -> Should create session and return 201 Created")
@@ -122,45 +176,31 @@ class QueueSessionControllerTest {
                 .andExpect(jsonPath("$.isActive").value(false));
     }
 
-    // ==================== UPDATE STATUS TESTS ====================
+    // ==================== POST REFRESH TICKET CODE TESTS ====================
 
     @Test
-    @DisplayName("PATCH /queue-sessions/status -> Should update status and return 200 OK")
-    void testUpdateStatus_Success() throws Exception {
+    @DisplayName("POST /queue-sessions/me/ticket-code -> Should refresh ticket code and return 200 OK")
+    void refreshTicketCode_Success() throws Exception {
         // Arrange
-        UpdateQueueStatusDTO requestDTO = new UpdateQueueStatusDTO(true);
-        QueueSessionProfResponseDTO activeSessionDTO = new QueueSessionProfResponseDTO("session-123", "BARB1234", true);
+        QueueSessionProfResponseDTO refreshedSessionDTO = new QueueSessionProfResponseDTO(
+                sessionResponseDTO.id(),
+                "BARB9999",
+                sessionResponseDTO.isActive()
+        );
 
-        when(queueSessionService.updateQueueStatus(any(), anyBoolean())).thenReturn(activeSessionDTO);
+        when(queueSessionService.refreshTicketCode(any())).thenReturn(refreshedSessionDTO);
 
         // Act & Assert
-        mockMvc.perform(patch("/queue-sessions/status")
-                        .with(user(loggedInUser))
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonTester.write(requestDTO).getJson()))
+        mockMvc.perform(post("/queue-sessions/me/ticket-code")
+                        .requestAttr("userId", loggedInUser.getId())
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("session-123"))
-                .andExpect(jsonPath("$.ticketCode").value("BARB1234"))
-                .andExpect(jsonPath("$.isActive").value(true));
+                .andExpect(jsonPath("$.id").value(sessionResponseDTO.id()))
+                .andExpect(jsonPath("$.ticketCode").value("BARB9999"))
+                .andExpect(jsonPath("$.isActive").value(sessionResponseDTO.isActive()));
     }
 
-    @Test
-    @DisplayName("PATCH /queue-sessions/status -> Should return 400 Bad Request when body is invalid")
-    void testUpdateStatus_ValidationError() throws Exception {
-        // Arrange
-        UpdateQueueStatusDTO requestDTO = new UpdateQueueStatusDTO(null);
-
-        // Act & Assert
-        mockMvc.perform(patch("/queue-sessions/status")
-                        .with(user(loggedInUser))
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonTester.write(requestDTO).getJson()))
-                .andExpect(status().isBadRequest());
-    }
-
-    // ==================== UPDATE ME TESTS (PREFIX & TOLERANCE) ====================
+    // ==================== PATCH UPDATE ME TESTS (PREFIX & TOLERANCE) ====================
 
     @Test
     @DisplayName("PATCH /queue-sessions/me -> Should update settings and return 200 OK")
@@ -202,81 +242,41 @@ class QueueSessionControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-    // ==================== REFRESH TICKET CODE  TESTS ====================
+    // ==================== PATCH UPDATE STATUS TESTS ====================
 
     @Test
-    @DisplayName("Should refresh ticket code and return 200 OK")
-    void refreshTicketCode_Success() throws Exception {
+    @DisplayName("PATCH /queue-sessions/me/status -> Should update status and return 200 OK")
+    void testUpdateStatus_Success() throws Exception {
         // Arrange
-        QueueSessionProfResponseDTO refreshedSessionDTO = new QueueSessionProfResponseDTO(
-                sessionResponseDTO.id(),
-                "BARB9999",
-                sessionResponseDTO.isActive()
-        );
+        UpdateQueueStatusDTO requestDTO = new UpdateQueueStatusDTO(true);
+        QueueSessionProfResponseDTO activeSessionDTO = new QueueSessionProfResponseDTO("session-123", "BARB1234", true);
 
-        when(queueSessionService.refreshTicketCode(any())).thenReturn(refreshedSessionDTO);
+        when(queueSessionService.updateQueueStatus(any(), anyBoolean())).thenReturn(activeSessionDTO);
 
         // Act & Assert
-        mockMvc.perform(patch("/queue-sessions/me/refresh-code")
-                        .requestAttr("userId", loggedInUser.getId())
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(sessionResponseDTO.id()))
-                .andExpect(jsonPath("$.ticketCode").value("BARB9999"))
-                .andExpect(jsonPath("$.isActive").value(sessionResponseDTO.isActive()));
-    }
-
-    // ==================== DASHBOARD TESTS ====================
-
-    @Test
-    @DisplayName("GET /queue-sessions/dashboard -> Should return dashboard payload and 200 OK")
-    void testGetDashboard_Success() throws Exception {
-        // Arrange
-        when(queueSessionService.getDashboardData(any())).thenReturn(dashboardDTO);
-
-        // Act & Assert
-        mockMvc.perform(get("/queue-sessions/dashboard")
+        mockMvc.perform(patch("/queue-sessions/me/status")
                         .with(user(loggedInUser))
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(requestDTO).getJson()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sessionId").value("session-123"))
-                .andExpect(jsonPath("$.businessName").value("Barbearia do Zé"))
+                .andExpect(jsonPath("$.id").value("session-123"))
                 .andExpect(jsonPath("$.ticketCode").value("BARB1234"))
-                .andExpect(jsonPath("$.isActive").value(true))
-                .andExpect(jsonPath("$.toleranceMinutes").value(5))
-                .andExpect(jsonPath("$.activeQueue[0].id").value("entry-123"))
-                .andExpect(jsonPath("$.activeQueue[0].position").value(1))
-                .andExpect(jsonPath("$.activeQueue[0].userId").value("client-123"))
-                .andExpect(jsonPath("$.activeQueue[0].clientName").value("João Silva"))
-                .andExpect(jsonPath("$.activeQueue[0].serviceName").value("Corte Navalhado"))
-                .andExpect(jsonPath("$.activeQueue[0].status").value("WAITING"));
+                .andExpect(jsonPath("$.isActive").value(true));
     }
 
-    // ==================== GET SESSION INFO BY CODE TESTS ====================
-
     @Test
-    @DisplayName("GET /queue-sessions/code/{ticketCode} - Should return 200 OK and session preview DTO")
-    void testGetSessionByCode_Success() throws Exception {
+    @DisplayName("PATCH /queue-sessions/me/status -> Should return 400 Bad Request when body is invalid")
+    void testUpdateStatus_ValidationError() throws Exception {
         // Arrange
-        String ticketCode = "BARB1";
-        QueueSessionUserResponseDTO mockResponse = new QueueSessionUserResponseDTO(
-                "session-123",
-                "Barbearia do Zé",
-                3,
-                true,
-                5
-        );
-
-        when(queueSessionService.getSessionInfoByCode(ticketCode)).thenReturn(mockResponse);
+        UpdateQueueStatusDTO requestDTO = new UpdateQueueStatusDTO(null);
 
         // Act & Assert
-        mockMvc.perform(get("/queue-sessions/code/{ticketCode}", ticketCode)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sessionId").value("session-123"))
-                .andExpect(jsonPath("$.businessName").value("Barbearia do Zé"))
-                .andExpect(jsonPath("$.peopleInQueue").value(3))
-                .andExpect(jsonPath("$.isActive").value(true))
-                .andExpect(jsonPath("$.toleranceMinutes").value(5));
+        mockMvc.perform(patch("/queue-sessions/me/status")
+                        .with(user(loggedInUser))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(requestDTO).getJson()))
+                .andExpect(status().isBadRequest());
     }
 }

@@ -26,7 +26,7 @@ public class QueueEntryController {
         return ResponseEntity.ok(status);
     }
 
-    @PostMapping("/join")
+    @PostMapping
     public ResponseEntity<QueueEntryResponseDTO> joinQueue(
             @RequestBody @Valid JoinQueueDTO dto,
             @AuthenticationPrincipal User loggedInUser) {
@@ -34,7 +34,7 @@ public class QueueEntryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PostMapping("/session/{sessionId}/call-next")
+    @PostMapping("/sessions/{sessionId}/next")
     public ResponseEntity<QueueEntryResponseDTO> callNext(
             @PathVariable String sessionId,
             @AuthenticationPrincipal User loggedInUser) {
@@ -43,7 +43,7 @@ public class QueueEntryController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{entryId}/requeue")
+    @PatchMapping("/{entryId}/requeue")
     public ResponseEntity<QueueEntryResponseDTO> requeueEntry(
             @PathVariable String entryId,
             @AuthenticationPrincipal User loggedUser) {
@@ -52,7 +52,7 @@ public class QueueEntryController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{entryId}/start")
+    @PatchMapping("/{entryId}/start")
     public ResponseEntity<QueueEntryResponseDTO> startService(
             @PathVariable String entryId,
             @AuthenticationPrincipal User loggedInUser) {
@@ -61,7 +61,7 @@ public class QueueEntryController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{entryId}/finish")
+    @PatchMapping("/{entryId}/finish")
     public ResponseEntity<Void> finishService(
             @PathVariable String entryId,
             @AuthenticationPrincipal User loggedInUser) {
@@ -70,7 +70,7 @@ public class QueueEntryController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{entryId}/cancel")
+    @PatchMapping("/{entryId}/cancel")
     public ResponseEntity<Void> cancelEntry(
             @PathVariable String entryId,
             @AuthenticationPrincipal User loggedInUser) {
