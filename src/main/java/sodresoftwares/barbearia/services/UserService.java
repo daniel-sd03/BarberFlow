@@ -7,10 +7,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sodresoftwares.barbearia.dto.ChangePasswordDTO;
+import sodresoftwares.barbearia.dto.RegisterDTO;
 import sodresoftwares.barbearia.dto.UpdateUserDTO;
 import sodresoftwares.barbearia.dto.UserResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.user.User;
+import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.repositories.UserRepository;
 
 @Service
@@ -22,20 +24,35 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Transactional(readOnly = true)
-    public UserResponseDTO getMyProfile(String userId) {
+    @Transactional
+    public User registerClient(RegisterDTO data) {
+        return createUser(data, UserRole.USER);
+    }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.warn("User not found");
-                    return new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "USER_NOT_FOUND",
-                            "User not found."
-                    );
-                });
+    @Transactional
+    public User createUser(RegisterDTO data, UserRole role) {
+        if (this.userRepository.existsByLogin(data.login())) {
+            log.warn("Registration failed: user already exists");
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "USER_ALREADY_EXISTS",
+                    "User already exists");
+        }
 
-        return UserResponseDTO.fromEntity(user);
+        String encryptedPassword = passwordEncoder.encode(data.password());
+
+        User newUser = User.builder()
+                .login(data.login())
+                .password(encryptedPassword)
+                .name(data.name())
+                .phone(data.phone())
+                .role(role)
+                .build();
+
+        User savedUser = userRepository.save(newUser);
+        log.info("User registered with role {}", savedUser.getRole());
+
+        return savedUser;
     }
 
     @Transactional
@@ -99,5 +116,21 @@ public class UserService {
         userRepository.save(user);
 
         log.info("Password changed successfully");
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponseDTO getMyProfile(String userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("User not found");
+                    return new AppException(
+                            HttpStatus.NOT_FOUND,
+                            "USER_NOT_FOUND",
+                            "User not found."
+                    );
+                });
+
+        return UserResponseDTO.fromEntity(user);
     }
 }

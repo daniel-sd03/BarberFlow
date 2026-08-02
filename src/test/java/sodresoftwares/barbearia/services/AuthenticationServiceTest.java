@@ -54,41 +54,22 @@ class AuthenticationServiceTest {
     private AuthenticationService authService;
 
     private User testUser;
-    private User testProfUser;
     private AuthenticationDTO authDTO;
-    private RegisterDTO registerDTO;
-    private RegisterProfessionalDTO registerProfDTO;
-
-
-    private final String TEST_LOGIN = "user@test.com";
-    private final String RAW_PASSWORD = "password123";
-    private final String ENCODED_PASSWORD = "$2a$10$encodedPasswordHash...";
-    private final String TEST_NAME = "Fulano da Silva";
-    private final String TEST_PHONE = "11999999999";
 
     @BeforeEach
     void setUp() {
+        String TEST_LOGIN = "user@test.com";
         testUser = User.builder()
                 .id("user-123")
                 .login(TEST_LOGIN)
-                .password(ENCODED_PASSWORD)
-                .name(TEST_NAME)
-                .phone(TEST_PHONE)
+                .password("$2a$10$encodedPasswordHash...")
+                .name("Fulano da Silva")
+                .phone("11999999999")
                 .role(UserRole.USER)
                 .build();
 
-        testProfUser = User.builder()
-                .id("prof-123")
-                .login(TEST_LOGIN)
-                .password(ENCODED_PASSWORD)
-                .name(TEST_NAME)
-                .phone(TEST_PHONE)
-                .role(UserRole.PROFESSIONAL)
-                .build();
-
+        String RAW_PASSWORD = "password123";
         authDTO = new AuthenticationDTO(TEST_LOGIN, RAW_PASSWORD);
-        registerDTO = new RegisterDTO(TEST_LOGIN, RAW_PASSWORD, TEST_NAME, TEST_PHONE);
-        registerProfDTO = new RegisterProfessionalDTO(TEST_LOGIN, RAW_PASSWORD, TEST_NAME, TEST_PHONE, "Barbearia do Zé");
     }
 
     // ==================== LOGIN TESTS ====================
@@ -132,97 +113,5 @@ class AuthenticationServiceTest {
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(tokenService, never()).generateToken(any());
-    }
-
-    // ==================== REGISTER TESTS ====================
-
-    @Test
-    @DisplayName("Should register new user successfully")
-    void testRegister_Successful() {
-        // Arrange
-        when(userRepository.existsByLogin(TEST_LOGIN)).thenReturn(false);
-        when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(ENCODED_PASSWORD);
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
-
-        // Act
-        authService.register(registerDTO);
-
-        // Assert
-        verify(userRepository).existsByLogin(TEST_LOGIN);
-        verify(passwordEncoder).encode(RAW_PASSWORD);
-        verify(userRepository).save(argThat(user ->
-                user.getLogin().equals(TEST_LOGIN) &&
-                        user.getPassword().equals(ENCODED_PASSWORD) &&
-                        user.getName().equals(TEST_NAME) &&
-                        user.getPhone().equals(TEST_PHONE) &&
-                        user.getRole().equals(UserRole.USER)
-        ));
-    }
-
-    @Test
-    @DisplayName("Should throw exception when trying to register an existing login")
-    void testRegister_UserAlreadyExists() {
-        // Arrange
-        when(userRepository.existsByLogin(TEST_LOGIN)).thenReturn(true);
-
-        // Act & Assert
-        assertThatThrownBy(() -> authService.register(registerDTO))
-                .isInstanceOf(AppException.class)
-                .hasMessage("User already exists")
-                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
-
-        verify(userRepository).existsByLogin(TEST_LOGIN);
-        verify(passwordEncoder, never()).encode(anyString());
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    // ==================== REGISTER PROFESSIONAL TESTS ====================
-
-    @Test
-    @DisplayName("Should register new professional successfully")
-    void testRegisterProfessional_Successful() {
-        // Arrange
-        when(userRepository.existsByLogin(TEST_LOGIN)).thenReturn(false);
-        when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(ENCODED_PASSWORD);
-        when(userRepository.save(any(User.class))).thenReturn(testProfUser);
-
-        // Act
-        authService.registerProfessional(registerProfDTO);
-
-        // Assert
-        verify(userRepository).existsByLogin(TEST_LOGIN);
-        verify(passwordEncoder).encode(RAW_PASSWORD);
-
-        verify(userRepository).save(argThat(user ->
-                user.getLogin().equals(TEST_LOGIN) &&
-                        user.getPassword().equals(ENCODED_PASSWORD) &&
-                        user.getName().equals(TEST_NAME) &&
-                        user.getPhone().equals(TEST_PHONE) &&
-                        user.getRole().equals(UserRole.PROFESSIONAL)
-        ));
-
-        verify(professionalRepository).save(argThat(professional ->
-                professional.getUser().getId().equals("prof-123") &&
-                        professional.getBusinessName().equals("Barbearia do Zé") &&
-                        professional.getIsActive().equals(true)
-        ));
-    }
-
-    @Test
-    @DisplayName("Should throw exception when trying to register an existing professional")
-    void testRegisterProfessional_UserAlreadyExists() {
-        // Arrange
-        when(userRepository.existsByLogin(TEST_LOGIN)).thenReturn(true);
-
-        // Act & Assert
-        assertThatThrownBy(() -> authService.registerProfessional(registerProfDTO))
-                .isInstanceOf(AppException.class)
-                .hasMessage("User already exists")
-                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
-
-        verify(userRepository).existsByLogin(TEST_LOGIN);
-        verify(passwordEncoder, never()).encode(anyString());
-        verify(userRepository, never()).save(any(User.class));
-        verify(professionalRepository, never()).save(any(Professional.class));
     }
 }

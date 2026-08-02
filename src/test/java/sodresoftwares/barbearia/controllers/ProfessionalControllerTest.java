@@ -21,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import sodresoftwares.barbearia.dto.ProfessionalResponseDTO;
+import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
 import sodresoftwares.barbearia.dto.UpdateProfessionalDTO;
 import sodresoftwares.barbearia.dto.UserResponseDTO;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
@@ -29,10 +30,8 @@ import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.ProfessionalService;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -59,7 +58,7 @@ class ProfessionalControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private JacksonTester<UpdateProfessionalDTO> updateProfessionalJson;
+    private JacksonTester<Object> jsonTester;
 
     @MockitoBean
     private ProfessionalService professionalService;
@@ -68,6 +67,7 @@ class ProfessionalControllerTest {
     private CacheManager cacheManager;
 
     private User loggedInUser;
+    private RegisterProfessionalDTO registerProfessionalDTO;
     private UpdateProfessionalDTO updateDTO;
     private ProfessionalResponseDTO responseDTO;
 
@@ -79,9 +79,13 @@ class ProfessionalControllerTest {
                 .role(UserRole.PROFESSIONAL)
                 .build();
 
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(loggedInUser, null, loggedInUser.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(auth);
+        registerProfessionalDTO = new RegisterProfessionalDTO(
+                "barber@test.com",
+                "password123",
+                "Barbeiro Teste",
+                "11999999999",
+                "Barbearia do Zé"
+        );
 
         updateDTO = new UpdateProfessionalDTO("New Business Name");
 
@@ -122,7 +126,40 @@ class ProfessionalControllerTest {
                 .andExpect(jsonPath("$.user.login").value("ze@test.com"));
     }
 
-    // ==================== UPDATE PROFESSIONAL PROFILE TESTS ====================
+    // ==================== POST REGISTER PROFESSIONAL TESTS ====================
+
+    @Test
+    @DisplayName("POST /api/professionals -> Should register new professional successfully (HTTP 201)")
+    void testRegisterProfessional_Success() throws Exception {
+        // Arrange
+        doNothing().when(professionalService).registerProfessional(any(RegisterProfessionalDTO.class));
+
+        // Act & Assert
+        mockMvc.perform(post("/api/professionals")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(registerProfessionalDTO).getJson()))
+                .andExpect(status().isCreated());
+
+        verify(professionalService).registerProfessional(any(RegisterProfessionalDTO.class));
+    }
+
+    @Test
+    @DisplayName("POST /api/professionals -> Should return 400 when professional register fields are blank")
+    void testRegisterProfessional_ValidationErrors() throws Exception {
+        // Arrange
+        RegisterProfessionalDTO invalidDTO = new RegisterProfessionalDTO(
+                "", "", "", "123", "");
+
+        // Act & Assert
+        mockMvc.perform(post("/api/professionals")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(invalidDTO).getJson()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(professionalService);
+    }
+
+    // ==================== PATCH UPDATE PROFESSIONAL PROFILE TESTS ====================
 
     @Test
     @DisplayName("PATCH /api/professionals/me -> Should update business profile and return 200 OK")
@@ -132,7 +169,7 @@ class ProfessionalControllerTest {
 
         mockMvc.perform(patch("/api/professionals/me")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(updateProfessionalJson.write(updateDTO).getJson()))
+                        .content(jsonTester.write(updateDTO).getJson()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("prof-123"))
                 .andExpect(jsonPath("$.businessName").value("New Business Name"))
@@ -146,7 +183,7 @@ class ProfessionalControllerTest {
 
         mockMvc.perform(patch("/api/professionals/me")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(updateProfessionalJson.write(invalidDTO).getJson()))
+                        .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());
     }
 }

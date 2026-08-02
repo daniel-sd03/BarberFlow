@@ -10,7 +10,7 @@ import sodresoftwares.barbearia.services.AuthenticationService;
 import sodresoftwares.barbearia.services.PasswordResetService;
 
 @RestController
-@RequestMapping("auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthenticationController {
 
@@ -22,20 +22,6 @@ public class AuthenticationController {
 			@RequestBody @Valid AuthenticationDTO data) {
 		LoginResponseDTO response = authenticationService.login(data);
 		return ResponseEntity.ok(response);
-	}
-	
-	@PostMapping("/register")
-	public ResponseEntity<Void> register(
-			@RequestBody @Valid RegisterDTO data ) {
-		authenticationService.register(data);
-		return ResponseEntity.status(HttpStatus.CREATED).build();
-	}
-
-	@PostMapping("/register/professional")
-	public ResponseEntity<Void> registerProfessional(
-			@RequestBody @Valid RegisterProfessionalDTO data) {
-		authenticationService.registerProfessional(data);
-		return ResponseEntity.status(HttpStatus.CREATED).build();
 	}
 
 	@PostMapping("/password-resets")

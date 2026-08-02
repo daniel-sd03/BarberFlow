@@ -2,10 +2,12 @@ package sodresoftwares.barbearia.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import sodresoftwares.barbearia.dto.ChangePasswordDTO;
+import sodresoftwares.barbearia.dto.RegisterDTO;
 import sodresoftwares.barbearia.dto.UpdateUserDTO;
 import sodresoftwares.barbearia.dto.UserResponseDTO;
 import sodresoftwares.barbearia.model.user.User;
@@ -25,11 +27,17 @@ public class UserController {
         return ResponseEntity.ok(profile);
     }
 
+    @PostMapping
+    public ResponseEntity<Void> register(
+            @RequestBody @Valid RegisterDTO data) {
+        userService.registerClient(data);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
     @PatchMapping("/me")
     public ResponseEntity<UserResponseDTO> updateMyProfile(
             @AuthenticationPrincipal User loggedInUser,
             @Valid @RequestBody UpdateUserDTO dto) {
-
         UserResponseDTO updatedProfile = userService.updateUserProfile(loggedInUser.getId(), dto);
         return ResponseEntity.ok(updatedProfile);
     }
@@ -38,7 +46,6 @@ public class UserController {
     public ResponseEntity<Void> changeMyPassword(
             @AuthenticationPrincipal User loggedInUser,
             @Valid @RequestBody ChangePasswordDTO dto) {
-
         userService.changePassword(loggedInUser.getId(), dto);
         return ResponseEntity.noContent().build();
     }

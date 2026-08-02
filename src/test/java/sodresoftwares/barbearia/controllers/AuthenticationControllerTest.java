@@ -69,8 +69,6 @@ class AuthenticationControllerTest {
     private PasswordResetService passwordResetService;
 
     private AuthenticationDTO authenticationDTO;
-    private RegisterDTO registerDTO;
-    private RegisterProfessionalDTO registerProfessionalDTO;
     private ForgotPasswordDTO forgotPasswordDTO;
     private ValidateTokenDTO validateTokenDTO;
     private ResetPasswordDTO resetPasswordDTO;
@@ -78,26 +76,12 @@ class AuthenticationControllerTest {
     @BeforeEach
     void setUp() {
         authenticationDTO = new AuthenticationDTO("user@test.com", "password123");
-        registerDTO = new RegisterDTO(
-                "user@test.com",
-                "password123",
-                "Cliente Teste",
-                "11999999999")
-        ;
-        registerProfessionalDTO = new RegisterProfessionalDTO(
-                "barber@test.com",
-                "password123",
-                "Barbeiro Teste",
-                "11999999999",
-                "Barbearia do Zé"
-        );
-
         forgotPasswordDTO = new ForgotPasswordDTO("user@test.com");
         validateTokenDTO = new ValidateTokenDTO("user@test.com", "123456");
         resetPasswordDTO = new ResetPasswordDTO("user@test.com", "123456", "newPass123", "newPass123");
     }
 
-    // ==================== LOGIN TESTS ====================
+    // ==================== POST LOGIN TESTS ====================
 
     @Test
     @DisplayName("Should login successfully and return token (HTTP 200)")
@@ -111,7 +95,7 @@ class AuthenticationControllerTest {
         when(authService.login(any(AuthenticationDTO.class))).thenReturn(mockResponse);
 
         // Act & Assert
-        mockMvc.perform(post("/auth/login")
+            mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(authenticationDTO).getJson()))
                 .andExpect(status().isOk())
@@ -136,71 +120,7 @@ class AuthenticationControllerTest {
         verifyNoInteractions(authService);
     }
 
-    // ==================== REGISTER TESTS ====================
-
-    @Test
-    @DisplayName("Should register new user successfully (HTTP 201)")
-    void testRegister_Success() throws Exception {
-        // Arrange
-        User userMock = new User();
-        when(authService.register(any(RegisterDTO.class))).thenReturn(userMock);
-
-        // Act & Assert
-        mockMvc.perform(post("/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonTester.write(registerDTO).getJson()))
-                .andExpect(status().isCreated());
-
-        verify(authService).register(any(RegisterDTO.class));
-    }
-
-    @Test
-    @DisplayName("Should return 400 when register fields are blank")
-    void testRegister_ValidationErrors() throws Exception {
-        RegisterDTO invalidDTO = new RegisterDTO("", "", "", "123");
-
-        // Act & Assert
-        mockMvc.perform(post("/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonTester.write(invalidDTO).getJson()))
-                .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(authService);
-    }
-
-    // ==================== REGISTER PROFESSIONAL TESTS ====================
-
-    @Test
-    @DisplayName("Should register new professional successfully (HTTP 201)")
-    void testRegisterProfessional_Success() throws Exception {
-        // Arrange
-        doNothing().when(authService).registerProfessional(any(RegisterProfessionalDTO.class));
-
-        // Act & Assert
-        mockMvc.perform(post("/auth/register/professional")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonTester.write(registerProfessionalDTO).getJson()))
-                .andExpect(status().isCreated());
-
-        verify(authService).registerProfessional(any(RegisterProfessionalDTO.class));
-    }
-
-    @Test
-    @DisplayName("Should return 400 when professional register fields are blank")
-    void testRegisterProfessional_ValidationErrors() throws Exception {
-        // Arrange
-        RegisterProfessionalDTO invalidDTO = new RegisterProfessionalDTO("", "", "", "123", "");
-
-        // Act & Assert
-        mockMvc.perform(post("/auth/register/professional")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonTester.write(invalidDTO).getJson()))
-                .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(authService);
-    }
-
-    // ==================== FORGOT PASSWORD TESTS ====================
+    // ==================== POST FORGOT PASSWORD TESTS ====================
 
     @Test
     @DisplayName("Should request password reset successfully (HTTP 200)")
@@ -232,7 +152,7 @@ class AuthenticationControllerTest {
         verifyNoInteractions(passwordResetService);
     }
 
-    // ==================== VALIDATE TOKEN TESTS ====================
+    // ==================== POST VALIDATE TOKEN TESTS ====================
 
     @Test
     @DisplayName("Should validate token successfully (HTTP 200)")
@@ -264,7 +184,7 @@ class AuthenticationControllerTest {
         verifyNoInteractions(passwordResetService);
     }
 
-    // ==================== RESET PASSWORD TESTS ====================
+    // ==================== PATCH RESET PASSWORD TESTS ====================
 
     @Test
     @DisplayName("Should reset password successfully (HTTP 204)")

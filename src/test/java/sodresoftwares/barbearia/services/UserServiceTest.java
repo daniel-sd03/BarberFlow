@@ -10,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import sodresoftwares.barbearia.dto.ChangePasswordDTO;
+import sodresoftwares.barbearia.dto.RegisterDTO;
 import sodresoftwares.barbearia.dto.UpdateUserDTO;
 import sodresoftwares.barbearia.dto.UserResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
@@ -38,7 +39,10 @@ class UserServiceTest {
     private UserService userService;
 
     private User testUser;
+    private RegisterDTO registerDTO;
     private final String USER_ID = "user-123";
+    private final String RAW_PASSWORD = "password123";
+    private final String ENCODED_PASSWORD = "$2a$10$encodedPasswordHash...";
 
     @BeforeEach
     void setUp() {
@@ -47,11 +51,18 @@ class UserServiceTest {
                 .name("Old Name")
                 .login("user@test.com")
                 .phone("000000000")
+                .password(ENCODED_PASSWORD)
                 .role(UserRole.USER)
                 .build();
-    }
 
-    // ==================== GET MY PROFILE TESTS ====================
+        registerDTO = new RegisterDTO(
+                testUser.getLogin(),
+                RAW_PASSWORD,
+                testUser.getName(),
+                testUser.getPhone()
+        );
+    }
+    // ====================  GET MY PROFILE TESTS ====================
 
     @Test
     @DisplayName("Should return user profile when user exists")
@@ -82,6 +93,48 @@ class UserServiceTest {
                 .isInstanceOf(AppException.class)
                 .hasMessage("User not found.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    // ==================== REGISTER TESTS ====================
+
+    @Test
+    @DisplayName("Should register new client successfully")
+    void testRegisterClient_Successful() {
+        // Arrange
+        when(userRepository.existsByLogin(testUser.getLogin())).thenReturn(false);
+        when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(ENCODED_PASSWORD);
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        // Act
+        userService.registerClient(registerDTO);
+
+        // Assert
+        verify(userRepository).existsByLogin(testUser.getLogin());
+        verify(passwordEncoder).encode(RAW_PASSWORD);
+        verify(userRepository).save(argThat(user ->
+                user.getLogin().equals(testUser.getLogin()) &&
+                        user.getPassword().equals(ENCODED_PASSWORD) &&
+                        user.getName().equals(testUser.getName()) &&
+                        user.getPhone().equals(testUser.getPhone()) &&
+                        user.getRole().equals(UserRole.USER)
+        ));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to register an existing login")
+    void testRegisterClient_UserAlreadyExists() {
+        // Arrange
+        when(userRepository.existsByLogin(testUser.getLogin())).thenReturn(true);
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.registerClient(registerDTO))
+                .isInstanceOf(AppException.class)
+                .hasMessage("User already exists")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+
+        verify(userRepository).existsByLogin(testUser.getLogin());
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any(User.class));
     }
 
     // ==================== UPDATE USER PROFILE TESTS ====================
