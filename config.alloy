@@ -1,0 +1,19 @@
+prometheus.scrape "spring_boot" {
+  targets = [{
+    __address__ = "api:8080",
+  }]
+  metrics_path = "/api/actuator/prometheus"
+  forward_to   = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+}
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_USERNAME")
+      password = sys.env("GRAFANA_TOKEN")
+    }
+  }
+}

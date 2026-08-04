@@ -1,35 +1,17 @@
 services:
-  db:
-    image: postgres:15
-    container_name: barberflow_postgres
-    environment:
-      POSTGRES_USER: usuario
-      POSTGRES_PASSWORD: senha123
-      POSTGRES_DB: meubanco
-    ports:
-      - "5432:5432"
-
-  redis:
-    image: redis:7
-    container_name: clickFila_redis
-    ports:
-      - "6379:6379"
-
   api:
-    build: .
-    container_name: spring_api
+    image: ${DOCKER_IMAGE:-seu-usuario/clickfila-api:latest}
+    container_name: clickFila_spring_api
+    restart: unless-stopped
     ports:
       - "8080:8080"
     depends_on:
-      - db
       - redis
-    profiles:
-      - "app"
     environment:
       # Database injection
-      - DB_URL=jdbc:postgresql://db:5432/meubanco
-      - DB_USER=usuario
-      - DB_PASS=senha123
+      - DB_URL=${DB_URL}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
 
       # Redis config (fixed for container internal network)
       - SPRING_DATA_REDIS_HOST=redis
@@ -37,11 +19,22 @@ services:
       - SPRING_CACHE_TYPE=redis
 
       # Security & External APIs injection
-      - JWT_SECRET=secret_password
+      - JWT_SECRET=${JWT_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - MAIL_FROM=${MAIL_FROM}
+
+      # Disables Spring's native Docker Compose integration in production
+      - SPRING_DOCKER_COMPOSE_ENABLED=false
+
+
+  redis:
+    image: redis:7
+    container_name: clickFila_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
 
   alloy:
     image: grafana/alloy:latest
@@ -53,6 +46,6 @@ services:
       - GRAFANA_URL=${GRAFANA_URL}
       - GRAFANA_USERNAME=${GRAFANA_USERNAME}
       - GRAFANA_TOKEN=${GRAFANA_TOKEN}
-    extra_hosts:
-          - "api:host-gateway"
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    depends_on:
+      - api

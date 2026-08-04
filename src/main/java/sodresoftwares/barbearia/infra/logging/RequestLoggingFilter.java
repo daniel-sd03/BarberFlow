@@ -20,7 +20,8 @@ import java.util.List;
 public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final List<String> EXCLUDED_PATHS = List.of(
-            "/favicon.ico"
+            "/favicon.ico",
+            "/api/actuator/prometheus"
     );
 
     private static final String ANONYMOUS_USER = "ANONYMOUS";
