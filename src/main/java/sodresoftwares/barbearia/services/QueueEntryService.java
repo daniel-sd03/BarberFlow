@@ -212,7 +212,7 @@ public class QueueEntryService {
     // ==========================================
 
     private QueueEntry getEntryById(String entryId) {
-        return queueEntryRepository.findById(entryId)
+        return queueEntryRepository.findByIdWithUser(entryId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "ENTRY_NOT_FOUND",
