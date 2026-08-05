@@ -38,15 +38,17 @@ services:
 
       # Security & External APIs injection
       - JWT_SECRET=secret_password
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - RESEND_API_KEY=${RESEND_API_KEY}
-      - MAIL_FROM=${MAIL_FROM}
+      - GOOGLE_CLIENT_ID=testete
+      - GOOGLE_CLIENT_SECRET=teste
+      - RESEND_API_KEY=teste
+      - MAIL_FROM=teste
 
   alloy:
     image: grafana/alloy:latest
     container_name: clickfila-alloy
     restart: unless-stopped
+    profiles:
+      - "metrics"
     volumes:
       - ./config.alloy:/etc/alloy/config.alloy:ro
     environment:
