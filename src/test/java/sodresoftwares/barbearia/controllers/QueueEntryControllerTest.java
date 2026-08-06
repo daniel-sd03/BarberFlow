@@ -29,6 +29,9 @@ import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.QueueEntryService;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -87,7 +90,10 @@ class QueueEntryControllerTest {
                 "Cliente Silva",
                 "Corte de Cabelo",
                 QueueEntryStatus.WAITING,
-                null
+                null,
+                Instant.now(),
+                null,
+                10
         );
 
         UsernamePasswordAuthenticationToken auth =
@@ -149,6 +155,7 @@ class QueueEntryControllerTest {
     @Test
     @DisplayName("POST /queue-entries/sessions/{sessionId}/next -> Should call next and return 200 OK")
     void testCallNext_Success() throws Exception {
+        Instant calledTime = Instant.now();
         QueueEntryResponseDTO calledEntry = new QueueEntryResponseDTO(
                 "entry-123",
                 1,
@@ -156,7 +163,10 @@ class QueueEntryControllerTest {
                 "Cliente Silva",
                 "Corte de Cabelo",
                 QueueEntryStatus.CALLED,
-                null
+                calledTime,
+                calledTime,
+                calledTime.plus(10, ChronoUnit.MINUTES),
+                10
         );
 
         when(queueEntryService.callNext(any(), any())).thenReturn(calledEntry);
@@ -193,7 +203,10 @@ class QueueEntryControllerTest {
                 "Cliente Silva",
                 "Corte de Cabelo",
                 QueueEntryStatus.IN_SERVICE,
-                null
+                Instant.now(),
+                Instant.now(),
+                null,
+                10
         );
         when(queueEntryService.startService(any(), any())).thenReturn(inServiceEntry);
 

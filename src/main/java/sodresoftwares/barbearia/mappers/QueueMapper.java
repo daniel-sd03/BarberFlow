@@ -5,7 +5,10 @@ import org.springframework.stereotype.Component;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.QueueEntry;
+import sodresoftwares.barbearia.model.QueueEntryStatus;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,15 +19,7 @@ public class QueueMapper {
         List<QueueEntryResponseDTO> dtos = new ArrayList<>();
         for (int i = 0; i < activeEntries.size(); i++) {
             QueueEntry entry = activeEntries.get(i);
-            dtos.add(new QueueEntryResponseDTO(
-                    entry.getId(),
-                    i + 1,
-                    entry.getUser().getId(),
-                    entry.getUser().getName(),
-                    entry.getServiceName(),
-                    entry.getStatus(),
-                    entry.getCalledAt()
-            ));
+            dtos.add(buildDtoWithTolerance(entry, i + 1));
         }
         return dtos;
     }
@@ -32,21 +27,37 @@ public class QueueMapper {
     public QueueEntryResponseDTO toSingleDto(QueueEntry targetEntry, List<QueueEntry> activeEntries) {
         for (int i = 0; i < activeEntries.size(); i++) {
             if (activeEntries.get(i).getId().equals(targetEntry.getId())) {
-                return new QueueEntryResponseDTO(
-                        targetEntry.getId(),
-                        i + 1,
-                        targetEntry.getUser().getId(),
-                        targetEntry.getUser().getName(),
-                        targetEntry.getServiceName(),
-                        targetEntry.getStatus(),
-                        targetEntry.getCalledAt()
-                );
+                return buildDtoWithTolerance(targetEntry, i + 1);
             }
         }
         throw new AppException(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "ENTRY_NOT_IN_ACTIVE_QUEUE",
                 "Queue entry was not found in the active queue."
+        );
+    }
+
+    private QueueEntryResponseDTO buildDtoWithTolerance(QueueEntry entry, int position) {
+
+        Integer toleranceMinute = entry.getQueueSession().getToleranceMinutes();
+        Instant serverTimeNow = Instant.now();
+        Instant toleranceExpiresAt = null;
+
+        if (entry.getCalledAt() != null && entry.getStatus() == QueueEntryStatus.CALLED) {
+            toleranceExpiresAt = entry.getCalledAt().plus(toleranceMinute, ChronoUnit.MINUTES);
+        }
+
+        return new QueueEntryResponseDTO(
+                entry.getId(),
+                position,
+                entry.getUser().getId(),
+                entry.getUser().getName(),
+                entry.getServiceName(),
+                entry.getStatus(),
+                entry.getCalledAt(),
+                serverTimeNow,
+                toleranceExpiresAt,
+                toleranceMinute
         );
     }
 }

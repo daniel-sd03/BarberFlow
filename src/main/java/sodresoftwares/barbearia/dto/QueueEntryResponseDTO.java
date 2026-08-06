@@ -11,5 +11,8 @@ public record QueueEntryResponseDTO(
         String clientName,
         String serviceName,
         QueueEntryStatus status,
-        Instant calledAt
+        Instant calledAt,
+        Instant serverTimeNow,
+        Instant toleranceExpiresAt,
+        Integer toleranceMinute
 ) {}

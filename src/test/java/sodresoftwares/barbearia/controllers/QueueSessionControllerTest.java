@@ -24,6 +24,7 @@ import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.QueueSessionService;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -90,7 +91,10 @@ class QueueSessionControllerTest {
                 "João Silva",
                 "Corte Navalhado",
                 QueueEntryStatus.WAITING,
-                null
+                null,
+                Instant.now(),
+                null,
+                10
         );
 
         dashboardDTO = new ProfessionalDashboardDTO(

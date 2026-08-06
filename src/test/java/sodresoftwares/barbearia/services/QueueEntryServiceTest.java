@@ -88,6 +88,7 @@ class QueueEntryServiceTest {
                 .id(SESSION_ID)
                 .professional(professional)
                 .isActive(true)
+                .toleranceMinutes(15)
                 .build();
 
         waitingEntry = QueueEntry.builder()
@@ -204,7 +205,7 @@ class QueueEntryServiceTest {
         assertThat(dto.clientName()).isEqualTo("Cliente João");
         assertThat(dto.serviceName()).isEqualTo("Corte");
         assertThat(dto.status()).isEqualTo(QueueEntryStatus.WAITING);
-
+        assertThat(dto.toleranceMinute()).isEqualTo(15);
 
         verify(queueEntryRepository).findByUserIdAndStatusIn(eq(userId), anyList());
         verify(queueCacheService).getActiveEntries(SESSION_ID);
@@ -302,6 +303,7 @@ class QueueEntryServiceTest {
         assertThat(response.clientName()).isEqualTo("Cliente João");
         assertThat(response.serviceName()).isEqualTo("Corte");
         assertThat(response.status()).isEqualTo(QueueEntryStatus.WAITING);
+        assertThat(response.toleranceMinute()).isEqualTo(15);
 
         verify(queueCacheService).evict(SESSION_ID);
     }
@@ -380,7 +382,7 @@ class QueueEntryServiceTest {
 
         when(queueSessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(activeSession));
         when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         when(queueEntryRepository.save(any(QueueEntry.class))).thenReturn(waitingEntry);
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
 
@@ -431,7 +433,7 @@ class QueueEntryServiceTest {
         // Arrange
         when(queueSessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(activeSession));
         when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.empty());
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, BARBER_USER_ID))
@@ -471,7 +473,7 @@ class QueueEntryServiceTest {
         waitingEntry.setStatus(QueueEntryStatus.CALLED);
         waitingEntry.setMissedCalls(0);
 
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         when(queueEntryRepository.save(any(QueueEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID))
@@ -494,7 +496,7 @@ class QueueEntryServiceTest {
     @DisplayName("Should throw bad request exception when trying to requeue an entry that is not CALLED")
     void testRequeueEntry_InvalidStatus() {
         // Arrange: status starts as WAITING
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.requeueEntry(ENTRY_ID, BARBER_USER_ID))
@@ -513,7 +515,7 @@ class QueueEntryServiceTest {
     void testStartService_Success() {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.CALLED);
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
         when(queueEntryRepository.save(any(QueueEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -537,7 +539,7 @@ class QueueEntryServiceTest {
     @DisplayName("Should block startService if the chair is already occupied (IN_SERVICE)")
     void testStartService_ChairOccupied() {
         // Arrange
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
 
         QueueEntry inServiceEntry = QueueEntry.builder().status(QueueEntryStatus.IN_SERVICE).build();
         when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(inServiceEntry, waitingEntry));
@@ -556,7 +558,7 @@ class QueueEntryServiceTest {
     void testStartService_InvalidStatus() {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.FINISHED);
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
 
         // Act & Assert
@@ -575,7 +577,7 @@ class QueueEntryServiceTest {
     void testFinishService_Success() {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.IN_SERVICE);
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         when(queueEntryRepository.save(any(QueueEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -593,7 +595,7 @@ class QueueEntryServiceTest {
     @DisplayName("Should throw bad request exception when attempting to finish a service not IN_SERVICE")
     void testFinishService_InvalidStatus() {
         // Arrange:
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.finishService(ENTRY_ID, BARBER_USER_ID))
@@ -611,7 +613,7 @@ class QueueEntryServiceTest {
     @DisplayName("Should allow the client to cancel their own entry")
     void testCancelEntry_ByClient_Success() {
         // Arrange
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         when(queueEntryRepository.save(any(QueueEntry.class))).thenReturn(waitingEntry);
 
         // Act
@@ -628,7 +630,7 @@ class QueueEntryServiceTest {
     void testCancelEntry_ByBarber_Success() {
         // Arrange
         professional.setId(BARBER_USER_ID);
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         when(queueEntryRepository.save(any(QueueEntry.class))).thenReturn(waitingEntry);
 
         // Act
@@ -644,7 +646,7 @@ class QueueEntryServiceTest {
     @DisplayName("Should throw forbidden exception when user attempting to cancel is neither the barber nor the client")
     void testCancelEntry_Forbidden() {
         // Arrange
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         String intruderUserId = "intruder-user-999";
 
         // Act & Assert
@@ -663,7 +665,7 @@ class QueueEntryServiceTest {
     void testCancelEntry_AlreadyFinishedOrCancelled(QueueEntryStatus invalidStatus) {
         // Arrange
         waitingEntry.setStatus(invalidStatus);
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.cancelEntry(ENTRY_ID, CLIENT_USER_ID))
@@ -679,7 +681,7 @@ class QueueEntryServiceTest {
     void testCancelEntry_ByClient_ServiceInProgress() {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.IN_SERVICE);
-        when(queueEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findByIdWithUser(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.cancelEntry(ENTRY_ID, CLIENT_USER_ID))
