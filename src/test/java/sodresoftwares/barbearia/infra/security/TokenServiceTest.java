@@ -28,8 +28,8 @@ class TokenServiceTest {
     private TokenService tokenService;
 
     private User testUser;
-
     private final String TEST_SECRET = "test-secret-key-for-testing-purposes-only";
+    private final String TEST_LGPD_VERSION = "1.0";
 
     @BeforeEach
     void setUp() {
@@ -45,7 +45,7 @@ class TokenServiceTest {
     @DisplayName("Should generate token successfully")
     void shouldGenerateTokenSuccessfully() {
         // Act
-        String token = tokenService.generateToken(testUser);
+        String token = tokenService.generateToken(testUser, TEST_LGPD_VERSION);
 
         // Assert
         assertThat(token).isNotNull();
@@ -57,7 +57,7 @@ class TokenServiceTest {
     @DisplayName("Should validate correct token successfully")
     void shouldValidateCorrectTokenSuccessfully() {
         // Arrange
-        String token = tokenService.generateToken(testUser);
+        String token = tokenService.generateToken(testUser, TEST_LGPD_VERSION);
 
         // Act
         String validatedLogin = tokenService.validateToken(token);
@@ -80,10 +80,33 @@ class TokenServiceTest {
     }
 
     @Test
+    @DisplayName("Should extract LGPD version from valid token successfully")
+    void shouldExtractLgpdVersionSuccessfully() {
+        // Arrange
+        String token = tokenService.generateToken(testUser, TEST_LGPD_VERSION);
+
+        // Act
+        String extractedVersion = tokenService.getLgpdVersionFromToken(token);
+
+        // Assert
+        assertThat(extractedVersion).isEqualTo(TEST_LGPD_VERSION);
+    }
+
+    @Test
+    @DisplayName("Should return null for invalid token when extracting LGPD version")
+    void shouldReturnNullForInvalidTokenWhenExtractingLgpdVersion() {
+        // Act
+        String result = tokenService.getLgpdVersionFromToken("invalid.token.here");
+
+        // Assert
+        assertThat(result).isNull();
+    }
+
+    @Test
     @DisplayName("Should return null for tampered token")
     void shouldReturnNullForTamperedToken() {
         // Arrange
-        String token = tokenService.generateToken(testUser);
+        String token = tokenService.generateToken(testUser, TEST_LGPD_VERSION);
         String tamperedToken = token.substring(0, token.length() - 10) + "0123456789";
 
         // Act
@@ -117,7 +140,7 @@ class TokenServiceTest {
     @DisplayName("Should have correct issuer in token")
     void shouldHaveCorrectIssuerInToken() {
         // Arrange
-        String token = tokenService.generateToken(testUser);
+        String token = tokenService.generateToken(testUser, TEST_LGPD_VERSION);
         Algorithm algorithm = Algorithm.HMAC256(TEST_SECRET);
 
         // Act & Assert - Verify issuer by decoding without validation
@@ -134,7 +157,7 @@ class TokenServiceTest {
     @DisplayName("Should have expiration date in the future")
     void shouldHaveExpirationDateInTheFuture() {
         // Arrange
-        String token = tokenService.generateToken(testUser);
+        String token = tokenService.generateToken(testUser, TEST_LGPD_VERSION);
         Algorithm algorithm = Algorithm.HMAC256(TEST_SECRET);
 
         // Act
@@ -144,10 +167,8 @@ class TokenServiceTest {
                 .verify(token)
                 .getExpiresAtAsInstant();
 
-        Instant now = Instant.now();
-
         // Assert
-        assertThat(expiresAt).isAfter(now);
+        assertThat(expiresAt).isAfter(Instant.now());
     }
 }
 

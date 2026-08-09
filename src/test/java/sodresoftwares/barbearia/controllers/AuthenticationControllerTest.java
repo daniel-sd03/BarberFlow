@@ -20,7 +20,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import sodresoftwares.barbearia.dto.*;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
-import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.AuthenticationService;
 import sodresoftwares.barbearia.services.PasswordResetService;
@@ -90,7 +89,7 @@ class AuthenticationControllerTest {
         String VALID_TOKEN = "jwt-token-example";
         String VALID_ROLE = UserRole.USER.toString();
 
-        LoginResponseDTO mockResponse = new LoginResponseDTO(VALID_TOKEN, VALID_ROLE);
+        TokenResponseDTO mockResponse = new TokenResponseDTO(VALID_TOKEN, VALID_ROLE);
 
         when(authService.login(any(AuthenticationDTO.class))).thenReturn(mockResponse);
 

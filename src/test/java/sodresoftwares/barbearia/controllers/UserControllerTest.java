@@ -1,5 +1,6 @@
 package sodresoftwares.barbearia.controllers;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -133,7 +134,7 @@ class UserControllerTest {
     void testRegister_Success() throws Exception {
         // Arrange
         User userMock = new User();
-        when(userService.registerClient(any(RegisterDTO.class))).thenReturn(userMock);
+        when(userService.registerClient(any(RegisterDTO.class), any())).thenReturn(userMock);
 
         // Act & Assert
         mockMvc.perform(post("/users")
@@ -141,7 +142,7 @@ class UserControllerTest {
                         .content(jsonTester.write(registerDTO).getJson()))
                 .andExpect(status().isCreated());
 
-        verify(userService).registerClient(any(RegisterDTO.class));
+        verify(userService).registerClient(any(RegisterDTO.class), any());
     }
 
     @Test

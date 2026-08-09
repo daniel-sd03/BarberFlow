@@ -13,11 +13,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import sodresoftwares.barbearia.model.LgpdConsent;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
+import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
+import sodresoftwares.barbearia.services.LgpdConsentService;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -30,6 +34,12 @@ class OAuth2AuthenticationSuccessHandlerTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private LgpdConsentRepository lgpdConsentRepository;
+
+    @Mock
+    private LgpdConsentService lgpdConsentService;
 
     @Mock
     private HttpServletRequest request;
@@ -49,9 +59,12 @@ class OAuth2AuthenticationSuccessHandlerTest {
     private final String email = "user@example.com";
     private final String googleId = "1234567890";
     private final String fakeToken = "mocked-jwt-token";
+    private final String fakeLgpdVersion = "1.0";
+    private LgpdConsent mockConsent;
 
     @BeforeEach
     void setUp() {
+        mockConsent = LgpdConsent.builder().termVersion(fakeLgpdVersion).build();
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttribute("email")).thenReturn(email);
         when(oAuth2User.getAttribute("sub")).thenReturn(googleId);
@@ -69,7 +82,9 @@ class OAuth2AuthenticationSuccessHandlerTest {
                 .build();
 
         when(userRepository.findByGoogleId(googleId)).thenReturn(existingUser);
-        when(tokenService.generateToken(existingUser)).thenReturn(fakeToken);
+        when(lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(existingUser.getId()))
+                .thenReturn(Optional.of(mockConsent));
+        when(tokenService.generateToken(existingUser, fakeLgpdVersion)).thenReturn(fakeToken);
 
         // Act
         successHandler.onAuthenticationSuccess(request, response, authentication);
@@ -77,7 +92,8 @@ class OAuth2AuthenticationSuccessHandlerTest {
         // Assert
         assertEquals(email, existingUser.getLogin());
         verify(userRepository).save(existingUser);
-        verify(tokenService).generateToken(existingUser);
+        verify(tokenService).generateToken(existingUser, fakeLgpdVersion);
+        verify(lgpdConsentService, never()).registerConsentForNewUser(any(), any());
 
         assertCookieAndRedirect();
     }
@@ -94,7 +110,9 @@ class OAuth2AuthenticationSuccessHandlerTest {
 
         when(userRepository.findByGoogleId(googleId)).thenReturn(null);
         when(userRepository.findByLogin(email)).thenReturn(standardUser);
-        when(tokenService.generateToken(standardUser)).thenReturn(fakeToken);
+        when(lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(standardUser.getId()))
+                .thenReturn(Optional.of(mockConsent));
+        when(tokenService.generateToken(standardUser, fakeLgpdVersion)).thenReturn(fakeToken);
 
         // Act
         successHandler.onAuthenticationSuccess(request, response, authentication);
@@ -102,7 +120,8 @@ class OAuth2AuthenticationSuccessHandlerTest {
         // Assert
         assertEquals(googleId, standardUser.getGoogleId());
         verify(userRepository).save(standardUser);
-        verify(tokenService).generateToken(standardUser);
+        verify(tokenService).generateToken(standardUser, fakeLgpdVersion);
+        verify(lgpdConsentService, never()).registerConsentForNewUser(any(), any());
 
         assertCookieAndRedirect();
     }
@@ -113,10 +132,16 @@ class OAuth2AuthenticationSuccessHandlerTest {
         // Arrange
         when(userRepository.findByGoogleId(googleId)).thenReturn(null);
         when(userRepository.findByLogin(email)).thenReturn(null);
+        when(lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(anyString()))
+                .thenReturn(Optional.of(mockConsent));
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        when(userRepository.save(userCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(tokenService.generateToken(any(User.class))).thenReturn(fakeToken);
+        when(userRepository.save(userCaptor.capture())).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setId("new-user-123");
+            return u;
+        });
+        when(tokenService.generateToken(any(User.class), eq(fakeLgpdVersion))).thenReturn(fakeToken);
 
         // Act
         successHandler.onAuthenticationSuccess(request, response, authentication);
@@ -130,7 +155,8 @@ class OAuth2AuthenticationSuccessHandlerTest {
         assertNotNull(newUser.getPassword());
 
         verify(userRepository).save(newUser);
-        verify(tokenService).generateToken(newUser);
+        verify(lgpdConsentService).registerConsentForNewUser(newUser, request);
+        verify(tokenService).generateToken(newUser, fakeLgpdVersion);
 
         assertCookieAndRedirect();
     }

@@ -1,5 +1,6 @@
 package sodresoftwares.barbearia.controllers;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,8 +30,9 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<Void> register(
-            @RequestBody @Valid RegisterDTO data) {
-        userService.registerClient(data);
+            @RequestBody @Valid RegisterDTO data,
+            HttpServletRequest request) {
+        userService.registerClient(data,request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

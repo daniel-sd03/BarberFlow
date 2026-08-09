@@ -1,5 +1,6 @@
 package sodresoftwares.barbearia.controllers;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,8 +29,9 @@ public class ProfessionalController {
 
     @PostMapping
     public ResponseEntity<Void> registerProfessional(
-            @RequestBody @Valid RegisterProfessionalDTO data) {
-        professionalService.registerProfessional(data);
+            @RequestBody @Valid RegisterProfessionalDTO data,
+            HttpServletRequest request) {
+        professionalService.registerProfessional(data,request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

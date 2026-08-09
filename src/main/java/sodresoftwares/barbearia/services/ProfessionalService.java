@@ -1,5 +1,6 @@
 package sodresoftwares.barbearia.services;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -25,10 +26,10 @@ public class ProfessionalService {
     private final UserService userService;
 
     @Transactional
-    public void registerProfessional(RegisterProfessionalDTO data) {
+    public void registerProfessional(RegisterProfessionalDTO data, HttpServletRequest request) {
         RegisterDTO baseData = new RegisterDTO(data.login(), data.password(), data.name(), data.phone());
 
-        User savedUser = userService.createUser(baseData, UserRole.PROFESSIONAL);
+        User savedUser = userService.createUser(baseData, UserRole.PROFESSIONAL, request);
 
         Professional newProfessional = Professional.builder()
                 .user(savedUser)
