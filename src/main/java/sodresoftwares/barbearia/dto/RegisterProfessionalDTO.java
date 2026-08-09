@@ -1,8 +1,6 @@
 package sodresoftwares.barbearia.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.*;
 
 public record RegisterProfessionalDTO(
         @NotBlank(message = "E-mail is required")
@@ -19,5 +17,9 @@ public record RegisterProfessionalDTO(
         String phone,
 
         @NotBlank(message = "Business Name is required")
-        String businessName
+        String businessName,
+
+        @NotNull(message = "Terms acceptance is required")
+        @AssertTrue(message = "You must accept the terms of use and privacy policy to register")
+        Boolean termsAccepted
 ) {}
