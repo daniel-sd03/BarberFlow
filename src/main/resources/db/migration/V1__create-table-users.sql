@@ -13,6 +13,17 @@ CREATE TABLE users
     updated_by VARCHAR(255)
 );
 
+CREATE TABLE lgpd_consents
+(
+    id           TEXT PRIMARY KEY UNIQUE NOT NULL,
+    user_id      TEXT                    NOT NULL,
+    term_version VARCHAR(20)             NOT NULL,
+    ip_address   VARCHAR(45),
+    user_agent   TEXT,
+    created_at   TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_lgpd_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
 CREATE TABLE professionals
 (
     id            TEXT PRIMARY KEY UNIQUE NOT NULL,

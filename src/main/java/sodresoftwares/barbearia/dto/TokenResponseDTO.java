@@ -1,6 +1,6 @@
 package sodresoftwares.barbearia.dto;
 
-public record LoginResponseDTO (
+public record TokenResponseDTO(
         String token,
         String role
 ){}

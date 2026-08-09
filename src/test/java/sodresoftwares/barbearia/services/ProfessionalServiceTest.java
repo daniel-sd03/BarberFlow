@@ -1,5 +1,6 @@
 package sodresoftwares.barbearia.services;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,9 @@ class ProfessionalServiceTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private HttpServletRequest request;
 
     @InjectMocks
     private ProfessionalService professionalService;
@@ -110,14 +114,14 @@ class ProfessionalServiceTest {
     @DisplayName("Should register new professional successfully")
     void testRegisterProfessional_Successful() {
         // Arrange:
-        when(userService.createUser(any(RegisterDTO.class), eq(UserRole.PROFESSIONAL)))
+        when(userService.createUser(any(RegisterDTO.class), eq(UserRole.PROFESSIONAL), any()))
                 .thenReturn(testProfessional.getUser());
 
         // Act
-        professionalService.registerProfessional(registerProfDTO);
+        professionalService.registerProfessional(registerProfDTO, request);
 
         // Assert
-        verify(userService).createUser(any(RegisterDTO.class), eq(UserRole.PROFESSIONAL));
+        verify(userService).createUser(any(RegisterDTO.class), eq(UserRole.PROFESSIONAL), eq(request));
         verify(professionalRepository).save(argThat(professional ->
                 professional.getUser().getId().equals(USER_ID) &&
                         professional.getBusinessName().equals("Barbearia do Zé") &&
@@ -129,16 +133,16 @@ class ProfessionalServiceTest {
     @DisplayName("Should throw exception when trying to register an existing professional")
     void testRegisterProfessional_UserAlreadyExists() {
         // Arrange: Se o UserService lançar exceção, o fluxo deve ser interrompido
-        when(userService.createUser(any(RegisterDTO.class), eq(UserRole.PROFESSIONAL)))
+        when(userService.createUser(any(RegisterDTO.class), eq(UserRole.PROFESSIONAL), any()))
                 .thenThrow(new AppException(HttpStatus.CONFLICT, "USER_ALREADY_EXISTS", "User already exists"));
 
         // Act & Assert
-        assertThatThrownBy(() -> professionalService.registerProfessional(registerProfDTO))
+        assertThatThrownBy(() -> professionalService.registerProfessional(registerProfDTO, request))
                 .isInstanceOf(AppException.class)
                 .hasMessage("User already exists")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
 
-        verify(userService).createUser(any(RegisterDTO.class), eq(UserRole.PROFESSIONAL));
+        verify(userService).createUser(any(RegisterDTO.class), eq(UserRole.PROFESSIONAL), eq(request));
         verify(professionalRepository, never()).save(any(Professional.class));
     }
 

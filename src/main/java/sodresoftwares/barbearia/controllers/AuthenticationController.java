@@ -2,7 +2,6 @@ package sodresoftwares.barbearia.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sodresoftwares.barbearia.dto.*;
@@ -18,9 +17,9 @@ public class AuthenticationController {
 	private final PasswordResetService passwordResetService;
 
 	@PostMapping("/login")
-	public ResponseEntity<LoginResponseDTO> login(
+	public ResponseEntity<TokenResponseDTO> login(
 			@RequestBody @Valid AuthenticationDTO data) {
-		LoginResponseDTO response = authenticationService.login(data);
+		TokenResponseDTO response = authenticationService.login(data);
 		return ResponseEntity.ok(response);
 	}
 

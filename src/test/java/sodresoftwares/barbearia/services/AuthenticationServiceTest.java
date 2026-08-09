@@ -1,6 +1,5 @@
 package sodresoftwares.barbearia.services;
 
-import org.h2.engine.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -8,27 +7,25 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import sodresoftwares.barbearia.dto.AuthenticationDTO;
-import sodresoftwares.barbearia.dto.LoginResponseDTO;
-import sodresoftwares.barbearia.dto.RegisterDTO;
-import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
-import sodresoftwares.barbearia.infra.exception.AppException;
+import sodresoftwares.barbearia.dto.TokenResponseDTO;
 import sodresoftwares.barbearia.infra.security.TokenService;
-import sodresoftwares.barbearia.model.Professional;
+import sodresoftwares.barbearia.model.LgpdConsent;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
+import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
 import sodresoftwares.barbearia.repositories.ProfessionalRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
+
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,13 +39,7 @@ class AuthenticationServiceTest {
     private TokenService tokenService;
 
     @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private ProfessionalRepository professionalRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    private LgpdConsentRepository lgpdConsentRepository;
 
     @InjectMocks
     private AuthenticationService authService;
@@ -82,13 +73,18 @@ class AuthenticationServiceTest {
                 testUser, null, testUser.getAuthorities()
         );
 
+        String fakeLgpdVersion = "1.0";
+        LgpdConsent mockConsent = LgpdConsent.builder().termVersion(fakeLgpdVersion).build();
+
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authenticatedToken);
-        when(tokenService.generateToken(testUser))
+        when(lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(testUser.getId()))
+                .thenReturn(Optional.of(mockConsent));
+        when(tokenService.generateToken(testUser, fakeLgpdVersion))
                 .thenReturn("valid-jwt-token");
 
         // Act
-        LoginResponseDTO result = authService.login(authDTO);
+        TokenResponseDTO result = authService.login(authDTO);
 
         // Assert
         assertThat(result).isNotNull();
@@ -96,7 +92,8 @@ class AuthenticationServiceTest {
         assertThat(result.role()).isEqualTo(UserRole.USER.toString());
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(tokenService).generateToken(testUser);
+        verify(lgpdConsentRepository).findFirstByUserIdOrderByCreatedAtDesc(testUser.getId());
+        verify(tokenService).generateToken(testUser, fakeLgpdVersion);
     }
 
     @Test
@@ -112,6 +109,6 @@ class AuthenticationServiceTest {
                 .hasMessage("Invalid credentials");
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(tokenService, never()).generateToken(any());
+        verify(tokenService, never()).generateToken(any(), any());
     }
 }

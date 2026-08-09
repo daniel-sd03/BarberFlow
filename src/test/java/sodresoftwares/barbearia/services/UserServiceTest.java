@@ -1,5 +1,6 @@
 package sodresoftwares.barbearia.services;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,12 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private LgpdConsentService lgpdConsentService;
+
+    @Mock
+    private HttpServletRequest request;
 
     @InjectMocks
     private UserService userService;
@@ -106,7 +113,7 @@ class UserServiceTest {
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
         // Act
-        userService.registerClient(registerDTO);
+        userService.registerClient(registerDTO, request);
 
         // Assert
         verify(userRepository).existsByLogin(testUser.getLogin());
@@ -118,6 +125,7 @@ class UserServiceTest {
                         user.getPhone().equals(testUser.getPhone()) &&
                         user.getRole().equals(UserRole.USER)
         ));
+        verify(lgpdConsentService).registerConsentForNewUser(testUser, request);
     }
 
     @Test
@@ -127,7 +135,7 @@ class UserServiceTest {
         when(userRepository.existsByLogin(testUser.getLogin())).thenReturn(true);
 
         // Act & Assert
-        assertThatThrownBy(() -> userService.registerClient(registerDTO))
+        assertThatThrownBy(() -> userService.registerClient(registerDTO, request))
                 .isInstanceOf(AppException.class)
                 .hasMessage("User already exists")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
@@ -135,6 +143,7 @@ class UserServiceTest {
         verify(userRepository).existsByLogin(testUser.getLogin());
         verify(passwordEncoder, never()).encode(anyString());
         verify(userRepository, never()).save(any(User.class));
+        verify(lgpdConsentService, never()).registerConsentForNewUser(any(), any());
     }
 
     // ==================== UPDATE USER PROFILE TESTS ====================

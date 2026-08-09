@@ -132,7 +132,7 @@ class ProfessionalControllerTest {
     @DisplayName("POST /professionals -> Should register new professional successfully (HTTP 201)")
     void testRegisterProfessional_Success() throws Exception {
         // Arrange
-        doNothing().when(professionalService).registerProfessional(any(RegisterProfessionalDTO.class));
+        doNothing().when(professionalService).registerProfessional(any(RegisterProfessionalDTO.class), any());
 
         // Act & Assert
         mockMvc.perform(post("/professionals")
@@ -140,7 +140,7 @@ class ProfessionalControllerTest {
                         .content(jsonTester.write(registerProfessionalDTO).getJson()))
                 .andExpect(status().isCreated());
 
-        verify(professionalService).registerProfessional(any(RegisterProfessionalDTO.class));
+        verify(professionalService).registerProfessional(any(RegisterProfessionalDTO.class), any());
     }
 
     @Test

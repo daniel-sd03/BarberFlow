@@ -1,5 +1,6 @@
 package sodresoftwares.barbearia.services;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -23,14 +24,15 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final LgpdConsentService lgpdConsentService;
 
     @Transactional
-    public User registerClient(RegisterDTO data) {
-        return createUser(data, UserRole.USER);
+    public User registerClient(RegisterDTO data, HttpServletRequest request) {
+        return createUser(data, UserRole.USER,request);
     }
 
     @Transactional
-    public User createUser(RegisterDTO data, UserRole role) {
+    public User createUser(RegisterDTO data, UserRole role, HttpServletRequest request) {
         if (this.userRepository.existsByLogin(data.login())) {
             throw new AppException(
                     HttpStatus.CONFLICT,
@@ -49,6 +51,7 @@ public class UserService {
                 .build();
 
         User savedUser = userRepository.save(newUser);
+        lgpdConsentService.registerConsentForNewUser(savedUser, request);
         log.info("User registered with role {}", savedUser.getRole());
 
         return savedUser;
