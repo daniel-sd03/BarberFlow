@@ -73,7 +73,7 @@ class LgpdConsentControllerTest {
         when(lgpdConsentService.acceptCurrentTerms(any(User.class), any())).thenReturn(mockResponse);
 
         // Act & Assert
-        mockMvc.perform(post("/api/v1/lgpd-consents")
+        mockMvc.perform(post("/v1/lgpd-consents")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value(newToken))

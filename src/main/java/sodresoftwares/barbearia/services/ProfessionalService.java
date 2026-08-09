@@ -27,7 +27,7 @@ public class ProfessionalService {
 
     @Transactional
     public void registerProfessional(RegisterProfessionalDTO data, HttpServletRequest request) {
-        RegisterDTO baseData = new RegisterDTO(data.login(), data.password(), data.name(), data.phone());
+        RegisterDTO baseData = new RegisterDTO(data.login(), data.password(), data.name(), data.phone(),data.termsAccepted());
 
         User savedUser = userService.createUser(baseData, UserRole.PROFESSIONAL, request);
 

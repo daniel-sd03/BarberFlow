@@ -84,7 +84,8 @@ class ProfessionalControllerTest {
                 "password123",
                 "Barbeiro Teste",
                 "11999999999",
-                "Barbearia do Zé"
+                "Barbearia do Zé",
+                true
         );
 
         updateDTO = new UpdateProfessionalDTO("New Business Name");
@@ -148,7 +149,7 @@ class ProfessionalControllerTest {
     void testRegisterProfessional_ValidationErrors() throws Exception {
         // Arrange
         RegisterProfessionalDTO invalidDTO = new RegisterProfessionalDTO(
-                "", "", "", "123", "");
+                "", "", "", "123", "",true);
 
         // Act & Assert
         mockMvc.perform(post("/professionals")

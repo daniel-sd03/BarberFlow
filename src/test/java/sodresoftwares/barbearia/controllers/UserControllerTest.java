@@ -86,8 +86,8 @@ class UserControllerTest {
                 "user@test.com",
                 "password123",
                 "Cliente Teste",
-                "11999999999")
-        ;
+                "11999999999",
+                true);
 
         updateDTO = new UpdateUserDTO(
                 "New Name",
@@ -148,7 +148,7 @@ class UserControllerTest {
     @Test
     @DisplayName("POST /users -> Should return 400 when register fields are blank")
     void testRegister_ValidationErrors() throws Exception {
-        RegisterDTO invalidDTO = new RegisterDTO("", "", "", "123");
+        RegisterDTO invalidDTO = new RegisterDTO("", "", "", "123",true);
 
         // Act & Assert
         mockMvc.perform(post("/users")

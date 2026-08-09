@@ -66,7 +66,8 @@ class UserServiceTest {
                 testUser.getLogin(),
                 RAW_PASSWORD,
                 testUser.getName(),
-                testUser.getPhone()
+                testUser.getPhone(),
+                true
         );
     }
     // ====================  GET MY PROFILE TESTS ====================

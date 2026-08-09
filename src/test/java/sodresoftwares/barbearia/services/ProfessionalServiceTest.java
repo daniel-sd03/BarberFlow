@@ -68,7 +68,8 @@ class ProfessionalServiceTest {
                 "password123",
                 "Barbeiro Zé",
                 "11999999999",
-                "Barbearia do Zé"
+                "Barbearia do Zé",
+                true
         );
     }
 
