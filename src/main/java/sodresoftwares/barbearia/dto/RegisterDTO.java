@@ -1,9 +1,6 @@
 package sodresoftwares.barbearia.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.*;
 import sodresoftwares.barbearia.model.user.UserRole;
 
 public record RegisterDTO(
@@ -18,5 +15,9 @@ public record RegisterDTO(
         String name,
 
         @Pattern(regexp = "^\\d{10,11}$", message = "Phone must contain 10 or 11 digits")
-        String phone
+        String phone,
+
+        @NotNull(message = "Terms acceptance is required")
+        @AssertTrue(message = "You must accept the terms of use and privacy policy to register")
+        Boolean termsAccepted
 ) {}
