@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.test.util.ReflectionTestUtils;
 import sodresoftwares.barbearia.model.LgpdConsent;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
@@ -69,6 +70,10 @@ class OAuth2AuthenticationSuccessHandlerTest {
         when(oAuth2User.getAttribute("email")).thenReturn(email);
         when(oAuth2User.getAttribute("sub")).thenReturn(googleId);
         when(response.encodeRedirectURL(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ReflectionTestUtils.setField(successHandler, "frontendUrl", "http://localhost:5173/oauth/callback");
+        ReflectionTestUtils.setField(successHandler, "cookieDomain", "");
+        ReflectionTestUtils.setField(successHandler, "cookieSecure", false);
     }
 
     @Test
@@ -187,6 +192,6 @@ class OAuth2AuthenticationSuccessHandlerTest {
         assertEquals("/", roleCookie.getPath());
         assertEquals(60, roleCookie.getMaxAge());
 
-        verify(response).sendRedirect("http://localhost:5173/inicio");
+        verify(response).sendRedirect("http://localhost:5173/oauth/callback");
     }
 }
