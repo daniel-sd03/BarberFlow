@@ -1,6 +1,6 @@
 services:
   api:
-    image: ${DOCKER_IMAGE:-seu-usuario/clickfila-api:latest}
+    image: clickfila/clickfila-api:latest
     container_name: clickFila_spring_api
     restart: unless-stopped
     ports:
@@ -28,7 +28,6 @@ services:
       # Disables Spring's native Docker Compose integration in production
       - SPRING_DOCKER_COMPOSE_ENABLED=false
 
-
   redis:
     image: redis:7
     container_name: clickFila_redis
@@ -49,3 +48,12 @@ services:
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     depends_on:
       - api
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+      - TUNNEL_TRANSPORT_PROTOCOL=http2
