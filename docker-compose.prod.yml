@@ -25,6 +25,11 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY}
       - MAIL_FROM=${MAIL_FROM}
 
+      # OAuth2 & Cookies Redirect
+      - FRONTEND_URL=${FRONTEND_URL}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN}
+      - COOKIE_SECURE=${COOKIE_SECURE}
+
       # Disables Spring's native Docker Compose integration in production
       - SPRING_DOCKER_COMPOSE_ENABLED=false
 
