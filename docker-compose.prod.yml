@@ -42,10 +42,14 @@ services:
 
   alloy:
     image: grafana/alloy:latest
-    container_name: clickfila-alloy
+    container_name: clickFila_alloy
     restart: unless-stopped
+    pid: host
     volumes:
-      - ./config.alloy:/etc/alloy/config.alloy:ro
+        - ./config.alloy:/etc/alloy/config.alloy:ro
+        - /proc:/host/proc:ro
+        - /sys:/host/sys:ro
+        - /:/rootfs:ro
     environment:
       - GRAFANA_URL=${GRAFANA_URL}
       - GRAFANA_USERNAME=${GRAFANA_USERNAME}
@@ -56,7 +60,7 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: cloudflare_tunnel
+    container_name: clickFila_cloudFlare_tunnel
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
