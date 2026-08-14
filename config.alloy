@@ -1,9 +1,21 @@
+prometheus.exporter.unix "host_metrics" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/rootfs"
+}
+
+prometheus.scrape "unix_scraper" {
+  targets         = prometheus.exporter.unix.host_metrics.targets
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+}
+
 prometheus.scrape "spring_boot" {
   targets = [{
     __address__ = "api:8080",
   }]
-  metrics_path = "/api/actuator/prometheus"
-  forward_to   = [prometheus.remote_write.grafana_cloud.receiver]
+  metrics_path    = "/api/actuator/prometheus"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
   scrape_interval = "15s"
 }
 
