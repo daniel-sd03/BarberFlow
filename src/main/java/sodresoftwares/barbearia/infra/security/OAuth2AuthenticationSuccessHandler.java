@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -30,12 +31,29 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final LgpdConsentRepository lgpdConsentRepository;
     private final LgpdConsentService lgpdConsentService;
 
+    @Value("${app.security.frontend-url}")
+    private String frontendUrl;
+
+    @Value("${app.security.cookie.domain}")
+    private String cookieDomain;
+
+    @Value("${app.security.cookie.secure}")
+    private boolean cookieSecure;
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         String email = oAuth2User.getAttribute("email");
         String googleId = oAuth2User.getAttribute("sub");
+        String name = oAuth2User.getAttribute("name");
+
+        if (name == null || name.isBlank()) {
+            name = oAuth2User.getAttribute("given_name");
+        }
+        if (name == null || name.isBlank()) {
+            name = email.split("@")[0];
+        }
 
         User userByGoogleId = userRepository.findByGoogleId(googleId);
         User userByEmail = (User) userRepository.findByLogin(email);
@@ -67,6 +85,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         else {
             finalUser = User.builder()
                     .login(email)
+                    .name(name)
                     .googleId(googleId)
                     .password(UUID.randomUUID().toString())
                     .role(UserRole.USER)
@@ -86,17 +105,22 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         Cookie tokenCookie = new Cookie("TEMP_AUTH_TOKEN", jwtToken);
         tokenCookie.setPath("/");
         tokenCookie.setMaxAge(60);
-        // tokenCookie.setSecure(true); // Descomentar em produção (HTTPS)
+        tokenCookie.setSecure(cookieSecure);
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            tokenCookie.setDomain(cookieDomain);
+        }
         response.addCookie(tokenCookie);
 
         Cookie roleCookie = new Cookie("TEMP_ROLE", finalUser.getRole().name());
         roleCookie.setPath("/");
         roleCookie.setMaxAge(60);
-        // roleCookie.setSecure(true); // Descomentar em produção (HTTPS)
+        roleCookie.setSecure(cookieSecure);
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            roleCookie.setDomain(cookieDomain);
+        }
         response.addCookie(roleCookie);
 
-        String targetUrl = "http://localhost:5173/inicio";
         log.info("OAuth2 authentication completed successfully for user {}", finalUser.getId());
-        getRedirectStrategy().sendRedirect(request, response, targetUrl);
+        getRedirectStrategy().sendRedirect(request, response, frontendUrl);
     }
 }
