@@ -8,6 +8,18 @@ prometheus.scrape "unix_scraper" {
   targets         = prometheus.exporter.unix.host_metrics.targets
   forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
   scrape_interval = "15s"
+  job_name        = "node"
+}
+
+prometheus.exporter.cadvisor "docker_metrics" {
+  docker_host = "unix:///var/run/docker.sock"
+}
+
+prometheus.scrape "cadvisor_scraper" {
+  targets         = prometheus.exporter.cadvisor.docker_metrics.targets
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  job_name        = "cadvisor"
 }
 
 prometheus.scrape "spring_boot" {
@@ -17,6 +29,7 @@ prometheus.scrape "spring_boot" {
   metrics_path    = "/api/actuator/prometheus"
   forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
   scrape_interval = "15s"
+  job_name        = "spring-boot"
 }
 
 prometheus.remote_write "grafana_cloud" {
