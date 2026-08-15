@@ -31,7 +31,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final LgpdConsentRepository lgpdConsentRepository;
     private final LgpdConsentService lgpdConsentService;
 
-    @Value("${app.security.frontend-url}")
+    @Value("${app.security.oauth2-redirect}")
     private String frontendUrl;
 
     @Value("${app.security.cookie.domain}")
