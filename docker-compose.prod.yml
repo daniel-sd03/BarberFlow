@@ -33,6 +33,8 @@ services:
       # Disables Spring's native Docker Compose integration in production
       - SPRING_DOCKER_COMPOSE_ENABLED=false
       - SPRING_PROFILES_ACTIVE=prod
+      - SPRINGDOC_SWAGGER_UI_ENABLED=false
+      - SPRINGDOC_API_DOCS_ENABLED=false
 
   redis:
     image: redis:7
