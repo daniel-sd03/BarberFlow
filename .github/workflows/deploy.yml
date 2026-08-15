@@ -51,7 +51,7 @@ jobs:
       - name: Deploy via AWS SSM
         run: |
           aws ssm send-command \
-            --instance-ids "i-010b4e9e30c70f46b" \
+            --instance-ids "i-0258e1cfb8641d58c" \
             --document-name "DeployClickFilaAPI" \
             --parameters "DockerUser='${{ secrets.DOCKERHUB_USERNAME }}',DockerPass='${{ secrets.DOCKERHUB_TOKEN }}',EnvContent='
               DB_URL=${{ secrets.DB_URL }}
