@@ -66,6 +66,8 @@ jobs:
               GRAFANA_USERNAME=${{ secrets.GRAFANA_USERNAME }}
               GRAFANA_TOKEN=${{ secrets.GRAFANA_TOKEN }}
               CLOUDFLARE_TUNNEL_TOKEN=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+              LOKI_URL=${{ secrets.LOKI_URL }}
+              LOKI_USERNAME=${{ secrets.LOKI_USERNAME }}
               FRONTEND_URL=${{ secrets.FRONTEND_URL }}
               COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN }}
               COOKIE_SECURE=${{ secrets.COOKIE_SECURE }}

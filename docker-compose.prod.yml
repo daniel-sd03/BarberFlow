@@ -32,6 +32,7 @@ services:
 
       # Disables Spring's native Docker Compose integration in production
       - SPRING_DOCKER_COMPOSE_ENABLED=false
+      - SPRING_PROFILES_ACTIVE=prod
 
   redis:
     image: redis:7
@@ -43,6 +44,7 @@ services:
   alloy:
     image: grafana/alloy:latest
     container_name: clickFila_alloy
+    hostname: ec2-clickfila
     restart: unless-stopped
     pid: host
     volumes:
@@ -51,10 +53,13 @@ services:
         - /sys:/host/sys:ro
         - /:/rootfs:ro
         - /var/run/docker.sock:/var/run/docker.sock:ro
+        - /var/lib/docker:/var/lib/docker:ro
     environment:
       - GRAFANA_URL=${GRAFANA_URL}
       - GRAFANA_USERNAME=${GRAFANA_USERNAME}
       - GRAFANA_TOKEN=${GRAFANA_TOKEN}
+      - LOKI_URL=${LOKI_URL}
+      - LOKI_USERNAME=${LOKI_USERNAME}
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     depends_on:
       - api
