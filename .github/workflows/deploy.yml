@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   test-and-build:
@@ -52,7 +53,7 @@ jobs:
           aws ssm send-command \
             --instance-ids "i-010b4e9e30c70f46b" \
             --document-name "DeployClickFilaAPI" \
-            --parameters "EnvContent='
+            --parameters "DockerUser='${{ secrets.DOCKERHUB_USERNAME }}',DockerPass='${{ secrets.DOCKERHUB_TOKEN }}',EnvContent='
               DB_URL=${{ secrets.DB_URL }}
               DB_USER=${{ secrets.DB_USER }}
               DB_PASS=${{ secrets.DB_PASS }}
