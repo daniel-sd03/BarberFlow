@@ -134,7 +134,7 @@ public class QueueSessionService {
     }
 
     public ProfessionalDashboardDTO getDashboardData(String loggedUserId) {
-        Optional<QueueSession> sessionOpt = queueSessionRepository.findByProfessionalUserId(loggedUserId);
+        Optional<QueueSession> sessionOpt = queueSessionRepository.findByProfessionalUserIdWithProfessional(loggedUserId);
 
         if (sessionOpt.isEmpty()) {
             Professional professional = professionalRepository.findByUserId(loggedUserId)
@@ -169,11 +169,12 @@ public class QueueSessionService {
     }
 
     public QueueSessionUserResponseDTO getSessionInfoByCode(String ticketCode) {
-        QueueSession session = queueSessionRepository.findByTicketCode(ticketCode.toUpperCase())
+        QueueSession session = queueSessionRepository.findByTicketCodeWithProfessional(ticketCode.toUpperCase())
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "SESSION_NOT_FOUND",
-                        "Queue not found for the Ticket code."));
+                        "Queue not found for the Ticket code."
+                ));
 
         int peopleInQueue = queueCacheService.getActiveEntries(session.getId()).size();
 

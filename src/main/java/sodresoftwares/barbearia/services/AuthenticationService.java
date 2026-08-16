@@ -30,18 +30,20 @@ public class AuthenticationService {
         var auth = this.authenticationManager.authenticate(usernamePassword);
 
         User loggedUser = (User) Objects.requireNonNull(auth.getPrincipal());
+        try {
+            MDC.put("userId", loggedUser.getId());
+            log.info("User authenticated successfully");
 
-        MDC.put("userId", loggedUser.getId());
-        log.info("User authenticated successfully");
+            String lgpdLastAcceptedVersion = lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(loggedUser.getId())
+                    .map(LgpdConsent::getTermVersion)
+                    .orElse(null);
 
-        String lgpdLastAcceptedVersion = lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(loggedUser.getId())
-                .map(LgpdConsent::getTermVersion)
-                .orElse(null);
+            String token = tokenService.generateToken(loggedUser, lgpdLastAcceptedVersion);
+            String role = loggedUser.getRole().toString();
 
-        String token = tokenService.generateToken(loggedUser, lgpdLastAcceptedVersion);
-
-        String role = loggedUser.getRole().toString();
-
-        return new TokenResponseDTO(token, role);
+            return new TokenResponseDTO(token, role);
+        } finally {
+            MDC.remove("userId");
+        }
     }
 }

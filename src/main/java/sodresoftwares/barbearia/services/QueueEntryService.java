@@ -74,12 +74,12 @@ public class QueueEntryService {
     @Transactional
     public QueueEntryResponseDTO joinQueue(@NonNull JoinQueueDTO dto, String loggedUserId) {
         QueueSession session = getAndValidateSession(dto.queueSessionId());
-        User user = getAndValidateUser(loggedUserId);
-        validateUserNotInAnyQueue(user.getId());
+        User userProxy = userRepository.getReferenceById(loggedUserId);
+        validateUserNotInAnyQueue(loggedUserId);
 
         QueueEntry entry = QueueEntry.builder()
                 .queueSession(session)
-                .user(user)
+                .user(userProxy)
                 .serviceName(dto.serviceName())
                 .status(QueueEntryStatus.WAITING)
                 .build();
@@ -212,7 +212,7 @@ public class QueueEntryService {
     // ==========================================
 
     private QueueEntry getEntryById(String entryId) {
-        return queueEntryRepository.findByIdWithUser(entryId)
+        return queueEntryRepository.findByIdWithFullGraph(entryId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "ENTRY_NOT_FOUND",
@@ -220,7 +220,7 @@ public class QueueEntryService {
     }
 
     private QueueSession getAndValidateSession(String sessionId) {
-        QueueSession session = queueSessionRepository.findById(sessionId)
+        QueueSession session = queueSessionRepository.findByIdWithProfessionalAndUser(sessionId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "SESSION_NOT_FOUND",
@@ -233,14 +233,6 @@ public class QueueEntryService {
                     "This queue is currently closed.");
         }
         return session;
-    }
-
-    private User getAndValidateUser(String userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.NOT_FOUND,
-                        "USER_NOT_FOUND",
-                        "User not found"));
     }
 
     // ==========================================
