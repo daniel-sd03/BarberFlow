@@ -1,30 +1,28 @@
 package sodresoftwares.barbearia.infra.security;
 
-import java.io.IOException;
-
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import sodresoftwares.barbearia.infra.exception.AppException;
-import sodresoftwares.barbearia.repositories.UserRepository;
+import sodresoftwares.barbearia.model.user.User;
+import sodresoftwares.barbearia.model.user.UserRole;
+
+import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
 public class SecurityFilter extends OncePerRequestFilter {
 
 	private final TokenService tokenService;
-	private final UserRepository userRepository;
 	private final HandlerExceptionResolver handlerExceptionResolver;
 
 	@Value("${app.lgpd.current-version}")
@@ -35,9 +33,11 @@ public class SecurityFilter extends OncePerRequestFilter {
 			throws ServletException, IOException {
 		var token = this.recoverToken(request);
 		if (token != null) {
-			var login = tokenService.validateToken(token);
-			if(login != null) {
-				String tokenLgpdVersion = tokenService.getLgpdVersionFromToken(token);
+			var decodedJWT = tokenService.validateAndDecodeToken(token);
+
+			if(decodedJWT != null) {
+				String tokenLgpdVersion = decodedJWT.getClaim("lgpd_version").asString();
+
 				boolean isLgpdEndpoint = request.getRequestURI().equals("/api/v1/lgpd-consents");
 				if (!isLgpdEndpoint && !currentLgpdVersion.equals(tokenLgpdVersion)) {
 					AppException ex = new AppException(
@@ -48,9 +48,10 @@ public class SecurityFilter extends OncePerRequestFilter {
 					handlerExceptionResolver.resolveException(request, response, null, ex);
 					return;
 				}
-				UserDetails user = userRepository.findByLogin(login);
-				if(user != null) {
-					var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+
+				var authentication = tokenService.getAuthentication(decodedJWT);
+
+				if (authentication != null) {
 					SecurityContextHolder.getContext().setAuthentication(authentication);
 				}
 			}

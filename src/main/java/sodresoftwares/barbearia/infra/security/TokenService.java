@@ -4,12 +4,15 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.user.User;
+import sodresoftwares.barbearia.model.user.UserRole;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,6 +29,8 @@ public class TokenService {
             return JWT.create()
                     .withIssuer("auth-api")
                     .withSubject(user.getLogin())
+                    .withClaim("user_id", user.getId())
+                    .withClaim("role", user.getRole().name())
                     .withClaim("lgpd_version", lgpdVersion)
                     .withExpiresAt(genExpirationDate())
                     .sign(algorithm);
@@ -39,31 +44,37 @@ public class TokenService {
         }
     }
 
-    public String validateToken(String token){
+    public DecodedJWT validateAndDecodeToken(String token){
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)
                     .withIssuer("auth-api")
                     .build()
-                    .verify(token)
-                    .getSubject();
+                    .verify(token);
         } catch (JWTVerificationException exception){
             return null;
         }
     }
 
-    public String getLgpdVersionFromToken(String token) {
-        try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
-            return JWT.require(algorithm)
-                    .withIssuer("auth-api")
-                    .build()
-                    .verify(token)
-                    .getClaim("lgpd_version")
-                    .asString();
-        } catch (JWTVerificationException exception){
-            return null;
+    public UsernamePasswordAuthenticationToken getAuthentication(DecodedJWT decodedJWT) {
+        String login = decodedJWT.getSubject();
+        String userId = decodedJWT.getClaim("user_id").asString();
+        String roleString = decodedJWT.getClaim("role").asString();
+
+        if (userId != null && roleString != null) {
+            User authenticatedUser = User.builder()
+                    .id(userId)
+                    .login(login)
+                    .role(UserRole.valueOf(roleString))
+                    .build();
+
+            return new UsernamePasswordAuthenticationToken(
+                    authenticatedUser,
+                    null,
+                    authenticatedUser.getAuthorities()
+            );
         }
+        return null;
     }
 
     private Instant genExpirationDate() {
