@@ -40,9 +40,6 @@ class OAuth2AuthenticationSuccessHandlerTest {
     private LgpdConsentRepository lgpdConsentRepository;
 
     @Mock
-    private LgpdConsentService lgpdConsentService;
-
-    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -98,7 +95,6 @@ class OAuth2AuthenticationSuccessHandlerTest {
         assertEquals(email, existingUser.getLogin());
         verify(userRepository).save(existingUser);
         verify(tokenService).generateToken(existingUser, fakeLgpdVersion);
-        verify(lgpdConsentService, never()).registerConsentForNewUser(any(), any());
 
         assertCookieAndRedirect();
     }
@@ -126,7 +122,6 @@ class OAuth2AuthenticationSuccessHandlerTest {
         assertEquals(googleId, standardUser.getGoogleId());
         verify(userRepository).save(standardUser);
         verify(tokenService).generateToken(standardUser, fakeLgpdVersion);
-        verify(lgpdConsentService, never()).registerConsentForNewUser(any(), any());
 
         assertCookieAndRedirect();
     }
@@ -137,8 +132,6 @@ class OAuth2AuthenticationSuccessHandlerTest {
         // Arrange
         when(userRepository.findByGoogleId(googleId)).thenReturn(null);
         when(userRepository.findByLogin(email)).thenReturn(null);
-        when(lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(anyString()))
-                .thenReturn(Optional.of(mockConsent));
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         when(userRepository.save(userCaptor.capture())).thenAnswer(invocation -> {
@@ -146,7 +139,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
             u.setId("new-user-123");
             return u;
         });
-        when(tokenService.generateToken(any(User.class), eq(fakeLgpdVersion))).thenReturn(fakeToken);
+        when(tokenService.generateToken(any(User.class),isNull())).thenReturn(fakeToken);
 
         // Act
         successHandler.onAuthenticationSuccess(request, response, authentication);
@@ -160,8 +153,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
         assertNotNull(newUser.getPassword());
 
         verify(userRepository).save(newUser);
-        verify(lgpdConsentService).registerConsentForNewUser(newUser, request);
-        verify(tokenService).generateToken(newUser, fakeLgpdVersion);
+        verify(tokenService).generateToken(newUser, null);
 
         assertCookieAndRedirect();
     }

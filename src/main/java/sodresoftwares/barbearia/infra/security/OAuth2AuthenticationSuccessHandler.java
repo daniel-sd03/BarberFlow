@@ -29,7 +29,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     final private TokenService tokenService;
     final private UserRepository userRepository;
     private final LgpdConsentRepository lgpdConsentRepository;
-    private final LgpdConsentService lgpdConsentService;
 
     @Value("${app.security.oauth2-redirect}")
     private String frontendUrl;
@@ -55,50 +54,43 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             name = email.split("@")[0];
         }
 
-        User userByGoogleId = userRepository.findByGoogleId(googleId);
-        User userByEmail = (User) userRepository.findByLogin(email);
-
-        User finalUser;
+        User finalUser = userRepository.findByGoogleId(googleId);
+        String lgpdLastAcceptedVersion = null;
 
         // Scenario 1: Existing Google Auth user
-        if (userByGoogleId != null) {
-            finalUser = userByGoogleId;
-
-            // Sync email if it was updated in Google's dashboard
+        if (finalUser != null) {
             if (!finalUser.getLogin().equals(email)) {
                 finalUser.setLogin(email);
                 userRepository.save(finalUser);
                 log.info("Google account email synchronized");
             }
+            lgpdLastAcceptedVersion = fetchLastLgpdVersion(finalUser.getId());
         }
-        // Scenario 2: Existing standard user logging in with Google for the first time
-        else if (userByEmail != null) {
-            finalUser = userByEmail;
-
-            // Link Google account to the existing profile
-            finalUser.setGoogleId(googleId);
-            userRepository.save(finalUser);
-
-            log.info("Google account linked successfully");
-        }
-        // Scenario 3: Brand new user
         else {
-            finalUser = User.builder()
-                    .login(email)
-                    .name(name)
-                    .googleId(googleId)
-                    .password(UUID.randomUUID().toString())
-                    .role(UserRole.USER)
-                    .build();
-            userRepository.save(finalUser);
-            lgpdConsentService.registerConsentForNewUser(finalUser, request);
+            User userByEmail = (User) userRepository.findByLogin(email);
 
-            log.info("New user registered via Google OAuth2");
+            // Scenario 2: Existing standard user logging in with Google for the first time
+            if (userByEmail != null) {
+                finalUser = userByEmail;
+                finalUser.setGoogleId(googleId);
+                userRepository.save(finalUser);
+                log.info("Google account linked successfully");
+
+                lgpdLastAcceptedVersion = fetchLastLgpdVersion(finalUser.getId());
+            }
+            // Scenario 3: Brand new user
+            else {
+                finalUser = User.builder()
+                        .login(email)
+                        .name(name)
+                        .googleId(googleId)
+                        .password(UUID.randomUUID().toString())
+                        .role(UserRole.USER)
+                        .build();
+                userRepository.save(finalUser);
+                log.info("New user registered via Google OAuth2");
+            }
         }
-
-        String lgpdLastAcceptedVersion = lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(finalUser.getId())
-                .map(LgpdConsent::getTermVersion)
-                .orElse(null);
 
         String jwtToken = tokenService.generateToken(finalUser, lgpdLastAcceptedVersion);
 
@@ -122,5 +114,11 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         log.info("OAuth2 authentication completed successfully for user {}", finalUser.getId());
         getRedirectStrategy().sendRedirect(request, response, frontendUrl);
+    }
+
+    private String fetchLastLgpdVersion(String userId) {
+        return lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)
+                .map(LgpdConsent::getTermVersion)
+                .orElse(null);
     }
 }
