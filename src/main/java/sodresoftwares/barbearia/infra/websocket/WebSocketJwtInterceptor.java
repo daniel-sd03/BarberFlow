@@ -8,11 +8,8 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import sodresoftwares.barbearia.infra.security.TokenService;
-import sodresoftwares.barbearia.repositories.UserRepository;
 
 @Component
 @Slf4j
@@ -20,26 +17,23 @@ import sodresoftwares.barbearia.repositories.UserRepository;
 public class WebSocketJwtInterceptor implements ChannelInterceptor {
 
     private final TokenService tokenService;
-    private final UserRepository userRepository;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-
             String authorizationHeader = accessor.getFirstNativeHeader("Authorization");
 
             if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
                 String token = authorizationHeader.replace("Bearer ", "");
 
-                String subject = tokenService.validateToken(token);
+                var decodedJWT = tokenService.validateAndDecodeToken(token);
 
-                if (subject != null) {
-                    UserDetails user = userRepository.findByLogin(subject);
+                if (decodedJWT != null) {
+                    var authentication = tokenService.getAuthentication(decodedJWT);
 
-                    if (user != null) {
-                        var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    if (authentication != null) {
                         accessor.setUser(authentication);
 
                     } else {
