@@ -214,4 +214,18 @@ class UserControllerTest {
                         .content(jsonTester.write(invalidDto).getJson()))
                 .andExpect(status().isBadRequest());
     }
+
+    // ==================== DELETE MY ACCOUNT TESTS ====================
+
+    @Test
+    @DisplayName("DELETE /users/me -> Should soft delete account and return 204 No Content")
+    void testDeleteMyAccount_Success() throws Exception {
+        doNothing().when(userService).deleteMyAccount(anyString());
+
+        mockMvc.perform(delete("/users/me")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+
+        verify(userService).deleteMyAccount(any());
+    }
 }

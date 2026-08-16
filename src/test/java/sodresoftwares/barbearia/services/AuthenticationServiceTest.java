@@ -7,12 +7,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import sodresoftwares.barbearia.dto.AuthenticationDTO;
 import sodresoftwares.barbearia.dto.TokenResponseDTO;
+import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.infra.security.TokenService;
 import sodresoftwares.barbearia.model.LgpdConsent;
 import sodresoftwares.barbearia.model.user.User;
@@ -41,6 +43,9 @@ class AuthenticationServiceTest {
     @Mock
     private LgpdConsentRepository lgpdConsentRepository;
 
+    @Mock
+    private UserService userService;
+
     @InjectMocks
     private AuthenticationService authService;
 
@@ -57,6 +62,7 @@ class AuthenticationServiceTest {
                 .name("Fulano da Silva")
                 .phone("11999999999")
                 .role(UserRole.USER)
+                .isActive(true)
                 .build();
 
         String RAW_PASSWORD = "password123";
@@ -110,5 +116,45 @@ class AuthenticationServiceTest {
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(tokenService, never()).generateToken(any(), any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to login with deactivated account")
+    void testLogin_AccountDeactivated() {
+        testUser.setIsActive(false); // Simulando conta desativada
+        UsernamePasswordAuthenticationToken authenticatedToken = new UsernamePasswordAuthenticationToken(
+                testUser, null, testUser.getAuthorities()
+        );
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authenticatedToken);
+
+        assertThatThrownBy(() -> authService.login(authDTO))
+                .isInstanceOf(AppException.class)
+                .hasMessage("This account is deactivated. Do you want to reactivate?")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        verify(tokenService, never()).generateToken(any(), any());
+    }
+
+    // ==================== REACTIVATE AND LOGIN TESTS ====================
+
+    @Test
+    @DisplayName("Should reactivate user and return JWT token")
+    void testReactivateAndLogin_Successful() {
+        UsernamePasswordAuthenticationToken authenticatedToken = new UsernamePasswordAuthenticationToken(
+                testUser, null, testUser.getAuthorities()
+        );
+        String fakeLgpdVersion = "1.0";
+        LgpdConsent mockConsent = LgpdConsent.builder().termVersion(fakeLgpdVersion).build();
+
+        when(authenticationManager.authenticate(any())).thenReturn(authenticatedToken);
+        doNothing().when(userService).reactivateAccount(testUser.getId());
+        when(lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(testUser.getId())).thenReturn(Optional.of(mockConsent));
+        when(tokenService.generateToken(testUser, fakeLgpdVersion)).thenReturn("valid-jwt-token");
+
+        TokenResponseDTO result = authService.reactivateAndLogin(authDTO);
+
+        assertThat(result.token()).isEqualTo("valid-jwt-token");
+        verify(userService).reactivateAccount(testUser.getId());
     }
 }

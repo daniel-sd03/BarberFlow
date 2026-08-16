@@ -16,6 +16,8 @@ import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.repositories.UserRepository;
 
+import java.time.Instant;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -25,6 +27,21 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final LgpdConsentService lgpdConsentService;
+
+    @Transactional(readOnly = true)
+    public UserResponseDTO getMyProfile(String userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    return new AppException(
+                            HttpStatus.NOT_FOUND,
+                            "USER_NOT_FOUND",
+                            "User not found."
+                    );
+                });
+
+        return UserResponseDTO.fromEntity(user);
+    }
 
     @Transactional
     public User registerClient(RegisterDTO data, HttpServletRequest request) {
@@ -116,18 +133,53 @@ public class UserService {
         log.info("Password changed successfully");
     }
 
-    @Transactional(readOnly = true)
-    public UserResponseDTO getMyProfile(String userId) {
+    @Transactional
+    public void deleteMyAccount(String loggedUserId) {
+        User user = userRepository.findById(loggedUserId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "USER_NOT_FOUND",
+                        "User not found in the system."
+                ));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    return new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "USER_NOT_FOUND",
-                            "User not found."
-                    );
-                });
+        if (!user.getIsActive()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "ALREADY_DELETED",
+                    "This account is already deactivated."
+            );
+        }
 
-        return UserResponseDTO.fromEntity(user);
+        user.setIsActive(false);
+        user.setDeletedAt(Instant.now());
+
+        userRepository.save(user);
+
+        log.info("Account deactivated successfully. Permanent deletion pending.");
+    }
+
+    @Transactional
+    public void reactivateAccount(String loggedUserId) {
+        User user = userRepository.findById(loggedUserId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "USER_NOT_FOUND",
+                        "User not found in the system."
+                ));
+
+        if (user.getIsActive()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "ALREADY_ACTIVE",
+                    "This account is already active."
+            );
+        }
+
+        user.setIsActive(true);
+        user.setDeletedAt(null);
+
+        userRepository.save(user);
+
+        log.info("Account reactivated successfully.");
     }
 }

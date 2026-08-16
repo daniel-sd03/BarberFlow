@@ -50,6 +50,12 @@ public class User implements UserDetails {
 	@Column(name = "google_id", unique = true, nullable = true)
 	private String googleId;
 
+	@Column(name = "is_active")
+	private Boolean isActive = true;
+
+	@Column(name = "deleted_at")
+	private Instant deletedAt;
+
 	@CreatedDate
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;

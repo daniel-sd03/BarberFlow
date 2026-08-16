@@ -46,6 +46,7 @@ public class SecurityConfigurations {
                         .requestMatchers(HttpMethod.POST, "/auth/password-resets").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/password-resets/validate").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/auth/passwords").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/reactivate").permitAll()
                         .requestMatchers("/oauth2/**", "/barbearia/oauth2/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/error").permitAll()

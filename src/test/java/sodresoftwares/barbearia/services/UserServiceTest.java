@@ -60,6 +60,8 @@ class UserServiceTest {
                 .phone("000000000")
                 .password(ENCODED_PASSWORD)
                 .role(UserRole.USER)
+                .isActive(true)
+                .deletedAt(null)
                 .build();
 
         registerDTO = new RegisterDTO(
@@ -296,5 +298,62 @@ class UserServiceTest {
                 .isInstanceOf(AppException.class)
                 .hasMessage("User not found.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    // ==================== DELETE MY ACCOUNT TESTS ====================
+
+    @Test
+    @DisplayName("Should deactivate account successfully")
+    void testDeleteMyAccount_Success() {
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+
+        userService.deleteMyAccount(USER_ID);
+
+        assertThat(testUser.getIsActive()).isFalse();
+        assertThat(testUser.getDeletedAt()).isNotNull();
+        verify(userRepository).save(testUser);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when account is already deleted")
+    void testDeleteMyAccount_AlreadyDeleted() {
+        testUser.setIsActive(false);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+
+        assertThatThrownBy(() -> userService.deleteMyAccount(USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("This account is already deactivated.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    // ==================== REACTIVATE ACCOUNT TESTS ====================
+
+    @Test
+    @DisplayName("Should reactivate account successfully")
+    void testReactivateAccount_Success() {
+        testUser.setIsActive(false);
+        testUser.setDeletedAt(java.time.Instant.now());
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+
+        userService.reactivateAccount(USER_ID);
+
+        assertThat(testUser.getIsActive()).isTrue();
+        assertThat(testUser.getDeletedAt()).isNull();
+        verify(userRepository).save(testUser);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to reactivate an active account")
+    void testReactivateAccount_AlreadyActive() {
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+
+        assertThatThrownBy(() -> userService.reactivateAccount(USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("This account is already active.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(userRepository, never()).save(any());
     }
 }

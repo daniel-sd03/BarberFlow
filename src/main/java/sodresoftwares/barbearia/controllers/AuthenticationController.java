@@ -40,4 +40,9 @@ public class AuthenticationController {
 		passwordResetService.resetPassword(dto);
 		return ResponseEntity.noContent().build();
 	}
+
+	@PostMapping("/reactivate")
+	public ResponseEntity<TokenResponseDTO> reactivate(@RequestBody @Valid AuthenticationDTO data) {
+		return ResponseEntity.ok(authenticationService.reactivateAndLogin(data));
+	}
 }
