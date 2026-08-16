@@ -7,7 +7,9 @@ CREATE TABLE users
     phone      TEXT,
     role       TEXT                    NOT NULL,
     google_id  TEXT UNIQUE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    is_active  BOOLEAN                 NOT NULL DEFAULT TRUE,
+    deleted_at TIMESTAMPTZ                      DEFAULT NULL,
+    created_at TIMESTAMPTZ                      DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ,
     created_by VARCHAR(255),
     updated_by VARCHAR(255)

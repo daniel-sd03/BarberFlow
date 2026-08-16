@@ -214,4 +214,25 @@ class AuthenticationControllerTest {
 
         verifyNoInteractions(passwordResetService);
     }
+
+    // ==================== POST REACTIVATE TESTS ====================
+
+    @Test
+    @DisplayName("POST /auth/reactivate -> Should reactivate successfully and return token (HTTP 200)")
+    void testReactivate_Success() throws Exception {
+        String VALID_TOKEN = "jwt-token-example";
+        String VALID_ROLE = UserRole.USER.toString();
+        TokenResponseDTO mockResponse = new TokenResponseDTO(VALID_TOKEN, VALID_ROLE);
+
+        when(authService.reactivateAndLogin(any(AuthenticationDTO.class))).thenReturn(mockResponse);
+
+        mockMvc.perform(post("/auth/reactivate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(authenticationDTO).getJson()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token", is(VALID_TOKEN)))
+                .andExpect(jsonPath("$.role", is(VALID_ROLE)));
+
+        verify(authService).reactivateAndLogin(any(AuthenticationDTO.class));
+    }
 }

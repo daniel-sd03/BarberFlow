@@ -51,4 +51,10 @@ public class UserController {
         userService.changePassword(loggedInUser.getId(), dto);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteMyAccount(@AuthenticationPrincipal User loggedUser) {
+        userService.deleteMyAccount(loggedUser.getId());
+        return ResponseEntity.noContent().build();
+    }
 }
