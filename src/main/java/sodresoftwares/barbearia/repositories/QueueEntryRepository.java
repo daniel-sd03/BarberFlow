@@ -21,12 +21,22 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, String> 
         ORDER BY q.joinedAt ASC
     """)
     List<QueueEntry> findActiveEntriesBySessionId(@Param("sessionId") String sessionId);
+
     @Query("""
         SELECT q FROM QueueEntry q
         JOIN FETCH q.user
         WHERE q.id = :id
     """)
     Optional<QueueEntry> findByIdWithUser(@Param("id") String id);
+
+    @Query("SELECT e FROM QueueEntry e " +
+            "JOIN FETCH e.user u " +
+            "JOIN FETCH e.queueSession s " +
+            "JOIN FETCH s.professional p " +
+            "JOIN FETCH p.user " +
+            "WHERE e.id = :id")
+    Optional<QueueEntry> findByIdWithFullGraph(@Param("id") String id);
+
     boolean existsByUserIdAndStatusIn(String userId, List<QueueEntryStatus> statuses);
     Optional<QueueEntry> findByUserIdAndStatusIn(String userId, List<QueueEntryStatus> statuses);
     Optional<QueueEntry> findFirstByUserIdOrderByJoinedAtDesc(String userId);

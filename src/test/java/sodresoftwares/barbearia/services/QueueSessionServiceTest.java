@@ -356,7 +356,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should return active Dashboard DTO successfully using Cache")
     void testGetDashboardData_SessionExists() {
         // Arrange
-        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.findByProfessionalUserIdWithProfessional(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
         when(queueCacheService.getActiveEntries(existingSession.getId())).thenReturn(List.of(activeEntry));
 
         // Act
@@ -385,7 +385,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should return blank Dashboard DTO if session does not exist yet (First Access)")
     void testGetDashboardData_FirstAccess() {
         // Arrange
-        when(queueSessionRepository.findByProfessionalUserId(PROF_USER_ID)).thenReturn(Optional.empty());
+        when(queueSessionRepository.findByProfessionalUserIdWithProfessional(PROF_USER_ID)).thenReturn(Optional.empty());
         when(professionalRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(professional));
 
         // Act
@@ -409,8 +409,8 @@ class QueueSessionServiceTest {
     @DisplayName("Should return session info preview successfully when ticket code exists")
     void testGetSessionInfoByCode_Success() {
         // Arrange
-        String ticketCode = "BARB1";
-        when(queueSessionRepository.findByTicketCode(ticketCode)).thenReturn(Optional.of(existingSession));
+        String ticketCode = "BARB1234";
+        when(queueSessionRepository.findByTicketCodeWithProfessional(ticketCode)).thenReturn(Optional.of(existingSession));
         when(queueCacheService.getActiveEntries(existingSession.getId()))
                 .thenReturn(List.of(activeEntry, activeEntry));
 
@@ -425,7 +425,7 @@ class QueueSessionServiceTest {
         assertThat(result.isActive()).isEqualTo(existingSession.getIsActive());
         assertThat(result.toleranceMinutes()).isEqualTo(5);
 
-        verify(queueSessionRepository).findByTicketCode(ticketCode);
+        verify(queueSessionRepository).findByTicketCodeWithProfessional(ticketCode);
         verify(queueCacheService).getActiveEntries(existingSession.getId());
     }
 
@@ -434,7 +434,7 @@ class QueueSessionServiceTest {
     void testGetSessionInfoByCode_NotFound() {
         // Arrange
         String invalidCode = "INVALID";
-        when(queueSessionRepository.findByTicketCode(invalidCode)).thenReturn(Optional.empty());
+        when(queueSessionRepository.findByTicketCodeWithProfessional(invalidCode)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> queueSessionService.getSessionInfoByCode(invalidCode))
