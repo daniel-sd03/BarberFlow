@@ -21,7 +21,8 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final List<String> EXCLUDED_PATHS = List.of(
             "/favicon.ico",
-            "/api/actuator/prometheus"
+            "/api/actuator/prometheus",
+            "/api/actuator/health"
     );
 
     private static final String ANONYMOUS_USER = "ANONYMOUS";
