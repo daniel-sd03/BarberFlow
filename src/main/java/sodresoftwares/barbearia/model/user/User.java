@@ -50,7 +50,8 @@ public class User implements UserDetails {
 	@Column(name = "google_id", unique = true, nullable = true)
 	private String googleId;
 
-	@Column(name = "is_active")
+	@Builder.Default
+	@Column(name = "is_active", nullable = false)
 	private Boolean isActive = true;
 
 	@Column(name = "deleted_at")
