@@ -42,6 +42,7 @@ public class AuthenticationService {
         return buildTokenResponse(loggedUser);
     }
 
+    @Transactional
     public TokenResponseDTO reactivateAndLogin(AuthenticationDTO data) {
         User loggedUser = authenticateUser(data);
 
