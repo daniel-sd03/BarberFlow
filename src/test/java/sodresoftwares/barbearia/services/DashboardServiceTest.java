@@ -14,6 +14,7 @@ import sodresoftwares.barbearia.model.Business;
 import sodresoftwares.barbearia.model.QueueEntry;
 import sodresoftwares.barbearia.model.QueueSession;
 import sodresoftwares.barbearia.model.TeamMember;
+import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.QueueSessionRepository;
 import sodresoftwares.barbearia.repositories.TeamMemberRepository;
 
@@ -58,10 +59,16 @@ class DashboardServiceTest {
                 .name("Barbearia Teste")
                 .build();
 
+        User mockUser = sodresoftwares.barbearia.model.user.User.builder()
+                .id(LOGGED_USER_ID)
+                .name("Zé Barbeiro")
+                .build();
+
         teamMember = TeamMember.builder()
                 .id("member-123")
                 .role("OWNER")
                 .business(business)
+                .user(mockUser)
                 .build();
 
         queueSession = QueueSession.builder()
@@ -99,6 +106,7 @@ class DashboardServiceTest {
     void getProfessionalDashboard_NoActiveSession() {
         // Arrange
         when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findAllByBusinessIdWithUser(BUSINESS_ID)).thenReturn(List.of(teamMember));
         when(queueSessionRepository.findByBusinessIdWithBusiness(BUSINESS_ID)).thenReturn(Optional.empty());
 
         // Act
@@ -120,6 +128,7 @@ class DashboardServiceTest {
     void getProfessionalDashboard_FullData() {
         // Arrange
         when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findAllByBusinessIdWithUser(BUSINESS_ID)).thenReturn(List.of(teamMember));
         when(queueSessionRepository.findByBusinessIdWithBusiness(BUSINESS_ID)).thenReturn(Optional.of(queueSession));
 
         List<QueueEntry> mockEntries = List.of(new QueueEntry());

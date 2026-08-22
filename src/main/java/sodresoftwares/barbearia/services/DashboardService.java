@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sodresoftwares.barbearia.dto.BusinessDashboardDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
+import sodresoftwares.barbearia.dto.TeamMemberDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.QueueSession;
@@ -33,7 +34,7 @@ public class DashboardService {
         if (loggedMemberOpt.isEmpty()) {
             return new BusinessDashboardDTO(
                     null, null, null, null,
-                    null, null, false, null, List.of()
+                    null, null, false, null, List.of(), List.of()
             );
         }
 
@@ -41,12 +42,20 @@ public class DashboardService {
         String businessId = loggedMember.getBusiness().getId();
         String businessName = loggedMember.getBusiness().getName();
 
+        List<TeamMemberDTO> teamDtos = teamMemberRepository.findAllByBusinessIdWithUser(businessId)
+                .stream()
+                .map(member -> new TeamMemberDTO(
+                        member.getId(),
+                        member.getUser().getName(),
+                        member.getRole()
+                )).toList();
+
         Optional<QueueSession> sessionOpt = queueSessionRepository.findByBusinessIdWithBusiness(businessId);
 
         if (sessionOpt.isEmpty()) {
             return new BusinessDashboardDTO(
                     businessId, businessName, loggedMember.getId(), loggedMember.getRole(),
-                    null, null, false, null, List.of()
+                    null, null, false, null, List.of(), teamDtos
             );
         }
 
@@ -58,7 +67,7 @@ public class DashboardService {
         return new BusinessDashboardDTO(
                 businessId, businessName, loggedMember.getId(), loggedMember.getRole(),
                 session.getId(), session.getTicketCode(), session.getIsActive(),
-                session.getToleranceMinutes(), activeQueueDtos
+                session.getToleranceMinutes(), activeQueueDtos, teamDtos
         );
     }
 }

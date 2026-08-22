@@ -93,6 +93,7 @@ class DashboardControllerTest {
                 "CODE123",
                 true,
                 15,
+                List.of(),
                 List.of()
         );
 
