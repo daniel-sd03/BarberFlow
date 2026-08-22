@@ -10,6 +10,7 @@ import sodresoftwares.barbearia.dto.*;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.Business;
 import sodresoftwares.barbearia.model.TeamMember;
+import sodresoftwares.barbearia.model.TeamRole;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.BusinessRepository;
 import sodresoftwares.barbearia.repositories.TeamMemberRepository;
@@ -67,7 +68,7 @@ public class BusinessService {
                 .business(savedBusiness)
                 .name(user.getName())
                 .user(user)
-                .role("OWNER")
+                .role(TeamRole.OWNER)
                 .build();
 
         teamMemberRepository.save(ownerMember);

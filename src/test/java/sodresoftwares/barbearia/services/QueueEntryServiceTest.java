@@ -89,7 +89,7 @@ class QueueEntryServiceTest {
                 .id("member-123")
                 .business(business)
                 .user(barberUser)
-                .role("OWNER")
+                .role(TeamRole.STAFF)
                 .build();
 
         activeSession = QueueSession.builder()
