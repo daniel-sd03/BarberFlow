@@ -16,6 +16,9 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, String> 
     @Query("""
         SELECT q FROM QueueEntry q
         JOIN FETCH q.user
+        JOIN FETCH q.queueSession
+        LEFT JOIN FETCH q.servedByMember sbm
+        LEFT JOIN FETCH sbm.user
         WHERE q.queueSession.id = :sessionId
         AND q.status IN ('WAITING', 'CALLED', 'IN_SERVICE')
         ORDER BY q.joinedAt ASC
@@ -32,12 +35,15 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, String> 
     @Query("SELECT e FROM QueueEntry e " +
             "JOIN FETCH e.user u " +
             "JOIN FETCH e.queueSession s " +
-            "JOIN FETCH s.professional p " +
-            "JOIN FETCH p.user " +
+            "JOIN FETCH s.business b " +
+            "JOIN FETCH b.user " +
+            "LEFT JOIN FETCH e.servedByMember sbm " +
+            "LEFT JOIN FETCH sbm.user " +
             "WHERE e.id = :id")
     Optional<QueueEntry> findByIdWithFullGraph(@Param("id") String id);
 
     boolean existsByUserIdAndStatusIn(String userId, List<QueueEntryStatus> statuses);
     Optional<QueueEntry> findByUserIdAndStatusIn(String userId, List<QueueEntryStatus> statuses);
     Optional<QueueEntry> findFirstByUserIdOrderByJoinedAtDesc(String userId);
+    boolean existsByServedByMemberIdAndStatusIn(String memberId, List<QueueEntryStatus> statuses);
 }

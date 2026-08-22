@@ -10,11 +10,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import sodresoftwares.barbearia.model.user.User;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "professionals")
+@Table(name = "businesses")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,7 +20,7 @@ import java.time.OffsetDateTime;
 @Builder
 @EqualsAndHashCode(of = "id")
 @EntityListeners(AuditingEntityListener.class)
-public class Professional {
+public class Business {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -32,11 +30,11 @@ public class Professional {
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, unique = true)
     private User user;
 
-    @Column(name = "business_name", nullable = false)
-    private String businessName;
+    @Column(name = "name", nullable = false)
+    private String name;
 
-    @Column(name = "is_active")
     @Builder.Default
+    @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
     @CreatedDate

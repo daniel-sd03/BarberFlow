@@ -20,8 +20,6 @@ import sodresoftwares.barbearia.model.LgpdConsent;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
-import sodresoftwares.barbearia.repositories.ProfessionalRepository;
-import sodresoftwares.barbearia.repositories.UserRepository;
 
 import java.util.Optional;
 

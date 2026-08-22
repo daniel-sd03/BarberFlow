@@ -105,7 +105,7 @@ class UserServiceTest {
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
-    // ==================== REGISTER TESTS ====================
+    // ==================== REGISTER CLIENT TESTS ====================
 
     @Test
     @DisplayName("Should register new client successfully")
@@ -147,6 +147,43 @@ class UserServiceTest {
         verify(passwordEncoder, never()).encode(anyString());
         verify(userRepository, never()).save(any(User.class));
         verify(lgpdConsentService, never()).registerConsentForNewUser(any(), any());
+    }
+
+
+    // ==================== REGISTER PROFESSIONAL TESTS ====================
+
+    @Test
+    @DisplayName("Should register new professional successfully")
+    void testRegisterProfessional_Successful() {
+        // Arrange
+        when(userRepository.existsByLogin(testUser.getLogin())).thenReturn(false);
+        when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(ENCODED_PASSWORD);
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        // Act
+        userService.registerProfessional(registerDTO, request);
+
+        // Assert
+        verify(userRepository).save(argThat(user ->
+                user.getLogin().equals(testUser.getLogin()) &&
+                        user.getRole().equals(UserRole.PROFESSIONAL) // A diferença crucial aqui!
+        ));
+        verify(lgpdConsentService).registerConsentForNewUser(testUser, request);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to register an existing professional")
+    void testRegisterProfessional_UserAlreadyExists() {
+        // Arrange
+        when(userRepository.existsByLogin(testUser.getLogin())).thenReturn(true);
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.registerProfessional(registerDTO, request))
+                .isInstanceOf(AppException.class)
+                .hasMessage("User already exists")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+
+        verify(userRepository, never()).save(any(User.class));
     }
 
     // ==================== UPDATE USER PROFILE TESTS ====================

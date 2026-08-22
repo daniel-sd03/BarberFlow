@@ -47,6 +47,17 @@ public class QueueMapper {
             toleranceExpiresAt = entry.getCalledAt().plus(toleranceMinute, ChronoUnit.MINUTES);
         }
 
+        String servedByMemberId = null;
+        String servedByMemberName = null;
+
+        if (entry.getServedByMember() != null) {
+            servedByMemberId = entry.getServedByMember().getId();
+
+            if (entry.getServedByMember().getUser() != null) {
+                servedByMemberName = entry.getServedByMember().getUser().getName();
+            }
+        }
+
         return new QueueEntryResponseDTO(
                 entry.getId(),
                 position,
@@ -54,6 +65,8 @@ public class QueueMapper {
                 entry.getUser().getName(),
                 entry.getServiceName(),
                 entry.getStatus(),
+                servedByMemberId,
+                servedByMemberName,
                 entry.getCalledAt(),
                 serverTimeNow,
                 toleranceExpiresAt,

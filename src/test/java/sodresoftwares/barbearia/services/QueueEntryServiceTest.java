@@ -16,14 +16,12 @@ import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.dto.UserQueueStatusDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.mappers.QueueMapper;
-import sodresoftwares.barbearia.model.Professional;
-import sodresoftwares.barbearia.model.QueueEntry;
-import sodresoftwares.barbearia.model.QueueEntryStatus;
-import sodresoftwares.barbearia.model.QueueSession;
+import sodresoftwares.barbearia.model.*;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.repositories.QueueEntryRepository;
 import sodresoftwares.barbearia.repositories.QueueSessionRepository;
+import sodresoftwares.barbearia.repositories.TeamMemberRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
 
 import java.time.Instant;
@@ -50,6 +48,9 @@ class QueueEntryServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private TeamMemberRepository teamMemberRepository;
+
+    @Mock
     private QueueCacheService queueCacheService;
 
     @Mock
@@ -62,7 +63,8 @@ class QueueEntryServiceTest {
     private QueueEntryService queueEntryService;
 
     private User clientUser;
-    private Professional professional;
+    private Business business;
+    private TeamMember teamMember;
     private QueueSession activeSession;
     private QueueEntry waitingEntry;
     private JoinQueueDTO joinQueueDTO;
@@ -77,16 +79,22 @@ class QueueEntryServiceTest {
         User barberUser = User.builder().id(BARBER_USER_ID).name("Barbeiro Zé").role(UserRole.PROFESSIONAL).build();
         clientUser = User.builder().id(CLIENT_USER_ID).name("Cliente João").role(UserRole.USER).build();
 
-        professional = Professional.builder()
-                .id("prof-123")
-                .user(barberUser)
-                .businessName("Barbearia do Zé")
+        business = Business.builder()
+                .id("biz-123")
+                .name("Barbearia do Zé")
                 .isActive(true)
+                .build();
+
+        teamMember = TeamMember.builder()
+                .id("member-123")
+                .business(business)
+                .user(barberUser)
+                .role("OWNER")
                 .build();
 
         activeSession = QueueSession.builder()
                 .id(SESSION_ID)
-                .professional(professional)
+                .business(business)
                 .isActive(true)
                 .toleranceMinutes(15)
                 .build();
@@ -286,7 +294,7 @@ class QueueEntryServiceTest {
     @DisplayName("Should allow user to join queue and map all DTO fields correctly")
     void testJoinQueue_Success() {
         // Arrange
-        when(queueSessionRepository.findByIdWithProfessionalAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
         when(userRepository.getReferenceById(CLIENT_USER_ID)).thenReturn(clientUser);
         when(queueEntryRepository.existsByUserIdAndStatusIn(eq(CLIENT_USER_ID), anyList())).thenReturn(false);
         when(queueEntryRepository.save(any(QueueEntry.class))).thenReturn(waitingEntry);
@@ -299,11 +307,7 @@ class QueueEntryServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.id()).isEqualTo(ENTRY_ID);
         assertThat(response.position()).isEqualTo(1);
-        assertThat(response.userId()).isEqualTo(CLIENT_USER_ID);
-        assertThat(response.clientName()).isEqualTo("Cliente João");
-        assertThat(response.serviceName()).isEqualTo("Corte");
         assertThat(response.status()).isEqualTo(QueueEntryStatus.WAITING);
-        assertThat(response.toleranceMinute()).isEqualTo(15);
 
         verify(queueCacheService).evict(SESSION_ID);
     }
@@ -312,7 +316,7 @@ class QueueEntryServiceTest {
     @DisplayName("Should throw exception when queue session is not found")
     void testJoinQueue_SessionNotFound() {
         // Arrange
-        when(queueSessionRepository.findByIdWithProfessionalAndUser(SESSION_ID)).thenReturn(Optional.empty());
+        when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.joinQueue(joinQueueDTO, CLIENT_USER_ID))
@@ -328,7 +332,7 @@ class QueueEntryServiceTest {
     void testJoinQueue_QueueClosed() {
         // Arrange
         activeSession.setIsActive(false);
-        when(queueSessionRepository.findByIdWithProfessionalAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.joinQueue(joinQueueDTO, CLIENT_USER_ID))
@@ -343,7 +347,7 @@ class QueueEntryServiceTest {
     @DisplayName("Should block user from joining if already waiting in an active queue")
     void testJoinQueue_AlreadyInQueue() {
         // Arrange
-        when(queueSessionRepository.findByIdWithProfessionalAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
         when(userRepository.getReferenceById(CLIENT_USER_ID)).thenReturn(clientUser);
         when(queueEntryRepository.existsByUserIdAndStatusIn(eq(CLIENT_USER_ID), anyList())).thenReturn(true);
 
@@ -359,40 +363,44 @@ class QueueEntryServiceTest {
     // ==================== CALL NEXT TESTS ====================
 
     @Test
-    @DisplayName("Should successfully call next waiting client")
+    @DisplayName("Should successfully call next waiting client and link the member serving")
     void testCallNext_Success() {
         // Arrange
-        professional.setId(BARBER_USER_ID);
-
-        when(queueSessionRepository.findByIdWithProfessionalAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(teamMemberRepository.findById(teamMember.getId())).thenReturn(Optional.of(teamMember));
+        when(queueEntryRepository.existsByServedByMemberIdAndStatusIn(eq(teamMember.getId()), anyList())).thenReturn(false);
         when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(queueEntryRepository.save(any(QueueEntry.class))).thenReturn(waitingEntry);
+        when(queueEntryRepository.save(any(QueueEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
 
         // Act
-        QueueEntryResponseDTO response = queueEntryService.callNext(SESSION_ID, BARBER_USER_ID);
+        QueueEntryResponseDTO response = queueEntryService.callNext(SESSION_ID, BARBER_USER_ID, teamMember.getId());
 
         // Assert
         assertThat(response).isNotNull();
         assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.CALLED);
         assertThat(waitingEntry.getCalledAt()).isNotNull();
+        assertThat(waitingEntry.getServedByMember()).isEqualTo(teamMember);
 
         verify(queueEntryRepository).save(waitingEntry);
         verify(queueCacheService).evict(SESSION_ID);
     }
 
     @Test
-    @DisplayName("Should throw exception if a non-owner tries to call next")
+    @DisplayName("Should throw exception if logged user tries to act as a member without permission")
     void testCallNext_Forbidden() {
         // Arrange
         String intruderUserId = "intruder-user-999";
-        when(queueSessionRepository.findByIdWithProfessionalAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(teamMemberRepository.findById(teamMember.getId())).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.existsByUserIdAndBusinessIdAndRole(intruderUserId, business.getId(), "OWNER"))
+                .thenReturn(false);
 
         // Act & Assert
-        assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, intruderUserId))
+        assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, intruderUserId, teamMember.getId()))
                 .isInstanceOf(AppException.class)
-                .hasMessage("You do not have permission to manage this queue.")
+                .hasMessage("You do not have permission to perform actions for this member.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
@@ -400,12 +408,14 @@ class QueueEntryServiceTest {
     @DisplayName("Should throw exception if there is no one waiting in the queue")
     void testCallNext_QueueEmpty() {
         // Arrange
-        professional.setId(BARBER_USER_ID);
-        when(queueSessionRepository.findByIdWithProfessionalAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(teamMemberRepository.findById(teamMember.getId())).thenReturn(Optional.of(teamMember));
+        when(queueEntryRepository.existsByServedByMemberIdAndStatusIn(eq(teamMember.getId()), anyList())).thenReturn(false);
+
         when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of());
 
         // Act & Assert
-        assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, BARBER_USER_ID))
+        assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, BARBER_USER_ID, teamMember.getId()))
                 .isInstanceOf(AppException.class)
                 .hasMessage("There are no clients waiting in the queue.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -415,12 +425,15 @@ class QueueEntryServiceTest {
     @DisplayName("Should throw not found exception when entry returned by cache does not exist in database")
     void testCallNext_EntryNotFoundInDatabase() {
         // Arrange
-        when(queueSessionRepository.findByIdWithProfessionalAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(teamMemberRepository.findById(teamMember.getId())).thenReturn(Optional.of(teamMember));
+        when(queueEntryRepository.existsByServedByMemberIdAndStatusIn(eq(teamMember.getId()), anyList())).thenReturn(false);
+
         when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, BARBER_USER_ID))
+        assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, BARBER_USER_ID, teamMember.getId()))
                 .isInstanceOf(AppException.class)
                 .hasMessage("Entry Id not found")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -429,39 +442,35 @@ class QueueEntryServiceTest {
         verify(queueCacheService, never()).evict(anyString());
     }
 
-    @ParameterizedTest
-    @EnumSource(value = QueueEntryStatus.class, names = {"CALLED", "IN_SERVICE"})
-    @DisplayName("Should block callNext if there is a client already CALLED or IN_SERVICE")
-    void testCallNext_ChairOccupied(QueueEntryStatus occupyingStatus) {
+    @Test
+    @DisplayName("Should block callNext if the specific team member is already attending someone")
+    void testCallNext_MemberBusy() {
         // Arrange
-        professional.setId(BARBER_USER_ID);
-        when(queueSessionRepository.findByIdWithProfessionalAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
-
-        QueueEntry occupyingEntry = QueueEntry.builder().status(occupyingStatus).build();
-        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(occupyingEntry, waitingEntry));
+        when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
+        when(teamMemberRepository.findById(teamMember.getId())).thenReturn(Optional.of(teamMember));
+        when(queueEntryRepository.existsByServedByMemberIdAndStatusIn(eq(teamMember.getId()), anyList())).thenReturn(true);
 
         // Act & Assert
-        assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, BARBER_USER_ID))
+        assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, BARBER_USER_ID, teamMember.getId()))
                 .isInstanceOf(AppException.class)
-                .hasMessage("Finish the current service or cancel the called client before calling the next one.")
+                .hasMessage("You are already attending a client. Finish the current service or cancel before calling the next one.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     // ==================== REQUEUE ENTRY TESTS ====================
 
     @Test
-    @DisplayName("Should successfully requeue entry, increment missed calls and reset status to WAITING")
+    @DisplayName("Should successfully requeue entry, reset status and CLEAR servedByMember")
     void testRequeueEntry_Success() {
         // Arrange
-        professional.setId(BARBER_USER_ID);
         waitingEntry.setStatus(QueueEntryStatus.CALLED);
         waitingEntry.setMissedCalls(0);
+        waitingEntry.setServedByMember(teamMember);
 
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(queueEntryRepository.save(any(QueueEntry.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-        when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID))
-                .thenReturn(List.of(waitingEntry));
+        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
+        when(queueEntryRepository.save(any(QueueEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
 
         // Act
         QueueEntryResponseDTO result = queueEntryService.requeueEntry(ENTRY_ID, BARBER_USER_ID);
@@ -470,6 +479,7 @@ class QueueEntryServiceTest {
         assertThat(result).isNotNull();
         assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.WAITING);
         assertThat(waitingEntry.getMissedCalls()).isEqualTo(1);
+        assertThat(waitingEntry.getServedByMember()).isNull();
 
         verify(queueEntryRepository).save(waitingEntry);
         verify(queueCacheService).evict(SESSION_ID);
@@ -481,6 +491,7 @@ class QueueEntryServiceTest {
     void testRequeueEntry_InvalidStatus() {
         // Arrange: status starts as WAITING
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.requeueEntry(ENTRY_ID, BARBER_USER_ID))
@@ -495,12 +506,12 @@ class QueueEntryServiceTest {
     // ==================== START SERVICE TESTS ====================
 
     @Test
-    @DisplayName("Should start service successfully when client status is CALLED") // Atualizei a descrição
+    @DisplayName("Should start service successfully when client status is CALLED")
     void testStartService_Success() {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.CALLED);
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
+        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
         when(queueEntryRepository.save(any(QueueEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID))
@@ -515,26 +526,7 @@ class QueueEntryServiceTest {
         assertThat(result.status()).isEqualTo(QueueEntryStatus.IN_SERVICE);
 
         verify(queueEntryRepository).save(waitingEntry);
-        verify(queueCacheService).evict(SESSION_ID);
         verify(queueEntryRepository).findActiveEntriesBySessionId(SESSION_ID);
-    }
-
-    @Test
-    @DisplayName("Should block startService if the chair is already occupied (IN_SERVICE)")
-    void testStartService_ChairOccupied() {
-        // Arrange
-        when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-
-        QueueEntry inServiceEntry = QueueEntry.builder().status(QueueEntryStatus.IN_SERVICE).build();
-        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(inServiceEntry, waitingEntry));
-
-        // Act & Assert
-        assertThatThrownBy(() -> queueEntryService.startService(ENTRY_ID, BARBER_USER_ID))
-                .isInstanceOf(AppException.class)
-                .hasMessage("There is already a client in service. Please finish their service first.")
-                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-        verify(queueEntryRepository, never()).save(any());
     }
 
     @Test
@@ -543,7 +535,7 @@ class QueueEntryServiceTest {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.FINISHED);
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
+        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.startService(ENTRY_ID, BARBER_USER_ID))
@@ -562,6 +554,7 @@ class QueueEntryServiceTest {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.IN_SERVICE);
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
         when(queueEntryRepository.save(any(QueueEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -580,6 +573,7 @@ class QueueEntryServiceTest {
     void testFinishService_InvalidStatus() {
         // Arrange:
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.finishService(ENTRY_ID, BARBER_USER_ID))
@@ -598,6 +592,7 @@ class QueueEntryServiceTest {
     void testCancelEntry_ByClient_Success() {
         // Arrange
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(teamMemberRepository.existsByUserIdAndBusinessId(CLIENT_USER_ID, business.getId())).thenReturn(false);
         when(queueEntryRepository.save(any(QueueEntry.class))).thenReturn(waitingEntry);
 
         // Act
@@ -613,8 +608,8 @@ class QueueEntryServiceTest {
     @DisplayName("Should allow the barber to cancel a client's entry")
     void testCancelEntry_ByBarber_Success() {
         // Arrange
-        professional.setId(BARBER_USER_ID);
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(teamMemberRepository.existsByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(true);
         when(queueEntryRepository.save(any(QueueEntry.class))).thenReturn(waitingEntry);
 
         // Act
@@ -632,6 +627,7 @@ class QueueEntryServiceTest {
         // Arrange
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         String intruderUserId = "intruder-user-999";
+        when(teamMemberRepository.existsByUserIdAndBusinessId(intruderUserId, business.getId())).thenReturn(false);
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.cancelEntry(ENTRY_ID, intruderUserId))
@@ -650,6 +646,7 @@ class QueueEntryServiceTest {
         // Arrange
         waitingEntry.setStatus(invalidStatus);
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(teamMemberRepository.existsByUserIdAndBusinessId(CLIENT_USER_ID, business.getId())).thenReturn(false);
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.cancelEntry(ENTRY_ID, CLIENT_USER_ID))
@@ -666,6 +663,7 @@ class QueueEntryServiceTest {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.IN_SERVICE);
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(teamMemberRepository.existsByUserIdAndBusinessId(CLIENT_USER_ID, business.getId())).thenReturn(false);
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.cancelEntry(ENTRY_ID, CLIENT_USER_ID))

@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import sodresoftwares.barbearia.dto.CallNextDTO;
 import sodresoftwares.barbearia.dto.JoinQueueDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.dto.UserQueueStatusDTO;
@@ -37,9 +38,10 @@ public class QueueEntryController {
     @PostMapping("/sessions/{sessionId}/next")
     public ResponseEntity<QueueEntryResponseDTO> callNext(
             @PathVariable String sessionId,
+            @RequestBody @Valid CallNextDTO dto,
             @AuthenticationPrincipal User loggedInUser) {
 
-        QueueEntryResponseDTO response = queueEntryService.callNext(sessionId, loggedInUser.getId());
+        QueueEntryResponseDTO response = queueEntryService.callNext(sessionId, loggedInUser.getId(),dto.actionMemberId());
         return ResponseEntity.ok(response);
     }
 
