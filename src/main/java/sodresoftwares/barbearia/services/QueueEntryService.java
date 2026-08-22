@@ -14,14 +14,15 @@ import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.QueueEntry;
 import sodresoftwares.barbearia.model.QueueEntryStatus;
 import sodresoftwares.barbearia.model.QueueSession;
+import sodresoftwares.barbearia.model.TeamMember;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.QueueEntryRepository;
 import sodresoftwares.barbearia.repositories.QueueSessionRepository;
+import sodresoftwares.barbearia.repositories.TeamMemberRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +35,7 @@ public class QueueEntryService {
     private final QueueEntryRepository queueEntryRepository;
     private final QueueSessionRepository queueSessionRepository;
     private final UserRepository userRepository;
+    private final TeamMemberRepository teamMemberRepository;
     private final QueueCacheService queueCacheService;
     private final QueueMapper queueMapper;
     private final QueueNotificationService queueNotificationService;
@@ -96,12 +98,11 @@ public class QueueEntryService {
     }
 
     @Transactional
-    public QueueEntryResponseDTO callNext(String sessionId, String loggedUserId) {
+    public QueueEntryResponseDTO callNext(String sessionId, String loggedUserId, String actionMemberId) {
         QueueSession session = getAndValidateSession(sessionId);
-        validateProfessionalOwnership(session, loggedUserId);
-
+        TeamMember memberCalling = getValidActionMember(session, loggedUserId, actionMemberId);
+        validateMemberNotAlreadyAttending(memberCalling);
         List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
-        validateChairIsAvailableForCall(activeEntries);
 
         String nextEntryId = activeEntries.stream()
                 .filter(e -> e.getStatus() == QueueEntryStatus.WAITING)
@@ -115,6 +116,7 @@ public class QueueEntryService {
         QueueEntry nextInLine = getEntryById(nextEntryId);
         nextInLine.setStatus(QueueEntryStatus.CALLED);
         nextInLine.setCalledAt(Instant.now());
+        nextInLine.setServedByMember(memberCalling);
 
         QueueEntry savedEntry = queueEntryRepository.save(nextInLine);
         log.info("Next client called");
@@ -131,11 +133,12 @@ public class QueueEntryService {
         QueueEntry entry = getEntryById(entryId);
         String sessionId = entry.getQueueSession().getId();
 
-        validateProfessionalOwnership(entry.getQueueSession(), loggedUserId);
+        validatePermissionToManageEntry(entry, loggedUserId);
         validateStatusForRequeue(entry);
 
         entry.setMissedCalls(entry.getMissedCalls() + 1);
         entry.setStatus(QueueEntryStatus.WAITING);
+        entry.setServedByMember(null);
 
         List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
 
@@ -162,8 +165,7 @@ public class QueueEntryService {
         QueueEntry entry = getEntryById(entryId);
         String sessionId = entry.getQueueSession().getId();
 
-        validateProfessionalOwnership(entry.getQueueSession(), loggedUserId);
-        validateChairIsAvailableForStart(sessionId);
+        validatePermissionToManageEntry(entry, loggedUserId);
         validateStatusForStart(entry);
 
         entry.setStatus(QueueEntryStatus.IN_SERVICE);
@@ -181,7 +183,7 @@ public class QueueEntryService {
     public void finishService(String entryId, String loggedUserId) {
         QueueEntry entry = getEntryById(entryId);
 
-        validateProfessionalOwnership(entry.getQueueSession(), loggedUserId);
+        validatePermissionToManageEntry(entry, loggedUserId);
         validateStatusForFinish(entry);
 
         entry.setStatus(QueueEntryStatus.FINISHED);
@@ -220,7 +222,7 @@ public class QueueEntryService {
     }
 
     private QueueSession getAndValidateSession(String sessionId) {
-        QueueSession session = queueSessionRepository.findByIdWithProfessionalAndUser(sessionId)
+        QueueSession session = queueSessionRepository.findByIdWithBusinessAndUser(sessionId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "SESSION_NOT_FOUND",
@@ -253,52 +255,92 @@ public class QueueEntryService {
         }
     }
 
-    private void validateProfessionalOwnership(QueueSession session, String loggedUserId) {
-        if (!session.getProfessional().getUser().getId().equals(loggedUserId)) {
-            log.warn("Security alert: User {} attempted to modify session {} without permission", loggedUserId, session.getId());
+    private TeamMember getValidActionMember(QueueSession session, String loggedUserId, String actionMemberId) {
+
+        TeamMember actionMember = teamMemberRepository.findById(actionMemberId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "MEMBER_NOT_FOUND",
+                        "Team member not found."));
+
+        if (!actionMember.getBusiness().getId().equals(session.getBusiness().getId())) {
             throw new AppException(
                     HttpStatus.FORBIDDEN,
                     "FORBIDDEN",
-                    "You do not have permission to manage this queue.");
+                    "This member does not belong to this business.");
+        }
+
+        boolean isOwnAccount = actionMember.getUser() != null &&
+                actionMember.getUser().getId().equals(loggedUserId);
+
+        boolean isOwnerDevice = teamMemberRepository.existsByUserIdAndBusinessIdAndRole(
+                loggedUserId,
+                session.getBusiness().getId(),
+                "OWNER"
+        );
+
+        if (!isOwnAccount && !isOwnerDevice) {
+            log.warn("Security alert: User {} attempted to act as member {} without permission", loggedUserId, actionMemberId);
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "FORBIDDEN",
+                    "You do not have permission to perform actions for this member.");
+        }
+
+        return actionMember;
+    }
+
+    private void validatePermissionToManageEntry(QueueEntry entry, String loggedUserId) {
+        String businessId = entry.getQueueSession().getBusiness().getId();
+
+        TeamMember loggedMember = teamMemberRepository.findByUserIdAndBusinessId(loggedUserId, businessId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.FORBIDDEN,
+                        "FORBIDDEN",
+                        "You do not belong to the team of this business."));
+
+        if ("OWNER".equals(loggedMember.getRole())) {
+            return;
+        }
+
+        TeamMember servedBy = entry.getServedByMember();
+        if (servedBy != null && !servedBy.getId().equals(loggedMember.getId())) {
+            log.warn("Security alert: User {} attempted to modify an entry served by member {}", loggedUserId, servedBy.getId());
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "FORBIDDEN",
+                    "You can only manage the clients you are currently serving."
+            );
+        }
+    }
+    private void validateMemberNotAlreadyAttending(TeamMember member) {
+        boolean isBusy = queueEntryRepository.existsByServedByMemberIdAndStatusIn(
+                member.getId(),
+                List.of(QueueEntryStatus.CALLED, QueueEntryStatus.IN_SERVICE)
+        );
+
+        if (isBusy) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "MEMBER_BUSY",
+                    "You are already attending a client. Finish the current service or cancel before calling the next one."
+            );
         }
     }
 
     private void validateCancelPermission(QueueEntry entry, String loggedUserId) {
-        boolean isTheBarber = entry.getQueueSession().getProfessional().getUser().getId().equals(loggedUserId);
+        boolean isTeamMember = teamMemberRepository.existsByUserIdAndBusinessId(
+                loggedUserId,
+                entry.getQueueSession().getBusiness().getId()
+        );
         boolean isTheClient = entry.getUser().getId().equals(loggedUserId);
 
-        if (!isTheBarber && !isTheClient) {
+        if (!isTeamMember && !isTheClient) {
             log.warn("Security alert: User {} attempted to cancel entry {} without permission", loggedUserId, entry.getId());
             throw new AppException(
                     HttpStatus.FORBIDDEN,
                     "FORBIDDEN",
                     "You do not have permission to cancel this entry.");
-        }
-    }
-
-    private void validateChairIsAvailableForCall(List<QueueEntry> activeEntries) {
-        boolean isSomeoneBeingAttended = activeEntries.stream()
-                .anyMatch(e -> e.getStatus() == QueueEntryStatus.CALLED || e.getStatus() == QueueEntryStatus.IN_SERVICE);
-
-        if (isSomeoneBeingAttended) {
-            throw new AppException(
-                    HttpStatus.BAD_REQUEST,
-                    "CHAIR_OCCUPIED",
-                    "Finish the current service or cancel the called client before calling the next one."
-            );
-        }
-    }
-
-    private void validateChairIsAvailableForStart(String sessionId) {
-        List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
-        boolean isSomeoneInService = activeEntries.stream()
-                .anyMatch(e -> e.getStatus() == QueueEntryStatus.IN_SERVICE);
-
-        if (isSomeoneInService) {
-            throw new AppException(
-                    HttpStatus.BAD_REQUEST,
-                    "CHAIR_OCCUPIED",
-                    "There is already a client in service. Please finish their service first.");
         }
     }
 

@@ -17,13 +17,6 @@ public class QueueSessionController {
 
     private final QueueSessionService queueSessionService;
 
-    @GetMapping("/me/dashboard")
-    public ResponseEntity<ProfessionalDashboardDTO> getDashboard(
-            @AuthenticationPrincipal User loggedInUser) {
-        ProfessionalDashboardDTO dashboard = queueSessionService.getDashboardData(loggedInUser.getId());
-        return ResponseEntity.ok(dashboard);
-    }
-
     @GetMapping("/tickets/{ticketCode}")
     public ResponseEntity<QueueSessionUserResponseDTO> getSessionByCode(
             @PathVariable String ticketCode) {
@@ -32,33 +25,33 @@ public class QueueSessionController {
     }
 
     @PostMapping
-    public ResponseEntity<QueueSessionProfResponseDTO> createSession(
+    public ResponseEntity<QueueSessionBusinessResponseDTO> createSession(
             @AuthenticationPrincipal User loggedInUser) {
-        QueueSessionProfResponseDTO session = queueSessionService.createQueueSession(loggedInUser.getId());
+        QueueSessionBusinessResponseDTO session = queueSessionService.createQueueSession(loggedInUser.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(session);
     }
 
     @PostMapping("/me/ticket-code")
-    public ResponseEntity<QueueSessionProfResponseDTO> refreshTicketCode(
+    public ResponseEntity<QueueSessionBusinessResponseDTO> refreshTicketCode(
             @AuthenticationPrincipal User loggedInUser) {
-        QueueSessionProfResponseDTO updatedSession = queueSessionService.refreshTicketCode(loggedInUser.getId());
+        QueueSessionBusinessResponseDTO updatedSession = queueSessionService.refreshTicketCode(loggedInUser.getId());
         return ResponseEntity.ok(updatedSession);
     }
 
     @PatchMapping("/me")
-    public ResponseEntity<QueueSessionProfResponseDTO> updateSession(
+    public ResponseEntity<QueueSessionBusinessResponseDTO> updateSession(
             @AuthenticationPrincipal User loggedInUser,
             @Valid @RequestBody UpdateQueueSessionDTO request) {
-        QueueSessionProfResponseDTO updatedSession =
+        QueueSessionBusinessResponseDTO updatedSession =
                 queueSessionService.updateSessionSettings(loggedInUser.getId(), request);
         return ResponseEntity.ok(updatedSession);
     }
 
     @PatchMapping("/me/status")
-    public ResponseEntity<QueueSessionProfResponseDTO> updateStatus(
+    public ResponseEntity<QueueSessionBusinessResponseDTO> updateStatus(
             @AuthenticationPrincipal User loggedInUser,
             @RequestBody @Valid UpdateQueueStatusDTO dto) {
-        QueueSessionProfResponseDTO session = queueSessionService.updateQueueStatus(loggedInUser.getId(),dto.activate());
+        QueueSessionBusinessResponseDTO session = queueSessionService.updateQueueStatus(loggedInUser.getId(),dto.activate());
         return ResponseEntity.ok(session);
     }
 }

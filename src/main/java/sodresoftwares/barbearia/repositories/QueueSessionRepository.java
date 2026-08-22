@@ -10,24 +10,23 @@ import java.util.Optional;
 
 @Repository
 public interface QueueSessionRepository extends JpaRepository<QueueSession, String> {
+    @Query("SELECT q FROM QueueSession q " +
+            "JOIN FETCH q.business " +
+            "WHERE q.business.id = :businessId")
+    Optional<QueueSession> findByBusinessIdWithBusiness(@Param("businessId") String businessId);
+
+    @Query("SELECT q FROM QueueSession q " +
+            "JOIN FETCH q.business " +
+            "WHERE q.ticketCode = :ticketCode")
+    Optional<QueueSession> findByTicketCodeWithBusiness(@Param("ticketCode") String ticketCode);
 
     @Query("SELECT s FROM QueueSession s " +
-            "JOIN FETCH s.professional p " +
-            "WHERE p.user.id = :userId")
-    Optional<QueueSession> findByProfessionalUserIdWithProfessional(@Param("userId") String userId);
-
-    @Query("SELECT s FROM QueueSession s " +
-            "JOIN FETCH s.professional " +
-            "WHERE s.ticketCode = :ticketCode")
-    Optional<QueueSession> findByTicketCodeWithProfessional(@Param("ticketCode") String ticketCode);
-
-    @Query("SELECT s FROM QueueSession s " +
-            "JOIN FETCH s.professional p " +
-            "JOIN FETCH p.user " +
+            "JOIN FETCH s.business b " +
+            "JOIN FETCH b.user " +
             "WHERE s.id = :id")
-    Optional<QueueSession> findByIdWithProfessionalAndUser(@Param("id") String id);
+    Optional<QueueSession> findByIdWithBusinessAndUser(@Param("id") String id);
 
-    Optional<QueueSession> findByProfessionalUserId(String userId);
+    Optional<QueueSession> findByBusinessId(String businessId);
     boolean existsByTicketCode(String ticketCode);
-    boolean existsByProfessionalUserId(String userId);
+    boolean existsByBusinessId(String businessId);
 }

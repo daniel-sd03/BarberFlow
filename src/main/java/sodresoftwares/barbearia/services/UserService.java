@@ -49,6 +49,11 @@ public class UserService {
     }
 
     @Transactional
+    public User registerProfessional(RegisterDTO data, HttpServletRequest request) {
+        return createUser(data, UserRole.PROFESSIONAL, request);
+    }
+
+    @Transactional
     public User createUser(RegisterDTO data, UserRole role, HttpServletRequest request) {
         if (this.userRepository.existsByLogin(data.login())) {
             throw new AppException(

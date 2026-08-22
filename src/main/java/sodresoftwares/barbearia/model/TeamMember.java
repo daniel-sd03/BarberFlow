@@ -12,7 +12,7 @@ import sodresoftwares.barbearia.model.user.User;
 import java.time.Instant;
 
 @Entity
-@Table(name = "queue_entries")
+@Table(name = "team_members")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,45 +20,33 @@ import java.time.Instant;
 @Builder
 @EqualsAndHashCode(of = "id")
 @EntityListeners(AuditingEntityListener.class)
-public class QueueEntry {
+public class TeamMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "queue_sessions_id", nullable = false)
-    private QueueSession queueSession;
+    @JoinColumn(name = "business_id", nullable = false)
+    private Business business;
+
+    @Column(nullable = false, length = 100)
+    private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "served_by_member_id")
-    private TeamMember servedByMember;
+    @Builder.Default
+    @Column(nullable = false, length = 20)
+    private String role = "STAFF";
 
-    @Column(name = "service_name", nullable = false, length = 100)
-    private String serviceName;
+    @Column(name = "pin_code", length = 4)
+    private String pinCode;
 
     @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private QueueEntryStatus status = QueueEntryStatus.WAITING;
-
-    @Builder.Default
-    @Column(name = "missed_calls", nullable = false)
-    private Integer missedCalls = 0;
-
-    @Version
-    private Long version;
-
-    @CreatedDate
-    @Column(name = "joined_at", nullable = false)
-    private Instant joinedAt;
-
-    @Column(name = "called_at")
-    private Instant calledAt;
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

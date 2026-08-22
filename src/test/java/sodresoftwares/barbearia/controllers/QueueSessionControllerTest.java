@@ -25,7 +25,6 @@ import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.QueueSessionService;
 
 import java.time.Instant;
-import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -66,8 +65,7 @@ class QueueSessionControllerTest {
     private QueueSessionService queueSessionService;
 
     private User loggedInUser;
-    private QueueSessionProfResponseDTO sessionResponseDTO;
-    private ProfessionalDashboardDTO dashboardDTO;
+    private QueueSessionBusinessResponseDTO sessionResponseDTO;
 
     @BeforeEach
     void setUp() {
@@ -78,7 +76,7 @@ class QueueSessionControllerTest {
                 .role(UserRole.PROFESSIONAL)
                 .build();
 
-        sessionResponseDTO = new QueueSessionProfResponseDTO(
+        sessionResponseDTO = new QueueSessionBusinessResponseDTO(
                 "session-123",
                 "BARB1234",
                 false
@@ -92,45 +90,13 @@ class QueueSessionControllerTest {
                 "Corte Navalhado",
                 QueueEntryStatus.WAITING,
                 null,
+                null,
+                null,
                 Instant.now(),
                 null,
                 10
         );
 
-        dashboardDTO = new ProfessionalDashboardDTO(
-                "session-123",
-                "Barbearia do Zé",
-                "BARB1234",
-                true,
-                5,
-                List.of(entryDTO)
-        );
-    }
-
-    // ==================== GET DASHBOARD TESTS ====================
-
-    @Test
-    @DisplayName("GET /queue-sessions/me/dashboard -> Should return dashboard payload and 200 OK")
-    void testGetDashboard_Success() throws Exception {
-        // Arrange
-        when(queueSessionService.getDashboardData(any())).thenReturn(dashboardDTO);
-
-        // Act & Assert
-        mockMvc.perform(get("/queue-sessions/me/dashboard")
-                        .with(user(loggedInUser))
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sessionId").value("session-123"))
-                .andExpect(jsonPath("$.businessName").value("Barbearia do Zé"))
-                .andExpect(jsonPath("$.ticketCode").value("BARB1234"))
-                .andExpect(jsonPath("$.isActive").value(true))
-                .andExpect(jsonPath("$.toleranceMinutes").value(5))
-                .andExpect(jsonPath("$.activeQueue[0].id").value("entry-123"))
-                .andExpect(jsonPath("$.activeQueue[0].position").value(1))
-                .andExpect(jsonPath("$.activeQueue[0].userId").value("client-123"))
-                .andExpect(jsonPath("$.activeQueue[0].clientName").value("João Silva"))
-                .andExpect(jsonPath("$.activeQueue[0].serviceName").value("Corte Navalhado"))
-                .andExpect(jsonPath("$.activeQueue[0].status").value("WAITING"));
     }
 
     // ==================== GET SESSION INFO BY CODE TESTS ====================
@@ -186,7 +152,7 @@ class QueueSessionControllerTest {
     @DisplayName("POST /queue-sessions/me/ticket-code -> Should refresh ticket code and return 200 OK")
     void refreshTicketCode_Success() throws Exception {
         // Arrange
-        QueueSessionProfResponseDTO refreshedSessionDTO = new QueueSessionProfResponseDTO(
+        QueueSessionBusinessResponseDTO refreshedSessionDTO = new QueueSessionBusinessResponseDTO(
                 sessionResponseDTO.id(),
                 "BARB9999",
                 sessionResponseDTO.isActive()
@@ -211,7 +177,7 @@ class QueueSessionControllerTest {
     void testUpdateSettings_Success() throws Exception {
         // Arrange
         UpdateQueueSessionDTO requestDTO = new UpdateQueueSessionDTO("CORTE", 15);
-        QueueSessionProfResponseDTO updatedSessionDTO = new QueueSessionProfResponseDTO(
+        QueueSessionBusinessResponseDTO updatedSessionDTO = new QueueSessionBusinessResponseDTO(
                 "session-123",
                 "CORTE1234",
                 true
@@ -253,7 +219,7 @@ class QueueSessionControllerTest {
     void testUpdateStatus_Success() throws Exception {
         // Arrange
         UpdateQueueStatusDTO requestDTO = new UpdateQueueStatusDTO(true);
-        QueueSessionProfResponseDTO activeSessionDTO = new QueueSessionProfResponseDTO("session-123", "BARB1234", true);
+        QueueSessionBusinessResponseDTO activeSessionDTO = new QueueSessionBusinessResponseDTO("session-123", "BARB1234", true);
 
         when(queueSessionService.updateQueueStatus(any(), anyBoolean())).thenReturn(activeSessionDTO);
 

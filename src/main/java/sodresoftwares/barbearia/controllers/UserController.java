@@ -28,11 +28,19 @@ public class UserController {
         return ResponseEntity.ok(profile);
     }
 
-    @PostMapping
+    @PostMapping("/client")
     public ResponseEntity<Void> register(
             @RequestBody @Valid RegisterDTO data,
             HttpServletRequest request) {
         userService.registerClient(data,request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/professional")
+    public ResponseEntity<Void> registerProfessional(
+            @RequestBody @Valid RegisterDTO data,
+            HttpServletRequest request) {
+        userService.registerProfessional(data, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

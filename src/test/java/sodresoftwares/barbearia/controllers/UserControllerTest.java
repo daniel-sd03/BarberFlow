@@ -127,7 +127,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.login").value("user@test.com"));
     }
 
-    // ==================== POST REGISTER TESTS ====================
+    // ==================== POST REGISTER CLIENT TESTS ====================
 
     @Test
     @DisplayName("POST /users -> Should register new user successfully (HTTP 201)")
@@ -137,7 +137,7 @@ class UserControllerTest {
         when(userService.registerClient(any(RegisterDTO.class), any())).thenReturn(userMock);
 
         // Act & Assert
-        mockMvc.perform(post("/users")
+        mockMvc.perform(post("/users/client")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(registerDTO).getJson()))
                 .andExpect(status().isCreated());
@@ -151,7 +151,39 @@ class UserControllerTest {
         RegisterDTO invalidDTO = new RegisterDTO("", "", "", "123",true);
 
         // Act & Assert
-        mockMvc.perform(post("/users")
+        mockMvc.perform(post("/users/client")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(invalidDTO).getJson()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(userService);
+    }
+
+    // ==================== POST REGISTER PROFESSIONAL TESTS ====================
+
+    @Test
+    @DisplayName("POST /users/professional -> Should register new professional successfully (HTTP 201)")
+    void testRegisterProfessional_Success() throws Exception {
+        // Arrange
+        User userMock = new User();
+        when(userService.registerProfessional(any(RegisterDTO.class), any())).thenReturn(userMock);
+
+        // Act & Assert
+        mockMvc.perform(post("/users/professional")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(registerDTO).getJson()))
+                .andExpect(status().isCreated());
+
+        verify(userService).registerProfessional(any(RegisterDTO.class), any());
+    }
+
+    @Test
+    @DisplayName("POST /users/professional -> Should return 400 when register fields are blank")
+    void testRegisterProfessional_ValidationErrors() throws Exception {
+        RegisterDTO invalidDTO = new RegisterDTO("", "", "", "123", true);
+
+        // Act & Assert
+        mockMvc.perform(post("/users/professional")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());

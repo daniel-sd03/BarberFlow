@@ -7,9 +7,9 @@ CREATE TABLE users
     phone      TEXT,
     role       TEXT                    NOT NULL,
     google_id  TEXT UNIQUE,
-    is_active  BOOLEAN                 NOT NULL DEFAULT TRUE,
-    deleted_at TIMESTAMPTZ                      DEFAULT NULL,
-    created_at TIMESTAMPTZ                      DEFAULT CURRENT_TIMESTAMP,
+    is_active  BOOLEAN                 NOT NULL,
+    deleted_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ,
     created_by VARCHAR(255),
     updated_by VARCHAR(255)
@@ -26,49 +26,68 @@ CREATE TABLE lgpd_consents
     CONSTRAINT fk_lgpd_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE TABLE professionals
+CREATE TABLE businesses
 (
-    id            TEXT PRIMARY KEY UNIQUE NOT NULL,
-    user_id       TEXT UNIQUE             NOT NULL,
-    business_name TEXT                    NOT NULL,
-    is_active     BOOLEAN     DEFAULT TRUE,
-    created_at    TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMPTZ,
-    created_by    VARCHAR(255),
-    updated_by    VARCHAR(255),
-    CONSTRAINT fk_provider_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    id         TEXT PRIMARY KEY UNIQUE NOT NULL,
+    user_id    TEXT UNIQUE             NOT NULL,
+    name       TEXT                    NOT NULL,
+    is_active  BOOLEAN                 NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ,
+    created_by VARCHAR(255),
+    updated_by VARCHAR(255),
+    CONSTRAINT fk_business_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE team_members
+(
+    id          TEXT PRIMARY KEY UNIQUE NOT NULL,
+    business_id TEXT                    NOT NULL,
+    name        VARCHAR(100)            NOT NULL,
+    user_id     TEXT,
+    role        VARCHAR(20)             NOT NULL,
+    pin_code    VARCHAR(4),
+    is_active   BOOLEAN                 NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMPTZ,
+    created_by  VARCHAR(255),
+    updated_by  VARCHAR(255),
+    CONSTRAINT fk_team_business FOREIGN KEY (business_id) REFERENCES businesses (id) ON DELETE CASCADE,
+    CONSTRAINT fk_team_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
 CREATE TABLE queue_sessions
 (
     id                TEXT PRIMARY KEY   NOT NULL,
-    professional_id   TEXT               NOT NULL,
+    business_id       TEXT               NOT NULL,
     ticket_code       VARCHAR(50) UNIQUE NOT NULL,
-    is_active         BOOLEAN            NOT NULL DEFAULT FALSE,
+    is_active         BOOLEAN            NOT NULL
     tolerance_minutes INTEGER            NOT NULL,
     prefix            VARCHAR(10),
-    created_at        TIMESTAMPTZ                 DEFAULT CURRENT_TIMESTAMP,
+    created_at        TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMPTZ,
-    CONSTRAINT fk_professional FOREIGN KEY (professional_id) REFERENCES professionals (id) ON DELETE CASCADE
+    CONSTRAINT fk_business FOREIGN KEY (business_id) REFERENCES businesses (id) ON DELETE CASCADE
 );
 
 CREATE TABLE queue_entries
 (
-    id                TEXT PRIMARY KEY NOT NULL,
-    queue_sessions_id TEXT             NOT NULL,
-    user_id           TEXT             NOT NULL,
-    service_name      VARCHAR(100)     NOT NULL,
-    status            VARCHAR(30)      NOT NULL,
-    missed_calls      INTEGER          NOT NULL DEFAULT 0,
-    version           BIGINT           NOT NULL DEFAULT 0,
-    joined_at         TIMESTAMPTZ      NOT NULL,
-    called_at         TIMESTAMPTZ,
-    created_at        TIMESTAMPTZ      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at        TIMESTAMPTZ,
-    created_by        VARCHAR(255),
-    updated_by        VARCHAR(255),
+    id                  TEXT PRIMARY KEY NOT NULL,
+    queue_sessions_id   TEXT             NOT NULL,
+    user_id             TEXT             NOT NULL,
+    served_by_member_id TEXT,
+    service_name        VARCHAR(100)     NOT NULL,
+    status              VARCHAR(30)      NOT NULL,
+    missed_calls        INTEGER          NOT NULL,
+    version             BIGINT           NOT NULL,
+    joined_at           TIMESTAMPTZ      NOT NULL,
+    called_at           TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMPTZ,
+    created_by          VARCHAR(255),
+    updated_by          VARCHAR(255),
     CONSTRAINT fk_queue_sessions FOREIGN KEY (queue_sessions_id) REFERENCES queue_sessions (id) ON DELETE CASCADE,
-    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_served_by_member FOREIGN KEY (served_by_member_id) REFERENCES team_members (id) ON DELETE SET NULL
 );
 
 CREATE TABLE password_reset_tokens

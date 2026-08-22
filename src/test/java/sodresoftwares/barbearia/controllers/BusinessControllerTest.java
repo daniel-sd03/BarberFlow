@@ -15,19 +15,18 @@ import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import sodresoftwares.barbearia.dto.ProfessionalResponseDTO;
-import sodresoftwares.barbearia.dto.RegisterProfessionalDTO;
-import sodresoftwares.barbearia.dto.UpdateProfessionalDTO;
+import sodresoftwares.barbearia.dto.BusinessResponseDTO;
+import sodresoftwares.barbearia.dto.CreateBusinessDTO;
+import sodresoftwares.barbearia.dto.UpdateBusinessDTO;
 import sodresoftwares.barbearia.dto.UserResponseDTO;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
-import sodresoftwares.barbearia.services.ProfessionalService;
+import sodresoftwares.barbearia.services.BusinessService;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -36,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
-        controllers = ProfessionalController.class,
+        controllers = BusinessController.class,
         excludeFilters = {
                 @ComponentScan.Filter(
                         type = FilterType.ASSIGNABLE_TYPE,
@@ -51,8 +50,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
 @AutoConfigureJsonTesters
-@DisplayName("ProfessionalController Tests")
-class ProfessionalControllerTest {
+@DisplayName("BusinessController Tests")
+class BusinessControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -61,15 +60,15 @@ class ProfessionalControllerTest {
     private JacksonTester<Object> jsonTester;
 
     @MockitoBean
-    private ProfessionalService professionalService;
+    private BusinessService businessService;
 
     @MockitoBean
     private CacheManager cacheManager;
 
     private User loggedInUser;
-    private RegisterProfessionalDTO registerProfessionalDTO;
-    private UpdateProfessionalDTO updateDTO;
-    private ProfessionalResponseDTO responseDTO;
+    private CreateBusinessDTO createBusinessDTO;
+    private UpdateBusinessDTO updateDTO;
+    private BusinessResponseDTO responseDTO;
 
     @BeforeEach
     void setUp() {
@@ -79,21 +78,14 @@ class ProfessionalControllerTest {
                 .role(UserRole.PROFESSIONAL)
                 .build();
 
-        registerProfessionalDTO = new RegisterProfessionalDTO(
-                "barber@test.com",
-                "password123",
-                "Barbeiro Teste",
-                "11999999999",
-                "Barbearia do Zé",
-                true
-        );
+        createBusinessDTO = new CreateBusinessDTO("Barbearia do Zé");
 
-        updateDTO = new UpdateProfessionalDTO("New Business Name");
+        updateDTO = new UpdateBusinessDTO("New Business Name");
 
         UserResponseDTO userDTO = UserResponseDTO.fromEntity(loggedInUser);
 
-        responseDTO = new ProfessionalResponseDTO(
-                "prof-123",
+        responseDTO = new BusinessResponseDTO(
+                "biz-123",
                 "New Business Name",
                 true,
                 userDTO
@@ -105,84 +97,83 @@ class ProfessionalControllerTest {
         SecurityContextHolder.clearContext();
     }
 
-    // ==================== GET MY PROFESSIONAL PROFILE TESTS ====================
+    // ==================== GET MY BUSINESS PROFILE TESTS ====================
 
     @Test
-    @DisplayName("GET /professionals/me -> Should return 200 OK and profile data including user")
-    void testGetMyProfessionalProfile_Success() throws Exception {
+    @DisplayName("GET /businesses/me -> Should return 200 OK and profile data including user")
+    void testGetMyBusinessProfile_Success() throws Exception {
         // Arrange
         UserResponseDTO mockUserDTO = new UserResponseDTO("user-123", "Barbeiro Zé", "ze@test.com", "3199999999", "PROFESSIONAL");
-        ProfessionalResponseDTO getResponseDTO = new ProfessionalResponseDTO("prof-123", "Barbearia do Zé", true, mockUserDTO);
+        BusinessResponseDTO getResponseDTO = new BusinessResponseDTO("biz-123", "Barbearia do Zé", true, mockUserDTO);
 
-        when(professionalService.getMyProfessionalProfile(any())).thenReturn(getResponseDTO);
+        when(businessService.getMyBusinessProfile(any())).thenReturn(getResponseDTO);
 
         // Act & Assert
-        mockMvc.perform(get("/professionals/me")
+        mockMvc.perform(get("/businesses/me")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("prof-123"))
-                .andExpect(jsonPath("$.businessName").value("Barbearia do Zé"))
+                .andExpect(jsonPath("$.id").value("biz-123"))
+                .andExpect(jsonPath("$.name").value("Barbearia do Zé"))
                 .andExpect(jsonPath("$.user.id").value("user-123"))
                 .andExpect(jsonPath("$.user.name").value("Barbeiro Zé"))
                 .andExpect(jsonPath("$.user.login").value("ze@test.com"));
     }
 
-    // ==================== POST REGISTER PROFESSIONAL TESTS ====================
+    // ==================== POST CREATE BUSINESS TESTS ====================
 
     @Test
-    @DisplayName("POST /professionals -> Should register new professional successfully (HTTP 201)")
-    void testRegisterProfessional_Success() throws Exception {
+    @DisplayName("POST /businesses -> Should create new business successfully (HTTP 201)")
+    void testCreateBusiness_Success() throws Exception {
         // Arrange
-        doNothing().when(professionalService).registerProfessional(any(RegisterProfessionalDTO.class), any());
+        doNothing().when(businessService).createBusiness(any(), any(CreateBusinessDTO.class));
 
         // Act & Assert
-        mockMvc.perform(post("/professionals")
+        mockMvc.perform(post("/businesses")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonTester.write(registerProfessionalDTO).getJson()))
+                        .content(jsonTester.write(createBusinessDTO).getJson()))
                 .andExpect(status().isCreated());
 
-        verify(professionalService).registerProfessional(any(RegisterProfessionalDTO.class), any());
+        verify(businessService).createBusiness(any(), any(CreateBusinessDTO.class));
     }
 
     @Test
-    @DisplayName("POST /professionals -> Should return 400 when professional register fields are blank")
-    void testRegisterProfessional_ValidationErrors() throws Exception {
+    @DisplayName("POST /businesses -> Should return 400 when business register fields are blank")
+    void testCreateBusiness_ValidationErrors() throws Exception {
         // Arrange
-        RegisterProfessionalDTO invalidDTO = new RegisterProfessionalDTO(
-                "", "", "", "123", "",true);
+        CreateBusinessDTO invalidDTO = new CreateBusinessDTO("");
 
         // Act & Assert
-        mockMvc.perform(post("/professionals")
+        mockMvc.perform(post("/businesses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());
 
-        verifyNoInteractions(professionalService);
+        verifyNoInteractions(businessService);
     }
 
-    // ==================== PATCH UPDATE PROFESSIONAL PROFILE TESTS ====================
+    // ==================== PATCH UPDATE BUSINESS PROFILE TESTS ====================
 
     @Test
-    @DisplayName("PATCH /professionals/me -> Should update business profile and return 200 OK")
-    void testUpdateMyProfessionalProfile_Success() throws Exception {
-        when(professionalService.updateProfessionalProfile(any(), any()))
+    @DisplayName("PATCH /businesses/me -> Should update business profile and return 200 OK")
+    void testUpdateMyBusinessProfile_Success() throws Exception {
+        when(businessService.updateBusinessProfile(any(), any()))
                 .thenReturn(responseDTO);
 
-        mockMvc.perform(patch("/professionals/me")
+        mockMvc.perform(patch("/businesses/me")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(updateDTO).getJson()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("prof-123"))
-                .andExpect(jsonPath("$.businessName").value("New Business Name"))
+                .andExpect(jsonPath("$.id").value("biz-123"))
+                .andExpect(jsonPath("$.name").value("New Business Name"))
                 .andExpect(jsonPath("$.isActive").value(true));
     }
 
     @Test
-    @DisplayName("PATCH /professionals/me -> Should return 400 Bad Request when DTO has validation errors")
-    void testUpdateMyProfessionalProfile_ValidationError() throws Exception {
-        UpdateProfessionalDTO invalidDTO = new UpdateProfessionalDTO("A");
+    @DisplayName("PATCH /businesses/me -> Should return 400 Bad Request when DTO has validation errors")
+    void testUpdateMyBusinessProfile_ValidationError() throws Exception {
+        UpdateBusinessDTO invalidDTO = new UpdateBusinessDTO("");
 
-        mockMvc.perform(patch("/professionals/me")
+        mockMvc.perform(patch("/businesses/me")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());

@@ -1,6 +1,6 @@
 package sodresoftwares.barbearia.dto;
 
-public record QueueSessionProfResponseDTO(
+public record QueueSessionBusinessResponseDTO(
         String id,
         String ticketCode,
         boolean isActive

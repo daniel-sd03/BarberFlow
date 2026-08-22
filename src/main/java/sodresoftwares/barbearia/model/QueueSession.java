@@ -7,7 +7,6 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 @Entity
 @Table(name = "queue_sessions")
@@ -25,8 +24,8 @@ public class QueueSession {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "professional_id", nullable = false)
-    private Professional professional;
+    @JoinColumn(name = "business_id", nullable = false)
+    private Business business;
 
     @Column(name = "ticket_code", unique = true, nullable = false, length = 50)
     private String ticketCode;

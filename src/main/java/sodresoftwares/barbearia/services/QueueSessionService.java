@@ -7,15 +7,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sodresoftwares.barbearia.dto.*;
 import sodresoftwares.barbearia.infra.exception.AppException;
-import sodresoftwares.barbearia.mappers.QueueMapper;
-import sodresoftwares.barbearia.model.Professional;
-import sodresoftwares.barbearia.model.QueueEntry;
-import sodresoftwares.barbearia.model.QueueSession;
-import sodresoftwares.barbearia.repositories.ProfessionalRepository;
+import sodresoftwares.barbearia.model.*;
 import sodresoftwares.barbearia.repositories.QueueSessionRepository;
+import sodresoftwares.barbearia.repositories.TeamMemberRepository;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -25,30 +20,25 @@ import java.util.concurrent.ThreadLocalRandom;
 public class QueueSessionService {
 
     private final QueueSessionRepository queueSessionRepository;
-    private final ProfessionalRepository professionalRepository;
+    private final TeamMemberRepository teamMemberRepository;
     private final QueueCacheService queueCacheService;
-    private final QueueMapper queueMapper;
 
     @Transactional
-    public QueueSessionProfResponseDTO createQueueSession(String loggedUserId) {
-        if (queueSessionRepository.existsByProfessionalUserId(loggedUserId)) {
+    public QueueSessionBusinessResponseDTO createQueueSession(String loggedUserId) {
+        Business business = getBusinessForOwner(loggedUserId);
+
+        if (queueSessionRepository.existsByBusinessId(business.getId())) {
             throw new AppException(
                     HttpStatus.CONFLICT,
                     "QUEUE_ALREADY_EXISTS",
-                    "This professional already has a queue session.");
+                    "This business already has a queue session.");
         }
 
-        Professional professional = professionalRepository.findByUserId(loggedUserId)
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.NOT_FOUND,
-                        "PROFESSIONAL_NOT_FOUND",
-                        "Professional not found"));
-
-        String initialPrefix = generateInitialPrefix(professional.getBusinessName());
+        String initialPrefix = generateInitialPrefix(business.getName());
         String safeTicketCode = generateUniqueTicketCode(initialPrefix);
 
         QueueSession newSession = QueueSession.builder()
-                .professional(professional)
+                .business(business)
                 .prefix(initialPrefix)
                 .ticketCode(safeTicketCode)
                 .isActive(false)
@@ -61,9 +51,14 @@ public class QueueSessionService {
     }
 
     @Transactional
-    public QueueSessionProfResponseDTO updateQueueStatus(String loggedUserId, boolean activate) {
-        QueueSession session = queueSessionRepository.findByProfessionalUserId(loggedUserId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SESSION_NOT_FOUND", "Queue not set up yet."));
+    public QueueSessionBusinessResponseDTO updateQueueStatus(String loggedUserId, boolean activate) {
+        Business business = getBusinessForOwner(loggedUserId);
+
+        QueueSession session = queueSessionRepository.findByBusinessId(business.getId())
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "SESSION_NOT_FOUND",
+                        "Queue not set up yet."));
 
         session.setIsActive(activate);
         QueueSession savedSession = queueSessionRepository.save(session);
@@ -73,8 +68,10 @@ public class QueueSessionService {
     }
 
     @Transactional
-    public QueueSessionProfResponseDTO updateSessionSettings(String loggedUserId, UpdateQueueSessionDTO dto) {
-        QueueSession session = queueSessionRepository.findByProfessionalUserId(loggedUserId)
+    public QueueSessionBusinessResponseDTO updateSessionSettings(String loggedUserId, UpdateQueueSessionDTO dto) {
+        Business business = getBusinessForOwner(loggedUserId);
+
+        QueueSession session = queueSessionRepository.findByBusinessId(business.getId())
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "SESSION_NOT_FOUND",
@@ -114,8 +111,10 @@ public class QueueSessionService {
     }
 
     @Transactional
-    public QueueSessionProfResponseDTO refreshTicketCode(String loggedUserId) {
-        QueueSession session = queueSessionRepository.findByProfessionalUserId(loggedUserId)
+    public QueueSessionBusinessResponseDTO refreshTicketCode(String loggedUserId) {
+        Business business = getBusinessForOwner(loggedUserId);
+
+        QueueSession session = queueSessionRepository.findByBusinessId(business.getId())
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "SESSION_NOT_FOUND",
@@ -133,43 +132,8 @@ public class QueueSessionService {
         return mapToSessionDTO(savedSession);
     }
 
-    public ProfessionalDashboardDTO getDashboardData(String loggedUserId) {
-        Optional<QueueSession> sessionOpt = queueSessionRepository.findByProfessionalUserIdWithProfessional(loggedUserId);
-
-        if (sessionOpt.isEmpty()) {
-            Professional professional = professionalRepository.findByUserId(loggedUserId)
-                    .orElseThrow(() -> new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "PROFESSIONAL_NOT_FOUND",
-                            "Professional not found"));
-
-            return new ProfessionalDashboardDTO(
-                    null,
-                    professional.getBusinessName(),
-                    null,
-                    false,
-                    null,
-                    List.of()
-            );
-        }
-
-        QueueSession session = sessionOpt.get();
-        List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(session.getId());
-
-        List<QueueEntryResponseDTO> queueDTOs = queueMapper.toDtoList(activeEntries);
-
-        return new ProfessionalDashboardDTO(
-                session.getId(),
-                session.getProfessional().getBusinessName(),
-                session.getTicketCode(),
-                session.getIsActive(),
-                session.getToleranceMinutes(),
-                queueDTOs
-        );
-    }
-
     public QueueSessionUserResponseDTO getSessionInfoByCode(String ticketCode) {
-        QueueSession session = queueSessionRepository.findByTicketCodeWithProfessional(ticketCode.toUpperCase())
+        QueueSession session = queueSessionRepository.findByTicketCodeWithBusiness(ticketCode.toUpperCase())
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "SESSION_NOT_FOUND",
@@ -180,7 +144,7 @@ public class QueueSessionService {
 
         return new QueueSessionUserResponseDTO(
                 session.getId(),
-                session.getProfessional().getBusinessName(),
+                session.getBusiness().getName(),
                 peopleInQueue,
                 session.getIsActive(),
                 session.getToleranceMinutes()
@@ -224,11 +188,36 @@ public class QueueSessionService {
         return generatedCode;
     }
 
-    private QueueSessionProfResponseDTO mapToSessionDTO(QueueSession session) {
-        return new QueueSessionProfResponseDTO(
+    private QueueSessionBusinessResponseDTO mapToSessionDTO(QueueSession session) {
+        return new QueueSessionBusinessResponseDTO(
                 session.getId(),
                 session.getTicketCode(),
                 session.getIsActive()
         );
+    }
+
+    private TeamMember getTeamMember(String loggedUserId) {
+        return teamMemberRepository.findByUserId(loggedUserId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "TEAM_MEMBER_NOT_FOUND",
+                        "User is not associated with any team/business."));
+    }
+
+    private Business getBusinessForAnyMember(String loggedUserId) {
+        return getTeamMember(loggedUserId).getBusiness();
+    }
+
+    private Business getBusinessForOwner(String loggedUserId) {
+        TeamMember member = getTeamMember(loggedUserId);
+
+        if (!"OWNER".equals(member.getRole())) {
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "ACCESS_DENIED",
+                    "Only the business owner can perform this action.");
+        }
+
+        return member.getBusiness();
     }
 }

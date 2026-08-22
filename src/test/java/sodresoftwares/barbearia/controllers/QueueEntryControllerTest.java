@@ -20,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import sodresoftwares.barbearia.dto.CallNextDTO;
 import sodresoftwares.barbearia.dto.JoinQueueDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.dto.UserQueueStatusDTO;
@@ -62,7 +63,7 @@ class QueueEntryControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private JacksonTester<JoinQueueDTO> joinQueueJson;
+    private JacksonTester<Object> jsonTester;
 
     @MockitoBean
     private CacheManager cacheManager;
@@ -90,6 +91,8 @@ class QueueEntryControllerTest {
                 "Cliente Silva",
                 "Corte de Cabelo",
                 QueueEntryStatus.WAITING,
+                null,
+                null,
                 null,
                 Instant.now(),
                 null,
@@ -131,7 +134,7 @@ class QueueEntryControllerTest {
 
         mockMvc.perform(post("/queue-entries")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(joinQueueJson.write(joinQueueDTO).getJson()))
+                        .content(jsonTester.write(joinQueueDTO).getJson()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("entry-123"))
                 .andExpect(jsonPath("$.position").value(3))
@@ -146,7 +149,7 @@ class QueueEntryControllerTest {
 
         mockMvc.perform(post("/queue-entries")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(joinQueueJson.write(invalidDTO).getJson()))
+                        .content(jsonTester.write(invalidDTO).getJson()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -163,16 +166,21 @@ class QueueEntryControllerTest {
                 "Cliente Silva",
                 "Corte de Cabelo",
                 QueueEntryStatus.CALLED,
+                null,
+                null,
                 calledTime,
                 calledTime,
                 calledTime.plus(10, ChronoUnit.MINUTES),
                 10
         );
 
-        when(queueEntryService.callNext(any(), any())).thenReturn(calledEntry);
+        CallNextDTO callNextDTO = new CallNextDTO("member-123");
+
+        when(queueEntryService.callNext(any(), any(),any())).thenReturn(calledEntry);
 
         mockMvc.perform(post("/queue-entries/sessions/{sessionId}/next", "session-789")
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(callNextDTO).getJson()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("entry-123"))
                 .andExpect(jsonPath("$.status").value("CALLED"));
@@ -203,6 +211,8 @@ class QueueEntryControllerTest {
                 "Cliente Silva",
                 "Corte de Cabelo",
                 QueueEntryStatus.IN_SERVICE,
+                "member-123",
+                "Barbeiro Zé",
                 Instant.now(),
                 Instant.now(),
                 null,
