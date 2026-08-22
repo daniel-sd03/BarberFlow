@@ -11,5 +11,6 @@ public record BusinessDashboardDTO(
         String ticketCode,
         boolean isActive,
         Integer toleranceMinutes,
-        List<QueueEntryResponseDTO> activeQueue
+        List<QueueEntryResponseDTO> activeQueue,
+        List<TeamMemberDTO> team
 ) {}

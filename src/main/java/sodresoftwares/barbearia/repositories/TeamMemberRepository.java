@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import sodresoftwares.barbearia.model.TeamMember;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TeamMemberRepository extends JpaRepository<TeamMember, String> {
@@ -13,6 +14,11 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, String> 
             "JOIN FETCH t.business " +
             "WHERE t.user.id = :userId")
     Optional<TeamMember> findByUserIdWithBusiness(@Param("userId") String userId);
+
+    @Query("SELECT t FROM TeamMember t " +
+            "JOIN FETCH t.user " +
+            "WHERE t.business.id = :businessId")
+    List<TeamMember> findAllByBusinessIdWithUser(@Param("businessId") String businessId);
 
     Optional<TeamMember> findByUserId(String userId);
 
