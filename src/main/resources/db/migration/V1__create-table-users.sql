@@ -61,9 +61,10 @@ CREATE TABLE queue_sessions
     id                TEXT PRIMARY KEY   NOT NULL,
     business_id       TEXT               NOT NULL,
     ticket_code       VARCHAR(50) UNIQUE NOT NULL,
-    is_active         BOOLEAN            NOT NULL
+    is_active         BOOLEAN            NOT NULL,
     tolerance_minutes INTEGER            NOT NULL,
     prefix            VARCHAR(10),
+    created_by        VARCHAR(255)       NOT NULL,
     created_at        TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMPTZ,
     CONSTRAINT fk_business FOREIGN KEY (business_id) REFERENCES businesses (id) ON DELETE CASCADE
@@ -98,6 +99,21 @@ CREATE TABLE password_reset_tokens
     expiry_date TIMESTAMPTZ             NOT NULL,
     created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE team_invites
+(
+    id          VARCHAR(255) PRIMARY KEY,
+    business_id VARCHAR(255) NOT NULL,
+    email       VARCHAR(255) NOT NULL,
+    role        VARCHAR(50)  NOT NULL,
+    status      VARCHAR(50)  NOT NULL,
+    created_by  VARCHAR(255) NOT NULL,
+    created_at  TIMESTAMP    NOT NULL,
+    expires_at  TIMESTAMP    NOT NULL,
+    CONSTRAINT fk_team_invites_business FOREIGN KEY (business_id) REFERENCES businesses (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_team_invites_email ON team_invites (email);
 
 CREATE INDEX idx_password_reset_email_code
     ON password_reset_tokens (email, code);

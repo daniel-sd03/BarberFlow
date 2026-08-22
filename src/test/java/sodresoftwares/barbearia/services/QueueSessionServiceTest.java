@@ -77,7 +77,7 @@ class QueueSessionServiceTest {
                 .id("member-123")
                 .business(business)
                 .user(professionalUser)
-                .role("OWNER")
+                .role(TeamRole.OWNER)
                 .build();
 
         existingSession = QueueSession.builder()
@@ -184,7 +184,7 @@ class QueueSessionServiceTest {
         // Arrange - Setup a staff member
         TeamMember staffMember = TeamMember.builder()
                 .business(business)
-                .role("STAFF")
+                .role(TeamRole.STAFF)
                 .build();
 
         when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(staffMember));

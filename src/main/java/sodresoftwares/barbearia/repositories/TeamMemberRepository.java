@@ -27,4 +27,6 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, String> 
     boolean existsByUserIdAndBusinessId(String userId, String businessId);
 
     boolean existsByUserIdAndBusinessIdAndRole(String loggedUserId, String id, String owner);
+
+    boolean existsByUserId(String userId);
 }

@@ -211,7 +211,7 @@ public class QueueSessionService {
     private Business getBusinessForOwner(String loggedUserId) {
         TeamMember member = getTeamMember(loggedUserId);
 
-        if (!"OWNER".equals(member.getRole())) {
+        if (member.getRole() != TeamRole.OWNER) {
             throw new AppException(
                     HttpStatus.FORBIDDEN,
                     "ACCESS_DENIED",

@@ -37,9 +37,9 @@ public class TeamMember {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Builder.Default
-    @Column(nullable = false, length = 20)
-    private String role = "STAFF";
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TeamRole role = TeamRole.STAFF;
 
     @Column(name = "pin_code", length = 4)
     private String pinCode;
