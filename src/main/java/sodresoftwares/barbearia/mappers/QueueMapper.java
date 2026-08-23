@@ -19,7 +19,7 @@ public class QueueMapper {
         List<QueueEntryResponseDTO> dtos = new ArrayList<>();
         for (int i = 0; i < activeEntries.size(); i++) {
             QueueEntry entry = activeEntries.get(i);
-            dtos.add(buildDtoWithTolerance(entry, i + 1));
+            dtos.add(toDto(entry, i + 1));
         }
         return dtos;
     }
@@ -27,7 +27,7 @@ public class QueueMapper {
     public QueueEntryResponseDTO toSingleDto(QueueEntry targetEntry, List<QueueEntry> activeEntries) {
         for (int i = 0; i < activeEntries.size(); i++) {
             if (activeEntries.get(i).getId().equals(targetEntry.getId())) {
-                return buildDtoWithTolerance(targetEntry, i + 1);
+                return toDto(targetEntry, i + 1);
             }
         }
         throw new AppException(
@@ -37,7 +37,7 @@ public class QueueMapper {
         );
     }
 
-    private QueueEntryResponseDTO buildDtoWithTolerance(QueueEntry entry, int position) {
+    private QueueEntryResponseDTO toDto(QueueEntry entry, int position) {
 
         Integer toleranceMinute = entry.getQueueSession().getToleranceMinutes();
         Instant serverTimeNow = Instant.now();
@@ -52,10 +52,7 @@ public class QueueMapper {
 
         if (entry.getServedByMember() != null) {
             servedByMemberId = entry.getServedByMember().getId();
-
-            if (entry.getServedByMember().getUser() != null) {
-                servedByMemberName = entry.getServedByMember().getUser().getName();
-            }
+            servedByMemberName = entry.getServedByMember().getName();
         }
 
         return new QueueEntryResponseDTO(

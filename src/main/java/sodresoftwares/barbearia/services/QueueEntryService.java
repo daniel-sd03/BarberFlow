@@ -11,10 +11,7 @@ import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.dto.UserQueueStatusDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.mappers.QueueMapper;
-import sodresoftwares.barbearia.model.QueueEntry;
-import sodresoftwares.barbearia.model.QueueEntryStatus;
-import sodresoftwares.barbearia.model.QueueSession;
-import sodresoftwares.barbearia.model.TeamMember;
+import sodresoftwares.barbearia.model.*;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.QueueEntryRepository;
 import sodresoftwares.barbearia.repositories.QueueSessionRepository;
@@ -76,12 +73,17 @@ public class QueueEntryService {
     @Transactional
     public QueueEntryResponseDTO joinQueue(@NonNull JoinQueueDTO dto, String loggedUserId) {
         QueueSession session = getAndValidateSession(dto.queueSessionId());
-        User userProxy = userRepository.getReferenceById(loggedUserId);
+        User clientUser = userRepository.findById(loggedUserId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "USER_NOT_FOUND",
+                        "User not found"
+                ));
         validateUserNotInAnyQueue(loggedUserId);
 
         QueueEntry entry = QueueEntry.builder()
                 .queueSession(session)
-                .user(userProxy)
+                .user(clientUser)
                 .serviceName(dto.serviceName())
                 .status(QueueEntryStatus.WAITING)
                 .build();
@@ -276,7 +278,7 @@ public class QueueEntryService {
         boolean isOwnerDevice = teamMemberRepository.existsByUserIdAndBusinessIdAndRole(
                 loggedUserId,
                 session.getBusiness().getId(),
-                "OWNER"
+                TeamRole.OWNER
         );
 
         if (!isOwnAccount && !isOwnerDevice) {
@@ -299,7 +301,7 @@ public class QueueEntryService {
                         "FORBIDDEN",
                         "You do not belong to the team of this business."));
 
-        if ("OWNER".equals(loggedMember.getRole())) {
+        if (loggedMember.getRole() == TeamRole.OWNER) {
             return;
         }
 
