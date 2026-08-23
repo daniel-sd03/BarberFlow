@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import sodresoftwares.barbearia.model.TeamMember;
+import sodresoftwares.barbearia.model.TeamRole;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +28,7 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, String> 
 
     boolean existsByUserIdAndBusinessId(String userId, String businessId);
 
-    boolean existsByUserIdAndBusinessIdAndRole(String loggedUserId, String id, String owner);
+    boolean existsByUserIdAndBusinessIdAndRole(String loggedUserId, String id, TeamRole owner);
 
     boolean existsByUserId(String userId);
 }

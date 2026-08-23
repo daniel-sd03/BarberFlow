@@ -394,7 +394,7 @@ class QueueEntryServiceTest {
         String intruderUserId = "intruder-user-999";
         when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
         when(teamMemberRepository.findById(teamMember.getId())).thenReturn(Optional.of(teamMember));
-        when(teamMemberRepository.existsByUserIdAndBusinessIdAndRole(intruderUserId, business.getId(), "OWNER"))
+        when(teamMemberRepository.existsByUserIdAndBusinessIdAndRole(intruderUserId, business.getId(), TeamRole.OWNER))
                 .thenReturn(false);
 
         // Act & Assert
