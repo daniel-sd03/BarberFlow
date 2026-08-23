@@ -14,6 +14,7 @@ import sodresoftwares.barbearia.dto.UpdateBusinessDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.Business;
 import sodresoftwares.barbearia.model.TeamMember;
+import sodresoftwares.barbearia.model.TeamRole;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.repositories.BusinessRepository;
@@ -130,7 +131,7 @@ class BusinessServiceTest {
         verify(teamMemberRepository).save(argThat(member ->
                 member.getBusiness().getId().equals(BUSINESS_ID) &&
                         member.getUser().getId().equals(USER_ID) &&
-                        member.getRole().equals("OWNER") &&
+                        member.getRole().equals(TeamRole.OWNER) &&
                         member.getName().equals("Barbeiro Zé")
         ));
     }

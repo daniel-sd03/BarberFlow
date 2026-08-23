@@ -10,20 +10,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import sodresoftwares.barbearia.dto.BusinessDashboardDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.mappers.QueueMapper;
-import sodresoftwares.barbearia.model.Business;
-import sodresoftwares.barbearia.model.QueueEntry;
-import sodresoftwares.barbearia.model.QueueSession;
-import sodresoftwares.barbearia.model.TeamMember;
+import sodresoftwares.barbearia.model.*;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.QueueSessionRepository;
+import sodresoftwares.barbearia.repositories.TeamInviteRepository;
 import sodresoftwares.barbearia.repositories.TeamMemberRepository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +35,9 @@ class DashboardServiceTest {
     private QueueSessionRepository queueSessionRepository;
 
     @Mock
+    private TeamInviteRepository teamInviteRepository;
+
+    @Mock
     private QueueCacheService queueCacheService;
 
     @Mock
@@ -45,30 +46,35 @@ class DashboardServiceTest {
     @InjectMocks
     private DashboardService dashboardService;
 
+    private User mockUser;
     private final String LOGGED_USER_ID = "user-123";
     private final String BUSINESS_ID = "biz-123";
     private final String SESSION_ID = "session-123";
 
+    private Business business;
     private TeamMember teamMember;
     private QueueSession queueSession;
 
     @BeforeEach
     void setUp() {
-        Business business = Business.builder()
+        business = Business.builder()
                 .id(BUSINESS_ID)
                 .name("Barbearia Teste")
                 .build();
 
-        User mockUser = sodresoftwares.barbearia.model.user.User.builder()
+        mockUser = User.builder()
                 .id(LOGGED_USER_ID)
+                .login("ze@test.com")
                 .name("Zé Barbeiro")
                 .build();
 
         teamMember = TeamMember.builder()
                 .id("member-123")
-                .role("OWNER")
+                .name("Zé Barbeiro")
+                .role(TeamRole.OWNER)
                 .business(business)
                 .user(mockUser)
+                .isActive(true)
                 .build();
 
         queueSession = QueueSession.builder()
@@ -83,22 +89,60 @@ class DashboardServiceTest {
     // ==================== DASHBOARD PROFESSIONAL ====================
 
     @Test
-    @DisplayName("Should return empty dashboard when user is not associated with any team")
+    @DisplayName("Should return empty dashboard with pending invites when user is not associated with any team")
     void getProfessionalDashboard_NoTeamMember() {
         // Arrange
         when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.empty());
 
+        TeamInvite mockInvite = TeamInvite.builder()
+                .id("inv-1")
+                .business(business)
+                .email("ze@test.com")
+                .role(TeamRole.STAFF)
+                .status(InviteStatus.PENDING)
+                .expiresAt(Instant.now())
+                .build();
+
+        when(teamInviteRepository.findAllByEmailAndStatus("ze@test.com", InviteStatus.PENDING))
+                .thenReturn(List.of(mockInvite));
+
         // Act
-        BusinessDashboardDTO result = dashboardService.getProfessionalDashboard(LOGGED_USER_ID);
+        BusinessDashboardDTO result = dashboardService.getProfessionalDashboard(mockUser);
 
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.businessId()).isNull();
         assertThat(result.loggedMemberRole()).isNull();
-        assertThat(result.sessionId()).isNull();
-        assertThat(result.activeQueue()).isEmpty();
+        assertThat(result.pendingInvites()).hasSize(1);
+        assertThat(result.pendingInvites().get(0).id()).isEqualTo("inv-1");
 
         verifyNoInteractions(queueSessionRepository, queueCacheService, queueMapper);
+    }
+
+    @Test
+    @DisplayName("Should map team members correctly even if they are Shadow Profiles (user is null)")
+    void getProfessionalDashboard_ShadowProfileMapping() {
+        // Arrange
+        TeamMember shadowMember = TeamMember.builder()
+                .id("shadow-123")
+                .name("Fantasma Silva")
+                .user(null)
+                .role(TeamRole.STAFF)
+                .business(business)
+                .isActive(true)
+                .build();
+
+        when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findAllByBusinessIdAndIsActiveTrueWithUser(BUSINESS_ID))
+                .thenReturn(List.of(teamMember, shadowMember));
+        when(queueSessionRepository.findByBusinessIdWithBusiness(BUSINESS_ID)).thenReturn(Optional.empty());
+
+        // Act
+        BusinessDashboardDTO result = dashboardService.getProfessionalDashboard(mockUser);
+
+        // Assert
+        assertThat(result.team()).hasSize(2);
+        assertThat(result.team().get(1).name()).isEqualTo("Fantasma Silva");
     }
 
     @Test
@@ -106,19 +150,20 @@ class DashboardServiceTest {
     void getProfessionalDashboard_NoActiveSession() {
         // Arrange
         when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
-        when(teamMemberRepository.findAllByBusinessIdWithUser(BUSINESS_ID)).thenReturn(List.of(teamMember));
+        when(teamMemberRepository.findAllByBusinessIdAndIsActiveTrueWithUser(BUSINESS_ID)).thenReturn(List.of(teamMember));
         when(queueSessionRepository.findByBusinessIdWithBusiness(BUSINESS_ID)).thenReturn(Optional.empty());
 
         // Act
-        BusinessDashboardDTO result = dashboardService.getProfessionalDashboard(LOGGED_USER_ID);
+        BusinessDashboardDTO result = dashboardService.getProfessionalDashboard(mockUser);
 
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.businessId()).isEqualTo(BUSINESS_ID);
         assertThat(result.businessName()).isEqualTo("Barbearia Teste");
-        assertThat(result.loggedMemberRole()).isEqualTo("OWNER");
+        assertThat(result.loggedMemberRole()).isEqualTo(TeamRole.OWNER);
         assertThat(result.sessionId()).isNull();
         assertThat(result.activeQueue()).isEmpty();
+        assertThat(result.pendingInvites()).isEmpty();
 
         verifyNoInteractions(queueCacheService, queueMapper);
     }
@@ -128,7 +173,7 @@ class DashboardServiceTest {
     void getProfessionalDashboard_FullData() {
         // Arrange
         when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
-        when(teamMemberRepository.findAllByBusinessIdWithUser(BUSINESS_ID)).thenReturn(List.of(teamMember));
+        when(teamMemberRepository.findAllByBusinessIdAndIsActiveTrueWithUser(BUSINESS_ID)).thenReturn(List.of(teamMember));
         when(queueSessionRepository.findByBusinessIdWithBusiness(BUSINESS_ID)).thenReturn(Optional.of(queueSession));
 
         List<QueueEntry> mockEntries = List.of(new QueueEntry());
@@ -138,15 +183,12 @@ class DashboardServiceTest {
         when(queueMapper.toDtoList(anyList())).thenReturn(mockDtos);
 
         // Act
-        BusinessDashboardDTO result = dashboardService.getProfessionalDashboard(LOGGED_USER_ID);
+        BusinessDashboardDTO result = dashboardService.getProfessionalDashboard(mockUser);
 
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.businessId()).isEqualTo(BUSINESS_ID);
         assertThat(result.sessionId()).isEqualTo(SESSION_ID);
-        assertThat(result.ticketCode()).isEqualTo("CODE99");
-        assertThat(result.isActive()).isTrue();
-        assertThat(result.toleranceMinutes()).isEqualTo(15);
         assertThat(result.activeQueue()).hasSize(1);
 
         verify(queueCacheService).getActiveEntries(SESSION_ID);

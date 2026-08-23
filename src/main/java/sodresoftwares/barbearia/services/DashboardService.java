@@ -6,12 +6,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sodresoftwares.barbearia.dto.BusinessDashboardDTO;
 import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
+import sodresoftwares.barbearia.dto.TeamInviteResponseDTO;
 import sodresoftwares.barbearia.dto.TeamMemberDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.mappers.QueueMapper;
+import sodresoftwares.barbearia.model.InviteStatus;
 import sodresoftwares.barbearia.model.QueueSession;
 import sodresoftwares.barbearia.model.TeamMember;
+import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.QueueSessionRepository;
+import sodresoftwares.barbearia.repositories.TeamInviteRepository;
 import sodresoftwares.barbearia.repositories.TeamMemberRepository;
 
 import java.util.List;
@@ -26,15 +30,28 @@ public class DashboardService {
     private final QueueSessionRepository queueSessionRepository;
     private final QueueCacheService queueCacheService;
     private final QueueMapper queueMapper;
+    private final TeamInviteRepository teamInviteRepository;
 
-    public BusinessDashboardDTO getProfessionalDashboard(String loggedUserId) {
+    public BusinessDashboardDTO getProfessionalDashboard(User loggedUser) {
 
-        Optional<TeamMember> loggedMemberOpt = teamMemberRepository.findByUserIdWithBusiness(loggedUserId);
+        Optional<TeamMember> loggedMemberOpt = teamMemberRepository.findByUserIdWithBusiness(loggedUser.getId());
 
         if (loggedMemberOpt.isEmpty()) {
+            List<TeamInviteResponseDTO> pendingInvites = teamInviteRepository.findAllByEmailAndStatus(loggedUser.getLogin(), InviteStatus.PENDING)
+                    .stream()
+                    .map(invite -> new TeamInviteResponseDTO(
+                            invite.getId(),
+                            invite.getBusiness().getId(),
+                            invite.getBusiness().getName(),
+                            invite.getEmail(),
+                            invite.getRole(),
+                            invite.getExpiresAt()
+                    )).toList();
+
             return new BusinessDashboardDTO(
                     null, null, null, null,
-                    null, null, false, null, List.of(), List.of()
+                    null, null, false, null,
+                    List.of(), List.of(), pendingInvites
             );
         }
 
@@ -42,11 +59,11 @@ public class DashboardService {
         String businessId = loggedMember.getBusiness().getId();
         String businessName = loggedMember.getBusiness().getName();
 
-        List<TeamMemberDTO> teamDtos = teamMemberRepository.findAllByBusinessIdWithUser(businessId)
+        List<TeamMemberDTO> teamDtos = teamMemberRepository.findAllByBusinessIdAndIsActiveTrueWithUser(businessId)
                 .stream()
                 .map(member -> new TeamMemberDTO(
                         member.getId(),
-                        member.getUser().getName(),
+                        member.getName(),
                         member.getRole()
                 )).toList();
 
@@ -55,7 +72,7 @@ public class DashboardService {
         if (sessionOpt.isEmpty()) {
             return new BusinessDashboardDTO(
                     businessId, businessName, loggedMember.getId(), loggedMember.getRole(),
-                    null, null, false, null, List.of(), teamDtos
+                    null, null, false, null, List.of(), teamDtos, List.of()
             );
         }
 
@@ -67,7 +84,7 @@ public class DashboardService {
         return new BusinessDashboardDTO(
                 businessId, businessName, loggedMember.getId(), loggedMember.getRole(),
                 session.getId(), session.getTicketCode(), session.getIsActive(),
-                session.getToleranceMinutes(), activeQueueDtos, teamDtos
+                session.getToleranceMinutes(), activeQueueDtos, teamDtos, List.of()
         );
     }
 }

@@ -18,8 +18,9 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping("/professional")
-    public ResponseEntity<BusinessDashboardDTO> getMyDashboard(@AuthenticationPrincipal User loggedInUser) {
-        BusinessDashboardDTO dashboard = dashboardService.getProfessionalDashboard(loggedInUser.getId());
+    public ResponseEntity<BusinessDashboardDTO> getMyDashboard(
+            @AuthenticationPrincipal User loggedInUser) {
+        BusinessDashboardDTO dashboard = dashboardService.getProfessionalDashboard(loggedInUser);
         return ResponseEntity.ok(dashboard);
     }
 }

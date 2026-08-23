@@ -64,9 +64,10 @@ CREATE TABLE queue_sessions
     is_active         BOOLEAN            NOT NULL,
     tolerance_minutes INTEGER            NOT NULL,
     prefix            VARCHAR(10),
-    created_by        VARCHAR(255)       NOT NULL,
     created_at        TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMPTZ,
+    created_by        VARCHAR(255)       NOT NULL,
+    updated_by          VARCHAR(255),
     CONSTRAINT fk_business FOREIGN KEY (business_id) REFERENCES businesses (id) ON DELETE CASCADE
 );
 
