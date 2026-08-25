@@ -1,5 +1,8 @@
-package sodresoftwares.barbearia.dto;
+package sodresoftwares.barbearia.dto.business;
 
+import sodresoftwares.barbearia.dto.queue.QueueEntryResponseDTO;
+import sodresoftwares.barbearia.dto.team.TeamInviteResponseDTO;
+import sodresoftwares.barbearia.dto.team.TeamMemberDTO;
 import sodresoftwares.barbearia.model.TeamRole;
 
 import java.util.List;

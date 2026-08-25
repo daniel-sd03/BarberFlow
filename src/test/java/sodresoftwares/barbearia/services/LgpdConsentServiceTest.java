@@ -10,7 +10,7 @@
     import org.mockito.Mock;
     import org.mockito.junit.jupiter.MockitoExtension;
     import org.springframework.test.util.ReflectionTestUtils;
-    import sodresoftwares.barbearia.dto.TokenResponseDTO;
+    import sodresoftwares.barbearia.dto.auth.TokenResponseDTO;
     import sodresoftwares.barbearia.infra.security.TokenService;
     import sodresoftwares.barbearia.model.LgpdConsent;
     import sodresoftwares.barbearia.model.user.User;

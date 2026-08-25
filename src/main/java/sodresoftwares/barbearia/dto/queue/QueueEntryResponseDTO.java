@@ -1,4 +1,4 @@
-package sodresoftwares.barbearia.dto;
+package sodresoftwares.barbearia.dto.queue;
 
 import sodresoftwares.barbearia.model.QueueEntryStatus;
 

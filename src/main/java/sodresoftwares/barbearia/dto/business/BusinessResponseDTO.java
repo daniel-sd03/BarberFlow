@@ -1,5 +1,6 @@
-package sodresoftwares.barbearia.dto;
+package sodresoftwares.barbearia.dto.business;
 
+import sodresoftwares.barbearia.dto.user.UserResponseDTO;
 import sodresoftwares.barbearia.model.Business;
 
 public record BusinessResponseDTO(

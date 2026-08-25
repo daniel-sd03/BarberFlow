@@ -1,6 +1,5 @@
 package sodresoftwares.barbearia.controllers;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,10 +20,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import sodresoftwares.barbearia.dto.ChangePasswordDTO;
-import sodresoftwares.barbearia.dto.RegisterDTO;
-import sodresoftwares.barbearia.dto.UpdateUserDTO;
-import sodresoftwares.barbearia.dto.UserResponseDTO;
+import sodresoftwares.barbearia.dto.auth.ChangePasswordDTO;
+import sodresoftwares.barbearia.dto.auth.RegisterDTO;
+import sodresoftwares.barbearia.dto.user.UpdateUserDTO;
+import sodresoftwares.barbearia.dto.user.UserResponseDTO;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;

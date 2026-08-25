@@ -1,4 +1,4 @@
-package sodresoftwares.barbearia.dto;
+package sodresoftwares.barbearia.dto.queue;
 
 public record QueueSessionBusinessResponseDTO(
         String id,

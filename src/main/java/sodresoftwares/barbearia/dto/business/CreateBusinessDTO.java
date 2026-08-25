@@ -1,4 +1,4 @@
-package sodresoftwares.barbearia.dto;
+package sodresoftwares.barbearia.dto.business;
 
 import jakarta.validation.constraints.NotBlank;
 

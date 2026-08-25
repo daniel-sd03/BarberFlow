@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sodresoftwares.barbearia.dto.ResetPasswordDTO;
+import sodresoftwares.barbearia.dto.auth.ResetPasswordDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.PasswordResetToken;
 import sodresoftwares.barbearia.model.user.User;

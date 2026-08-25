@@ -1,12 +1,13 @@
 package sodresoftwares.barbearia.services;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sodresoftwares.barbearia.dto.*;
+import sodresoftwares.barbearia.dto.business.BusinessResponseDTO;
+import sodresoftwares.barbearia.dto.business.CreateBusinessDTO;
+import sodresoftwares.barbearia.dto.business.UpdateBusinessDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.Business;
 import sodresoftwares.barbearia.model.TeamMember;

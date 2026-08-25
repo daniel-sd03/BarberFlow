@@ -1,4 +1,4 @@
-package sodresoftwares.barbearia.dto;
+package sodresoftwares.barbearia.dto.auth;
 
 public record TokenResponseDTO(
         String token,
