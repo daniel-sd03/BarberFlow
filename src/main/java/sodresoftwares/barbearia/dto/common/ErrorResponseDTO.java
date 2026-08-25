@@ -1,4 +1,4 @@
-package sodresoftwares.barbearia.dto;
+package sodresoftwares.barbearia.dto.common;
 
 import java.time.Instant;
 

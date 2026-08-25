@@ -6,8 +6,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import sodresoftwares.barbearia.dto.CreateTeamInviteDTO;
-import sodresoftwares.barbearia.dto.TeamInviteResponseDTO;
+import sodresoftwares.barbearia.dto.team.CreateTeamInviteDTO;
+import sodresoftwares.barbearia.dto.team.TeamInviteResponseDTO;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.TeamInviteService;
 

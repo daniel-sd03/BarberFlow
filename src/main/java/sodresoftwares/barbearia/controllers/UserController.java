@@ -7,10 +7,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import sodresoftwares.barbearia.dto.ChangePasswordDTO;
-import sodresoftwares.barbearia.dto.RegisterDTO;
-import sodresoftwares.barbearia.dto.UpdateUserDTO;
-import sodresoftwares.barbearia.dto.UserResponseDTO;
+import sodresoftwares.barbearia.dto.auth.ChangePasswordDTO;
+import sodresoftwares.barbearia.dto.auth.RegisterDTO;
+import sodresoftwares.barbearia.dto.user.UpdateUserDTO;
+import sodresoftwares.barbearia.dto.user.UserResponseDTO;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.UserService;
 

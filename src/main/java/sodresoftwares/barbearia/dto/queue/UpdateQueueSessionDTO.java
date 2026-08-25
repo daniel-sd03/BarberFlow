@@ -1,4 +1,4 @@
-package sodresoftwares.barbearia.dto;
+package sodresoftwares.barbearia.dto.queue;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;

@@ -1,14 +1,12 @@
 package sodresoftwares.barbearia.services;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sodresoftwares.barbearia.dto.BusinessDashboardDTO;
-import sodresoftwares.barbearia.dto.QueueEntryResponseDTO;
-import sodresoftwares.barbearia.dto.TeamInviteResponseDTO;
-import sodresoftwares.barbearia.dto.TeamMemberDTO;
-import sodresoftwares.barbearia.infra.exception.AppException;
+import sodresoftwares.barbearia.dto.business.BusinessDashboardDTO;
+import sodresoftwares.barbearia.dto.queue.QueueEntryResponseDTO;
+import sodresoftwares.barbearia.dto.team.TeamInviteResponseDTO;
+import sodresoftwares.barbearia.dto.team.TeamMemberDTO;
 import sodresoftwares.barbearia.mappers.QueueMapper;
 import sodresoftwares.barbearia.model.InviteStatus;
 import sodresoftwares.barbearia.model.QueueSession;

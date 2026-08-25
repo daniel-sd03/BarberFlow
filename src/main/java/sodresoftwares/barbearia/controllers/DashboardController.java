@@ -6,7 +6,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import sodresoftwares.barbearia.dto.BusinessDashboardDTO;
+import sodresoftwares.barbearia.dto.business.BusinessDashboardDTO;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.DashboardService;
 

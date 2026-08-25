@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sodresoftwares.barbearia.dto.QuickCreateMemberDTO;
+import sodresoftwares.barbearia.dto.team.QuickCreateMemberDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.Business;
 import sodresoftwares.barbearia.model.TeamMember;

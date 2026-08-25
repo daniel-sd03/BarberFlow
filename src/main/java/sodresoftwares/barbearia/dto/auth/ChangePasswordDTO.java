@@ -1,4 +1,4 @@
-package sodresoftwares.barbearia.dto;
+package sodresoftwares.barbearia.dto.auth;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

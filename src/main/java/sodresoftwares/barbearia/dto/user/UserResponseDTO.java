@@ -1,4 +1,4 @@
-package sodresoftwares.barbearia.dto;
+package sodresoftwares.barbearia.dto.user;
 
 import sodresoftwares.barbearia.model.user.User;
 

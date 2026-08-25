@@ -6,7 +6,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import sodresoftwares.barbearia.dto.TokenResponseDTO;
+import sodresoftwares.barbearia.dto.auth.TokenResponseDTO;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.LgpdConsentService;
 
