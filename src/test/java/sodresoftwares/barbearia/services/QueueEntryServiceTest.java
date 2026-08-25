@@ -76,8 +76,17 @@ class QueueEntryServiceTest {
 
     @BeforeEach
     void setUp() {
-        User barberUser = User.builder().id(BARBER_USER_ID).name("Barbeiro Zé").role(UserRole.PROFESSIONAL).build();
-        clientUser = User.builder().id(CLIENT_USER_ID).name("Cliente João").role(UserRole.USER).build();
+        User barberUser = User.builder()
+                .id(BARBER_USER_ID)
+                .name("Barbeiro Zé")
+                .role(UserRole.PROFESSIONAL)
+                .build();
+
+        clientUser = User.builder()
+                .id(CLIENT_USER_ID)
+                .name("Cliente João")
+                .role(UserRole.USER)
+                .build();
 
         business = Business.builder()
                 .id("biz-123")
@@ -295,7 +304,7 @@ class QueueEntryServiceTest {
     void testJoinQueue_Success() {
         // Arrange
         when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
-        when(userRepository.getReferenceById(CLIENT_USER_ID)).thenReturn(clientUser);
+        when(userRepository.findById(CLIENT_USER_ID)).thenReturn(Optional.of(clientUser));
         when(queueEntryRepository.existsByUserIdAndStatusIn(eq(CLIENT_USER_ID), anyList())).thenReturn(false);
         when(queueEntryRepository.save(any(QueueEntry.class))).thenReturn(waitingEntry);
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
@@ -348,7 +357,7 @@ class QueueEntryServiceTest {
     void testJoinQueue_AlreadyInQueue() {
         // Arrange
         when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
-        when(userRepository.getReferenceById(CLIENT_USER_ID)).thenReturn(clientUser);
+        when(userRepository.findById(CLIENT_USER_ID)).thenReturn(Optional.of(clientUser));
         when(queueEntryRepository.existsByUserIdAndStatusIn(eq(CLIENT_USER_ID), anyList())).thenReturn(true);
 
         // Act & Assert
