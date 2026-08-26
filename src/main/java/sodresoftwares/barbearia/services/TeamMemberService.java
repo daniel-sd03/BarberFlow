@@ -15,6 +15,7 @@ import sodresoftwares.barbearia.repositories.TeamMemberRepository;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class TeamMemberService {
 
     private final TeamMemberRepository teamMemberRepository;
@@ -68,6 +69,27 @@ public class TeamMemberService {
         log.info("Team member deactivated.");
     }
 
+    @Transactional
+    public void leaveTeam(String loggedUserId) {
+        TeamMember member = teamMemberRepository.findByUserId(loggedUserId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "MEMBER_NOT_FOUND",
+                        "You are not associated with any team."
+                ));
+
+        if (member.getRole() == TeamRole.OWNER) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "OWNER_CANNOT_LEAVE",
+                    "The owner cannot leave the team. You must delete or transfer the business."
+            );
+        }
+
+        member.setIsActive(false);
+        teamMemberRepository.save(member);
+        log.info("Team member left the business voluntarily.");
+    }
 
     private Business getBusinessForOwner(String loggedUserId) {
         TeamMember member = teamMemberRepository.findByUserId(loggedUserId)

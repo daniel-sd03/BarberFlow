@@ -25,6 +25,12 @@ public class TeamMemberController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @PostMapping("/leave")
+    public ResponseEntity<Void> leaveTeam(@AuthenticationPrincipal User loggedUser) {
+        teamMemberService.leaveTeam(loggedUser.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{memberId}")
     public ResponseEntity<Void> removeMember(
             @AuthenticationPrincipal User loggedUser,
