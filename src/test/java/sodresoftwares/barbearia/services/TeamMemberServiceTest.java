@@ -101,7 +101,7 @@ class TeamMemberServiceTest {
     void quickCreateMember_NotOwner() {
         QuickCreateMemberDTO dto = new QuickCreateMemberDTO("Novo Barbeiro");
 
-        ownerMember.setRole(TeamRole.STAFF); // Simulando que o usuário logado é apenas STAFF
+        ownerMember.setRole(TeamRole.STAFF);
         when(teamMemberRepository.findByUserId("logged-staff-id")).thenReturn(Optional.of(ownerMember));
 
         assertThatThrownBy(() -> teamMemberService.quickCreateMember("logged-staff-id", dto))
@@ -122,7 +122,7 @@ class TeamMemberServiceTest {
 
         teamMemberService.removeMember("logged-owner-id", "staff-member-id");
 
-        assertThat(staffMember.getIsActive()).isFalse(); // Verifica o Soft Delete
+        assertThat(staffMember.getIsActive()).isFalse();
         verify(teamMemberRepository).save(staffMember);
     }
 
@@ -144,7 +144,7 @@ class TeamMemberServiceTest {
     @DisplayName("Should throw exception when trying to remove a member from another business")
     void removeMember_WrongBusiness() {
         Business otherBusiness = Business.builder().id("other-biz-id").name("Outra Barbearia").build();
-        staffMember.setBusiness(otherBusiness); // O funcionário pertence a outra barbearia
+        staffMember.setBusiness(otherBusiness);
 
         when(teamMemberRepository.findByUserId("logged-owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamMemberRepository.findById("staff-member-id")).thenReturn(Optional.of(staffMember));
@@ -169,6 +169,37 @@ class TeamMemberServiceTest {
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         assertThat(ownerMember.getIsActive()).isTrue();
+        verify(teamMemberRepository, never()).save(any());
+    }
+
+    // ==================== LEAVE TEAM ====================
+
+    @Test
+    @DisplayName("Should set isActive to false when a STAFF member leaves the team voluntarily")
+    void leaveTeam_Success() {
+        // Arrange
+        when(teamMemberRepository.findByUserId("logged-staff-id")).thenReturn(Optional.of(staffMember));
+
+        // Act
+        teamMemberService.leaveTeam("logged-staff-id");
+
+        // Assert
+        assertThat(staffMember.getIsActive()).isFalse();
+        verify(teamMemberRepository).save(staffMember);
+    }
+
+    @Test
+    @DisplayName("Should throw exception if an OWNER tries to leave the team")
+    void leaveTeam_OwnerCannotLeave() {
+        // Arrange
+        when(teamMemberRepository.findByUserId("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+
+        // Act & Assert
+        assertThatThrownBy(() -> teamMemberService.leaveTeam("logged-owner-id"))
+                .isInstanceOf(AppException.class)
+                .hasMessage("The owner cannot leave the team. You must delete or transfer the business.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
         verify(teamMemberRepository, never()).save(any());
     }
 }

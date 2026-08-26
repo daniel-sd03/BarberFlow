@@ -25,8 +25,8 @@ import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.TeamMemberService;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -77,6 +77,8 @@ class TeamMemberControllerTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
+    // ==================== POST TEAM MEMBERS ====================
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
@@ -95,6 +97,8 @@ class TeamMemberControllerTest {
         verify(teamMemberService).quickCreateMember(any(), any(QuickCreateMemberDTO.class));
     }
 
+    // ==================== DELETE TEAM MEMBERS ====================
+
     @Test
     @DisplayName("Should return 204 No Content when removing a member")
     void removeMember_Success() throws Exception {
@@ -104,5 +108,19 @@ class TeamMemberControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(teamMemberService).removeMember(any(), any());
+    }
+
+    // ==================== POST LEAVE TEAM  ====================
+
+    @Test
+    @DisplayName("POST /api/team/members/leave -> Should return 204 No Content")
+    void testLeaveTeam_Success() throws Exception {
+
+        // Act & Assert
+        mockMvc.perform(post("/team-members/leave")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+
+        verify(teamMemberService).leaveTeam(any());
     }
 }
