@@ -56,6 +56,9 @@ class QueueEntryServiceTest {
     @Mock
     private QueueNotificationService queueNotificationService;
 
+    @Mock
+    private PushNotificationDispatcher pushDispatcher;
+
     @Spy
     private QueueMapper queueMapper = new QueueMapper();
 
@@ -394,6 +397,7 @@ class QueueEntryServiceTest {
 
         verify(queueEntryRepository).save(waitingEntry);
         verify(queueCacheService).evict(SESSION_ID);
+        verify(pushDispatcher).notifyClientTurn(waitingEntry.getUser().getId(), teamMember.getName());
     }
 
     @Test
