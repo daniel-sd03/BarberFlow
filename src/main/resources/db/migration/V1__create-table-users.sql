@@ -67,7 +67,7 @@ CREATE TABLE queue_sessions
     created_at        TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMPTZ,
     created_by        VARCHAR(255)       NOT NULL,
-    updated_by          VARCHAR(255),
+    updated_by        VARCHAR(255),
     CONSTRAINT fk_business FOREIGN KEY (business_id) REFERENCES businesses (id) ON DELETE CASCADE
 );
 
@@ -112,6 +112,17 @@ CREATE TABLE team_invites
     created_at  TIMESTAMP    NOT NULL,
     expires_at  TIMESTAMP    NOT NULL,
     CONSTRAINT fk_team_invites_business FOREIGN KEY (business_id) REFERENCES businesses (id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_push_subscriptions
+(
+    id       VARCHAR(255) PRIMARY KEY,
+    user_id  VARCHAR(255)  NOT NULL,
+    endpoint VARCHAR(1000) NOT NULL,
+    p256dh   VARCHAR(255)  NOT NULL,
+    auth     VARCHAR(255)  NOT NULL,
+
+    CONSTRAINT fk_user_push_subscription FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_team_invites_email ON team_invites (email);

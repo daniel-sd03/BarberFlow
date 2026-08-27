@@ -43,6 +43,11 @@ services:
       - RESEND_API_KEY=teste
       - MAIL_FROM=teste
 
+      # ---  Web Push ---
+      - VAPID_PUBLIC_KEY=BPflBBkWNQarTPMxmzW1Uz0H1U0GOIW4RW79Gd3eCgVSWdtBvfHiy6U2fzQotYvjSHzAP5MY2YCHpjHqfhqUyn8
+      - VAPID_PRIVATE_KEY=WuzeO7_abRynkhcw5wgFLbgkFUz4kyfzN0cl4O3WvXc
+      - VAPID_SUBJECT=mailto:suporte@clickfila.com.br
+
   alloy:
     image: grafana/alloy:latest
     container_name: clickfila-alloy
