@@ -36,6 +36,7 @@ public class QueueEntryService {
     private final QueueCacheService queueCacheService;
     private final QueueMapper queueMapper;
     private final QueueNotificationService queueNotificationService;
+    private final PushNotificationDispatcher pushDispatcher;
 
     public UserQueueStatusDTO getUserQueueStatus(String userId) {
         QueueEntryResponseDTO active = findActiveEntryByUserId(userId).orElse(null);
@@ -126,6 +127,13 @@ public class QueueEntryService {
         queueCacheService.evict(sessionId);
         List<QueueEntry> updatedActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
         queueNotificationService.notifyQueueUpdate(sessionId);
+
+        if (savedEntry.getUser() != null) {
+            pushDispatcher.notifyClientTurn(
+                    savedEntry.getUser().getId(),
+                    memberCalling.getName()
+            );
+        }
 
         return queueMapper.toSingleDto(savedEntry, updatedActiveEntries);
     }
