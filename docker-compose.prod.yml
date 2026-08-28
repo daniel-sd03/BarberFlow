@@ -47,6 +47,11 @@ services:
       - SPRINGDOC_SWAGGER_UI_ENABLED=false
       - SPRINGDOC_API_DOCS_ENABLED=false
 
+      # Web Push Notifications
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
+      - VAPID_SUBJECT=${VAPID_SUBJECT}
+
   redis:
     image: redis:7
     container_name: clickFila_redis
