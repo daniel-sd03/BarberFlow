@@ -71,4 +71,7 @@ jobs:
               FRONTEND_URL=${{ secrets.FRONTEND_URL }}
               COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN }}
               COOKIE_SECURE=${{ secrets.COOKIE_SECURE }}
+              VAPID_PUBLIC_KEY=${{ secrets.VAPID_PUBLIC_KEY }}
+              VAPID_PRIVATE_KEY=${{ secrets.VAPID_PRIVATE_KEY }}
+              VAPID_SUBJECT=${{ secrets.VAPID_SUBJECT }}
             '"
