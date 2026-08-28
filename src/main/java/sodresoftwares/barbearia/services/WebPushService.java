@@ -2,8 +2,10 @@ package sodresoftwares.barbearia.services;
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
+import org.apache.http.HttpResponse;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -36,8 +38,15 @@ public class WebPushService {
         try {
             Notification notification = new Notification(endpoint, p256dh, auth, jsonPayload);
 
-            pushService.send(notification);
-            log.info("Push notification sent to endpoint: {}", endpoint);
+            HttpResponse response = pushService.send(notification, Encoding.AES128GCM);
+
+            int statusCode = response.getStatusLine().getStatusCode();
+
+            if (statusCode == 201) {
+                log.info("Push notification sent successfully to endpoint: {}", endpoint);
+            } else {
+                log.warn("Failed to send push. Google FCM returned status: {}", statusCode);
+            }
 
         } catch (Exception e) {
             log.error("Failed to send push notification", e);
