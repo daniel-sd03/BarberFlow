@@ -13,6 +13,7 @@
     import sodresoftwares.barbearia.dto.auth.TokenResponseDTO;
     import sodresoftwares.barbearia.infra.security.TokenService;
     import sodresoftwares.barbearia.model.LgpdConsent;
+    import sodresoftwares.barbearia.model.RefreshToken;
     import sodresoftwares.barbearia.model.user.User;
     import sodresoftwares.barbearia.model.user.UserRole;
     import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
@@ -34,16 +35,20 @@
         @Mock
         private HttpServletRequest request;
 
+        @Mock
+        private RefreshTokenService refreshTokenService;
+
         @InjectMocks
         private LgpdConsentService lgpdConsentService;
 
         private User testUser;
         private final String CURRENT_VERSION = "2.0";
+        private RefreshToken mockRefresh;
 
         @BeforeEach
         void setUp() {
             ReflectionTestUtils.setField(lgpdConsentService, "currentLgpdVersion", CURRENT_VERSION);
-
+            mockRefresh = RefreshToken.builder().token("mock-refresh-token").build();
             testUser = User.builder()
                     .id("user-123")
                     .login("test@test.com")
@@ -59,6 +64,7 @@
             // Arrange
             when(lgpdConsentRepository.existsByUserIdAndTermVersion(testUser.getId(), CURRENT_VERSION)).thenReturn(true);
             when(tokenService.generateToken(testUser, CURRENT_VERSION)).thenReturn("mock-token");
+            when(refreshTokenService.createOrReuseRefreshToken(testUser)).thenReturn(mockRefresh);
 
             // Act
             TokenResponseDTO response= lgpdConsentService.acceptCurrentTerms(testUser, request);
@@ -66,6 +72,7 @@
             // Assert
             assertThat(response).isNotNull();
             assertThat(response.token()).isEqualTo("mock-token");
+            assertThat(response.refreshToken()).isEqualTo("mock-refresh-token");
             assertThat(response.role()).isEqualTo(testUser.getRole().toString());
 
             verify(lgpdConsentRepository, never()).save(any(LgpdConsent.class));
@@ -80,6 +87,7 @@
             when(request.getHeader("CF-Connecting-IP")).thenReturn("192.168.1.100");
             when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
             when(tokenService.generateToken(testUser, CURRENT_VERSION)).thenReturn("mock-token");
+            when(refreshTokenService.createOrReuseRefreshToken(testUser)).thenReturn(mockRefresh);
 
             // Act
             TokenResponseDTO response = lgpdConsentService.acceptCurrentTerms(testUser, request);
@@ -87,6 +95,7 @@
             // Assert
             assertThat(response).isNotNull();
             assertThat(response.token()).isEqualTo("mock-token");
+            assertThat(response.refreshToken()).isEqualTo("mock-refresh-token");
             assertThat(response.role()).isEqualTo(testUser.getRole().toString());
 
             ArgumentCaptor<LgpdConsent> consentCaptor = ArgumentCaptor.forClass(LgpdConsent.class);

@@ -125,6 +125,15 @@ CREATE TABLE user_push_subscriptions
     CONSTRAINT fk_user_push_subscription FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
+CREATE TABLE refresh_tokens
+(
+    id          VARCHAR(255) PRIMARY KEY,
+    token       VARCHAR(255)             NOT NULL UNIQUE,
+    user_id     VARCHAR(255)             NOT NULL UNIQUE,
+    expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
 CREATE INDEX idx_team_invites_email ON team_invites (email);
 
 CREATE INDEX idx_password_reset_email_code

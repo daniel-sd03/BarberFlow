@@ -59,11 +59,12 @@ class LgpdConsentControllerTest {
     private CacheManager cacheManager;
 
     private final String newToken = "new-fresh-jwt-token";
+    private final String newRefreshToken = "new-refresh-token";
     private TokenResponseDTO mockResponse;
 
     @BeforeEach
     void setUp() {
-        mockResponse = new TokenResponseDTO(newToken, "USER");
+        mockResponse = new TokenResponseDTO(newToken, newRefreshToken, "USER");
     }
 
     @Test
@@ -77,6 +78,7 @@ class LgpdConsentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value(newToken))
+                .andExpect(jsonPath("$.refreshToken").value(newRefreshToken))
                 .andExpect(jsonPath("$.role").value("USER"));
 
         verify(lgpdConsentService).acceptCurrentTerms(any(User.class), any());

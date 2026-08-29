@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import sodresoftwares.barbearia.dto.auth.*;
 import sodresoftwares.barbearia.services.AuthenticationService;
 import sodresoftwares.barbearia.services.PasswordResetService;
+import sodresoftwares.barbearia.services.RefreshTokenService;
 
 @RestController
 @RequestMapping("/auth")
@@ -15,6 +16,7 @@ public class AuthenticationController {
 
 	private final AuthenticationService authenticationService;
 	private final PasswordResetService passwordResetService;
+	private final RefreshTokenService refreshTokenService;
 
 	@PostMapping("/login")
 	public ResponseEntity<TokenResponseDTO> login(
@@ -44,5 +46,11 @@ public class AuthenticationController {
 	@PostMapping("/reactivate")
 	public ResponseEntity<TokenResponseDTO> reactivate(@RequestBody @Valid AuthenticationDTO data) {
 		return ResponseEntity.ok(authenticationService.reactivateAndLogin(data));
+	}
+
+	@PostMapping("/refresh")
+	public ResponseEntity<TokenRefreshResponseDTO> refreshAccessToken(@Valid @RequestBody TokenRefreshRequestDTO request) {
+		TokenRefreshResponseDTO response = refreshTokenService.processRefreshToken(request.refreshToken());
+		return ResponseEntity.ok(response);
 	}
 }

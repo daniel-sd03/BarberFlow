@@ -16,6 +16,7 @@ import sodresoftwares.barbearia.dto.auth.TokenResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.infra.security.TokenService;
 import sodresoftwares.barbearia.model.LgpdConsent;
+import sodresoftwares.barbearia.model.RefreshToken;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
@@ -43,11 +44,15 @@ class AuthenticationServiceTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     @InjectMocks
     private AuthenticationService authService;
 
     private User testUser;
     private AuthenticationDTO authDTO;
+    private RefreshToken mockRefresh;
 
     @BeforeEach
     void setUp() {
@@ -61,6 +66,8 @@ class AuthenticationServiceTest {
                 .role(UserRole.USER)
                 .isActive(true)
                 .build();
+
+        mockRefresh = RefreshToken.builder().token("valid-refresh-token").build();
 
         String RAW_PASSWORD = "password123";
         authDTO = new AuthenticationDTO(TEST_LOGIN, RAW_PASSWORD);
@@ -85,6 +92,7 @@ class AuthenticationServiceTest {
                 .thenReturn(Optional.of(mockConsent));
         when(tokenService.generateToken(testUser, fakeLgpdVersion))
                 .thenReturn("valid-jwt-token");
+        when(refreshTokenService.createOrReuseRefreshToken(testUser)).thenReturn(mockRefresh);
 
         // Act
         TokenResponseDTO result = authService.login(authDTO);
@@ -148,6 +156,7 @@ class AuthenticationServiceTest {
         doNothing().when(userService).reactivateAccount(testUser.getId());
         when(lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(testUser.getId())).thenReturn(Optional.of(mockConsent));
         when(tokenService.generateToken(testUser, fakeLgpdVersion)).thenReturn("valid-jwt-token");
+        when(refreshTokenService.createOrReuseRefreshToken(testUser)).thenReturn(mockRefresh);
 
         TokenResponseDTO result = authService.reactivateAndLogin(authDTO);
 
