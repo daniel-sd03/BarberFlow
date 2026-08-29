@@ -193,7 +193,11 @@ public class QueueEntryService {
     public void finishService(String entryId, String loggedUserId) {
         QueueEntry entry = getEntryById(entryId);
 
-        validatePermissionToManageEntry(entry, loggedUserId);
+        boolean isTheClient = entry.getUser() != null && entry.getUser().getId().equals(loggedUserId);
+
+        if (!isTheClient) {
+            validatePermissionToManageEntry(entry, loggedUserId);
+        }
         validateStatusForFinish(entry);
 
         entry.setStatus(QueueEntryStatus.FINISHED);
