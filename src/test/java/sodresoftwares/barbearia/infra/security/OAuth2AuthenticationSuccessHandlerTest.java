@@ -15,11 +15,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.test.util.ReflectionTestUtils;
 import sodresoftwares.barbearia.model.LgpdConsent;
+import sodresoftwares.barbearia.model.RefreshToken;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
 import sodresoftwares.barbearia.services.LgpdConsentService;
+import sodresoftwares.barbearia.services.RefreshTokenService;
 
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +42,9 @@ class OAuth2AuthenticationSuccessHandlerTest {
     private LgpdConsentRepository lgpdConsentRepository;
 
     @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -57,20 +62,25 @@ class OAuth2AuthenticationSuccessHandlerTest {
     private final String email = "user@example.com";
     private final String googleId = "1234567890";
     private final String fakeToken = "mocked-jwt-token";
+    private final String fakeRefreshToken = "mocked-refresh-token";
     private final String fakeLgpdVersion = "1.0";
     private LgpdConsent mockConsent;
 
     @BeforeEach
     void setUp() {
         mockConsent = LgpdConsent.builder().termVersion(fakeLgpdVersion).build();
+        RefreshToken mockRefresh = RefreshToken.builder().token(fakeRefreshToken).build();
+
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttribute("email")).thenReturn(email);
         when(oAuth2User.getAttribute("sub")).thenReturn(googleId);
         when(response.encodeRedirectURL(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(refreshTokenService.createOrReuseRefreshToken(any(User.class))).thenReturn(mockRefresh);
 
         ReflectionTestUtils.setField(successHandler, "frontendUrl", "http://localhost:5173/oauth/callback");
         ReflectionTestUtils.setField(successHandler, "cookieDomain", "");
         ReflectionTestUtils.setField(successHandler, "cookieSecure", false);
+
     }
 
     @Test
@@ -161,10 +171,10 @@ class OAuth2AuthenticationSuccessHandlerTest {
     private void assertCookieAndRedirect() throws Exception {
         ArgumentCaptor<Cookie> cookieCaptor = ArgumentCaptor.forClass(Cookie.class);
 
-        verify(response, times(2)).addCookie(cookieCaptor.capture());
+        verify(response, times(3)).addCookie(cookieCaptor.capture());
 
         List<Cookie> capturedCookies = cookieCaptor.getAllValues();
-        assertEquals(2, capturedCookies.size());
+        assertEquals(3, capturedCookies.size());
 
         Cookie tokenCookie = capturedCookies.stream()
                 .filter(c -> "TEMP_AUTH_TOKEN".equals(c.getName()))
@@ -174,6 +184,15 @@ class OAuth2AuthenticationSuccessHandlerTest {
         assertEquals(fakeToken, tokenCookie.getValue());
         assertEquals("/", tokenCookie.getPath());
         assertEquals(60, tokenCookie.getMaxAge());
+
+        Cookie refreshTokenCookie = capturedCookies.stream()
+                .filter(c -> "TEMP_REFRESH_TOKEN".equals(c.getName()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("TEMP_REFRESH_TOKEN cookie not found"));
+
+        assertEquals(fakeRefreshToken, refreshTokenCookie.getValue());
+        assertEquals("/", refreshTokenCookie.getPath());
+        assertEquals(60, refreshTokenCookie.getMaxAge());
 
         Cookie roleCookie = capturedCookies.stream()
                 .filter(c -> "TEMP_ROLE".equals(c.getName()))

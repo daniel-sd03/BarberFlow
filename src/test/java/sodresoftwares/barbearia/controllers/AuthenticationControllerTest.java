@@ -23,6 +23,7 @@ import sodresoftwares.barbearia.infra.security.SecurityFilter;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.AuthenticationService;
 import sodresoftwares.barbearia.services.PasswordResetService;
+import sodresoftwares.barbearia.services.RefreshTokenService;
 
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
@@ -67,10 +68,15 @@ class AuthenticationControllerTest {
     @MockitoBean
     private PasswordResetService passwordResetService;
 
+    @MockitoBean
+    private RefreshTokenService refreshTokenService;
+
     private AuthenticationDTO authenticationDTO;
     private ForgotPasswordDTO forgotPasswordDTO;
     private ValidateTokenDTO validateTokenDTO;
     private ResetPasswordDTO resetPasswordDTO;
+    private TokenRefreshRequestDTO request;
+    private TokenRefreshResponseDTO response;
 
     @BeforeEach
     void setUp() {
@@ -78,6 +84,8 @@ class AuthenticationControllerTest {
         forgotPasswordDTO = new ForgotPasswordDTO("user@test.com");
         validateTokenDTO = new ValidateTokenDTO("user@test.com", "123456");
         resetPasswordDTO = new ResetPasswordDTO("user@test.com", "123456", "newPass123", "newPass123");
+        request = new TokenRefreshRequestDTO("valid-refresh-token");
+        response = new TokenRefreshResponseDTO("new-access-token", "valid-refresh-token");
     }
 
     // ==================== POST LOGIN TESTS ====================
@@ -88,8 +96,9 @@ class AuthenticationControllerTest {
         // Arrange
         String VALID_TOKEN = "jwt-token-example";
         String VALID_ROLE = UserRole.USER.toString();
+        String VALID_REFRESH_TOKEN = "refresh-token-example";
 
-        TokenResponseDTO mockResponse = new TokenResponseDTO(VALID_TOKEN, VALID_ROLE);
+        TokenResponseDTO mockResponse = new TokenResponseDTO(VALID_TOKEN, VALID_REFRESH_TOKEN, VALID_ROLE);
 
         when(authService.login(any(AuthenticationDTO.class))).thenReturn(mockResponse);
 
@@ -99,6 +108,7 @@ class AuthenticationControllerTest {
                         .content(jsonTester.write(authenticationDTO).getJson()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token", is(VALID_TOKEN)))
+                .andExpect(jsonPath("$.refreshToken", is(VALID_REFRESH_TOKEN)))
                 .andExpect(jsonPath("$.role", is(VALID_ROLE)));
 
         verify(authService).login(any(AuthenticationDTO.class));
@@ -222,7 +232,9 @@ class AuthenticationControllerTest {
     void testReactivate_Success() throws Exception {
         String VALID_TOKEN = "jwt-token-example";
         String VALID_ROLE = UserRole.USER.toString();
-        TokenResponseDTO mockResponse = new TokenResponseDTO(VALID_TOKEN, VALID_ROLE);
+        String VALID_REFRESH_TOKEN = "refresh-token-example";
+
+        TokenResponseDTO mockResponse = new TokenResponseDTO(VALID_TOKEN, VALID_REFRESH_TOKEN, VALID_ROLE);
 
         when(authService.reactivateAndLogin(any(AuthenticationDTO.class))).thenReturn(mockResponse);
 
@@ -231,8 +243,26 @@ class AuthenticationControllerTest {
                         .content(jsonTester.write(authenticationDTO).getJson()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token", is(VALID_TOKEN)))
+                .andExpect(jsonPath("$.refreshToken", is(VALID_REFRESH_TOKEN)))
                 .andExpect(jsonPath("$.role", is(VALID_ROLE)));
 
         verify(authService).reactivateAndLogin(any(AuthenticationDTO.class));
+    }
+
+    // ==================== POST REFRESH TESTS ====================
+
+    @Test
+    @DisplayName("POST /auth/refresh -> Should return new access token (HTTP 200)")
+    void testRefreshAccessToken_Success() throws Exception {
+        // Arrange
+        when(refreshTokenService.processRefreshToken(anyString())).thenReturn(response);
+
+        // Act & Assert
+        mockMvc.perform(post("/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(request).getJson()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("new-access-token"))
+                .andExpect(jsonPath("$.refreshToken").value("valid-refresh-token"));
     }
 }

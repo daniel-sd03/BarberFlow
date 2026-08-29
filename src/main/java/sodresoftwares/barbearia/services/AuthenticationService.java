@@ -12,6 +12,7 @@ import sodresoftwares.barbearia.dto.auth.AuthenticationDTO;
 import sodresoftwares.barbearia.dto.auth.TokenResponseDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.infra.security.TokenService;
+import sodresoftwares.barbearia.model.RefreshToken;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.LgpdConsent;
 import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
@@ -27,6 +28,7 @@ public class AuthenticationService {
     private final TokenService tokenService;
     private final LgpdConsentRepository lgpdConsentRepository;
     private final UserService userService;
+    private final RefreshTokenService refreshTokenService;
 
     public TokenResponseDTO login(AuthenticationDTO data) {
         User loggedUser = authenticateUser(data);
@@ -68,9 +70,13 @@ public class AuthenticationService {
                     .orElse(null);
 
             String token = tokenService.generateToken(loggedUser, lgpdLastAcceptedVersion);
+            RefreshToken refreshToken = refreshTokenService.createOrReuseRefreshToken(loggedUser);
             String role = loggedUser.getRole().toString();
 
-            return new TokenResponseDTO(token, role);
+            return new TokenResponseDTO(
+                    token,
+                    refreshToken.getToken(),
+                    role);
         } finally {
             MDC.remove("userId");
         }

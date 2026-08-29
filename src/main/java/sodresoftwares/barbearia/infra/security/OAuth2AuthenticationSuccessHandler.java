@@ -11,12 +11,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import sodresoftwares.barbearia.model.RefreshToken;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.model.LgpdConsent;
 import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
 import sodresoftwares.barbearia.services.LgpdConsentService;
+import sodresoftwares.barbearia.services.RefreshTokenService;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -29,6 +31,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     final private TokenService tokenService;
     final private UserRepository userRepository;
     private final LgpdConsentRepository lgpdConsentRepository;
+    private final RefreshTokenService refreshTokenService;
 
     @Value("${app.security.oauth2-redirect}")
     private String frontendUrl;
@@ -93,6 +96,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         }
 
         String jwtToken = tokenService.generateToken(finalUser, lgpdLastAcceptedVersion);
+        RefreshToken refreshToken = refreshTokenService.createOrReuseRefreshToken(finalUser);
 
         Cookie tokenCookie = new Cookie("TEMP_AUTH_TOKEN", jwtToken);
         tokenCookie.setPath("/");
@@ -102,6 +106,15 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             tokenCookie.setDomain(cookieDomain);
         }
         response.addCookie(tokenCookie);
+
+        Cookie refreshTokenCookie = new Cookie("TEMP_REFRESH_TOKEN", refreshToken.getToken());
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge(60);
+        refreshTokenCookie.setSecure(cookieSecure);
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            refreshTokenCookie.setDomain(cookieDomain);
+        }
+        response.addCookie(refreshTokenCookie);
 
         Cookie roleCookie = new Cookie("TEMP_ROLE", finalUser.getRole().name());
         roleCookie.setPath("/");

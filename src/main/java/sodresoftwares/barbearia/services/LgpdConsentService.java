@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import sodresoftwares.barbearia.dto.auth.TokenResponseDTO;
 import sodresoftwares.barbearia.infra.security.TokenService;
 import sodresoftwares.barbearia.model.LgpdConsent;
+import sodresoftwares.barbearia.model.RefreshToken;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
 
@@ -19,6 +20,7 @@ public class LgpdConsentService {
 
     private final LgpdConsentRepository lgpdConsentRepository;
     private final TokenService tokenService;
+    private final RefreshTokenService refreshTokenService;
 
     @Value("${app.lgpd.current-version}")
     private String currentLgpdVersion;
@@ -36,9 +38,10 @@ public class LgpdConsentService {
         }
 
         String token = tokenService.generateToken(user, currentLgpdVersion);
+        RefreshToken refreshToken = refreshTokenService.createOrReuseRefreshToken(user);
         String role = user.getRole().toString();
 
-        return new TokenResponseDTO(token, role);
+        return new TokenResponseDTO(token, refreshToken.getToken(), role);
     }
 
     @Transactional
