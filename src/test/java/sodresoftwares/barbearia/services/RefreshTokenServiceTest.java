@@ -46,7 +46,7 @@ class RefreshTokenServiceTest {
         testUser = User.builder().id("user-123").login("test@mail.com").build();
     }
 
-    // ==================== CREAT OR REUSE REFRESH TOKEN TESTS  ====================
+    // ==================== GENERATE NEW REFRESH TOKEN TESTS  ====================
 
     @Test
     @DisplayName("Should create a brand new refresh token when user has none")
@@ -55,37 +55,42 @@ class RefreshTokenServiceTest {
         when(refreshTokenRepository.existsByToken(anyString())).thenReturn(false);
         when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        RefreshToken result = refreshTokenService.createOrReuseRefreshToken(testUser);
+        RefreshToken result = refreshTokenService.generateNewRefreshToken(testUser);
 
         assertNotNull(result);
         assertEquals(testUser, result.getUser());
         assertNotNull(result.getToken());
         assertTrue(result.getExpiryDate().isAfter(Instant.now()));
+        verify(refreshTokenRepository, never()).delete(any());
         verify(refreshTokenRepository).save(any(RefreshToken.class));
     }
 
     @Test
-    @DisplayName("Should reuse existing token if it is still valid")
-    void testCreateOrReuse_ReuseValidToken() {
-        RefreshToken validToken = RefreshToken.builder()
-                .token("existing-token")
-                .expiryDate(Instant.now().plusMillis(100000))
-                .build();
+    @DisplayName("Should delete old token and generate a new one when user already has a token")
+    void testGenerateNewRefreshToken_WhenExistingTokenExists() {
+        // Arrange
+        RefreshToken oldToken = RefreshToken.builder().token("old-token").build();
 
-        when(refreshTokenRepository.findByUserId("user-123")).thenReturn(Optional.of(validToken));
-        when(refreshTokenRepository.save(any(RefreshToken.class))).thenReturn(validToken);
+        when(refreshTokenRepository.findByUserId("user-123")).thenReturn(Optional.of(oldToken));
+        when(refreshTokenRepository.existsByToken(anyString())).thenReturn(false);
+        when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        RefreshToken result = refreshTokenService.createOrReuseRefreshToken(testUser);
+        // Act
+        RefreshToken result = refreshTokenService.generateNewRefreshToken(testUser);
 
-        assertEquals("existing-token", result.getToken());
-        verify(refreshTokenRepository, never()).delete(any());
+        // Assert
+        assertNotNull(result);
+        assertNotEquals("old-token", result.getToken());
+        verify(refreshTokenRepository).delete(oldToken);
+        verify(refreshTokenRepository).save(any(RefreshToken.class));
     }
 
-    // ==================== PROCESS REFRESH TOKEN TESTS  ====================
+// ==================== PROCESS REFRESH TOKEN TESTS  ====================
 
     @Test
-    @DisplayName("Should process a valid refresh token and generate a new access token")
+    @DisplayName("Should process a valid refresh token, rotate it, and generate a new access token")
     void testProcessRefreshToken_Success() {
+        // Arrange
         RefreshToken validToken = RefreshToken.builder()
                 .token("valid-token")
                 .user(testUser)
@@ -94,16 +99,26 @@ class RefreshTokenServiceTest {
 
         when(refreshTokenRepository.findByToken("valid-token")).thenReturn(Optional.of(validToken));
         when(tokenService.generateToken(testUser, "1.0")).thenReturn("new-jwt-access-token");
+        when(refreshTokenRepository.findByUserId("user-123")).thenReturn(Optional.of(validToken));
+        when(refreshTokenRepository.existsByToken(anyString())).thenReturn(false);
+        when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(i -> i.getArguments()[0]);
 
+        // Act
         TokenRefreshResponseDTO response = refreshTokenService.processRefreshToken("valid-token");
 
+        // Assert
         assertEquals("new-jwt-access-token", response.accessToken());
-        assertEquals("valid-token", response.refreshToken());
+        assertNotEquals("valid-token", response.refreshToken());
+        assertNotNull(response.refreshToken());
+
+        verify(refreshTokenRepository).delete(validToken);
+        verify(refreshTokenRepository).save(any(RefreshToken.class));
     }
 
     @Test
     @DisplayName("Should throw AppException when refresh token is expired")
     void testVerifyExpiration_ThrowsException() {
+        // Arrange
         RefreshToken expiredToken = RefreshToken.builder()
                 .token("expired-token")
                 .expiryDate(Instant.now().minusMillis(100000))
@@ -111,6 +126,7 @@ class RefreshTokenServiceTest {
 
         when(refreshTokenRepository.findByToken("expired-token")).thenReturn(Optional.of(expiredToken));
 
+        // Act & Assert
         AppException exception = assertThrows(AppException.class, () ->
                 refreshTokenService.processRefreshToken("expired-token"));
 
