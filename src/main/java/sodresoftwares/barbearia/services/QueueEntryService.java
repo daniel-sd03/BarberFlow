@@ -57,8 +57,15 @@ public class QueueEntryService {
                         QueueEntryStatus.CALLED,
                         QueueEntryStatus.IN_SERVICE)
         ).map(entry -> {
-            List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(entry.getQueueSession().getId());
-            return queueMapper.toSingleDto(entry, activeEntries);
+            List<QueueEntryResponseDTO> cachedQueue = queueCacheService.getActiveEntriesDTO(entry.getQueueSession().getId());
+
+            return cachedQueue.stream()
+                    .filter(dto -> dto.id().equals(entry.getId()))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        List<QueueEntry> activeEntries = queueEntryRepository.findActiveEntriesBySessionId(entry.getQueueSession().getId());
+                        return queueMapper.toSingleDto(entry, activeEntries);
+                    });
         });
     }
 
@@ -72,7 +79,7 @@ public class QueueEntryService {
     }
 
     @Transactional
-    public QueueEntryResponseDTO joinQueue(@NonNull JoinQueueDTO dto, String loggedUserId) {
+    public QueueEntryResponseDTO joinQueue(JoinQueueDTO dto, String loggedUserId) {
         QueueSession session = getAndValidateSession(dto.queueSessionId());
         User clientUser = userRepository.findById(loggedUserId)
                 .orElseThrow(() -> new AppException(
@@ -92,7 +99,7 @@ public class QueueEntryService {
         QueueEntry savedEntry = queueEntryRepository.save(entry);
         log.info("User joined queue successfully");
 
-        queueCacheService.evict(dto.queueSessionId());
+        queueCacheService.evictSessionList(dto.queueSessionId());
 
         List<QueueEntry> activeEntries = queueEntryRepository.findActiveEntriesBySessionId(dto.queueSessionId());
         queueNotificationService.notifyQueueUpdate(dto.queueSessionId());
@@ -105,18 +112,17 @@ public class QueueEntryService {
         QueueSession session = getAndValidateSession(sessionId);
         TeamMember memberCalling = getValidActionMember(session, loggedUserId, actionMemberId);
         validateMemberNotAlreadyAttending(memberCalling);
-        List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
 
-        String nextEntryId = activeEntries.stream()
+        List<QueueEntry> activeEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+
+        QueueEntry nextInLine = activeEntries.stream()
                 .filter(e -> e.getStatus() == QueueEntryStatus.WAITING)
-                .map(QueueEntry::getId)
                 .findFirst()
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "QUEUE_EMPTY",
                         "There are no clients waiting in the queue."));
 
-        QueueEntry nextInLine = getEntryById(nextEntryId);
         nextInLine.setStatus(QueueEntryStatus.CALLED);
         nextInLine.setCalledAt(Instant.now());
         nextInLine.setServedByMember(memberCalling);
@@ -124,8 +130,7 @@ public class QueueEntryService {
         QueueEntry savedEntry = queueEntryRepository.save(nextInLine);
         log.info("Next client called");
 
-        queueCacheService.evict(sessionId);
-        List<QueueEntry> updatedActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+        queueCacheService.evictSessionList(sessionId);
         queueNotificationService.notifyQueueUpdate(sessionId);
 
         if (savedEntry.getUser() != null) {
@@ -135,13 +140,21 @@ public class QueueEntryService {
             );
         }
 
-        return queueMapper.toSingleDto(savedEntry, updatedActiveEntries);
+        return queueMapper.toSingleDto(savedEntry, activeEntries);
     }
 
     @Transactional
-    public QueueEntryResponseDTO requeueEntry(String entryId, String loggedUserId) {
-        QueueEntry entry = getEntryById(entryId);
-        String sessionId = entry.getQueueSession().getId();
+    public QueueEntryResponseDTO requeueEntry(String sessionId, String entryId, String loggedUserId) {
+
+        List<QueueEntry> activeEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+
+        QueueEntry entry = activeEntries.stream()
+                .filter(e -> e.getId().equals(entryId))
+                .findFirst()
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "ENTRY_NOT_FOUND",
+                        "Entry not found in the active queue."));
 
         validatePermissionToManageEntry(entry, loggedUserId);
         validateStatusForRequeue(entry);
@@ -150,30 +163,36 @@ public class QueueEntryService {
         entry.setStatus(QueueEntryStatus.WAITING);
         entry.setServedByMember(null);
 
-        List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
-
-        List<QueueEntry> waitingList = activeEntries.stream()
+        // Moves the client to the 2nd position in the waiting line
+        // (immediately after the current first waiting client).
+        activeEntries.stream()
                 .filter(e -> e.getStatus() == QueueEntryStatus.WAITING && !e.getId().equals(entryId))
-                .toList();
-
-        if (!waitingList.isEmpty()) {
-            QueueEntry newFirst = waitingList.get(0);
-            entry.setJoinedAt(newFirst.getJoinedAt().plusSeconds(1));
-        }
+                .findFirst()
+                .ifPresent(newFirst -> entry.setJoinedAt(newFirst.getJoinedAt().plusSeconds(1)));
 
         QueueEntry savedEntry = queueEntryRepository.save(entry);
         log.info("Client returned to queue");
 
-        queueCacheService.evict(sessionId);
-        List<QueueEntry> newActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+        queueCacheService.evictSessionList(sessionId);
         queueNotificationService.notifyQueueUpdate(sessionId);
-        return queueMapper.toSingleDto(savedEntry, newActiveEntries);
+
+        activeEntries.sort(java.util.Comparator.comparing(QueueEntry::getJoinedAt));
+
+        return queueMapper.toSingleDto(savedEntry, activeEntries);
     }
 
     @Transactional
-    public QueueEntryResponseDTO startService(String entryId, String loggedUserId) {
-        QueueEntry entry = getEntryById(entryId);
-        String sessionId = entry.getQueueSession().getId();
+    public QueueEntryResponseDTO startService(String sessionId, String entryId, String loggedUserId) {
+
+        List<QueueEntry> activeEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+
+        QueueEntry entry = activeEntries.stream()
+                .filter(e -> e.getId().equals(entryId))
+                .findFirst()
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "ENTRY_NOT_FOUND",
+                        "Entry not found in the active queue."));
 
         validatePermissionToManageEntry(entry, loggedUserId);
         validateStatusForStart(entry);
@@ -182,11 +201,10 @@ public class QueueEntryService {
         QueueEntry savedEntry = queueEntryRepository.save(entry);
         log.info("Service started");
 
-        queueCacheService.evict(sessionId);
-        List<QueueEntry> newActiveEntries = queueEntryRepository.findActiveEntriesBySessionId(sessionId);
+        queueCacheService.evictSessionList(sessionId);
         queueNotificationService.notifyQueueUpdate(sessionId);
 
-        return queueMapper.toSingleDto(savedEntry, newActiveEntries);
+        return queueMapper.toSingleDto(savedEntry, activeEntries);
     }
 
     @Transactional
@@ -204,7 +222,7 @@ public class QueueEntryService {
         queueEntryRepository.save(entry);
         log.info("Service finished");
 
-        queueCacheService.evict(entry.getQueueSession().getId());
+        queueCacheService.evictSessionList(entry.getQueueSession().getId());
         queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
     }
 
@@ -219,7 +237,7 @@ public class QueueEntryService {
         queueEntryRepository.save(entry);
         log.info("Queue entry cancelled");
 
-        queueCacheService.evict(entry.getQueueSession().getId());
+        queueCacheService.evictSessionList(entry.getQueueSession().getId());
         queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
     }
 

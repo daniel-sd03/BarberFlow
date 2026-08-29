@@ -75,9 +75,8 @@ public class DashboardService {
         }
 
         QueueSession session = sessionOpt.get();
-        List<QueueEntryResponseDTO> activeQueueDtos = queueMapper.toDtoList(
-                queueCacheService.getActiveEntries(session.getId())
-        );
+
+        List<QueueEntryResponseDTO> activeQueueDtos = queueCacheService.getActiveEntriesDTO(session.getId());
 
         return new BusinessDashboardDTO(
                 businessId, businessName, loggedMember.getId(), loggedMember.getRole(),
