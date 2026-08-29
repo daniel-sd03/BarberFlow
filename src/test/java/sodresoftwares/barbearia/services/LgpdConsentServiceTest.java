@@ -64,7 +64,7 @@
             // Arrange
             when(lgpdConsentRepository.existsByUserIdAndTermVersion(testUser.getId(), CURRENT_VERSION)).thenReturn(true);
             when(tokenService.generateToken(testUser, CURRENT_VERSION)).thenReturn("mock-token");
-            when(refreshTokenService.createOrReuseRefreshToken(testUser)).thenReturn(mockRefresh);
+            when(refreshTokenService.generateNewRefreshToken(testUser)).thenReturn(mockRefresh);
 
             // Act
             TokenResponseDTO response= lgpdConsentService.acceptCurrentTerms(testUser, request);
@@ -87,7 +87,7 @@
             when(request.getHeader("CF-Connecting-IP")).thenReturn("192.168.1.100");
             when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
             when(tokenService.generateToken(testUser, CURRENT_VERSION)).thenReturn("mock-token");
-            when(refreshTokenService.createOrReuseRefreshToken(testUser)).thenReturn(mockRefresh);
+            when(refreshTokenService.generateNewRefreshToken(testUser)).thenReturn(mockRefresh);
 
             // Act
             TokenResponseDTO response = lgpdConsentService.acceptCurrentTerms(testUser, request);

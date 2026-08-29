@@ -96,7 +96,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         }
 
         String jwtToken = tokenService.generateToken(finalUser, lgpdLastAcceptedVersion);
-        RefreshToken refreshToken = refreshTokenService.createOrReuseRefreshToken(finalUser);
+        RefreshToken refreshToken = refreshTokenService.generateNewRefreshToken(finalUser);
 
         Cookie tokenCookie = new Cookie("TEMP_AUTH_TOKEN", jwtToken);
         tokenCookie.setPath("/");

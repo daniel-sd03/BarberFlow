@@ -92,7 +92,7 @@ class AuthenticationServiceTest {
                 .thenReturn(Optional.of(mockConsent));
         when(tokenService.generateToken(testUser, fakeLgpdVersion))
                 .thenReturn("valid-jwt-token");
-        when(refreshTokenService.createOrReuseRefreshToken(testUser)).thenReturn(mockRefresh);
+        when(refreshTokenService.generateNewRefreshToken(testUser)).thenReturn(mockRefresh);
 
         // Act
         TokenResponseDTO result = authService.login(authDTO);
@@ -156,7 +156,7 @@ class AuthenticationServiceTest {
         doNothing().when(userService).reactivateAccount(testUser.getId());
         when(lgpdConsentRepository.findFirstByUserIdOrderByCreatedAtDesc(testUser.getId())).thenReturn(Optional.of(mockConsent));
         when(tokenService.generateToken(testUser, fakeLgpdVersion)).thenReturn("valid-jwt-token");
-        when(refreshTokenService.createOrReuseRefreshToken(testUser)).thenReturn(mockRefresh);
+        when(refreshTokenService.generateNewRefreshToken(testUser)).thenReturn(mockRefresh);
 
         TokenResponseDTO result = authService.reactivateAndLogin(authDTO);
 

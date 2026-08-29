@@ -11,10 +11,8 @@ import sodresoftwares.barbearia.infra.security.TokenService;
 import sodresoftwares.barbearia.model.RefreshToken;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.RefreshTokenRepository;
-import sodresoftwares.barbearia.repositories.UserRepository;
 
 import java.time.Instant;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -28,33 +26,19 @@ public class RefreshTokenService {
     private String currentLgpdVersion;
 
     private final RefreshTokenRepository refreshTokenRepository;
-    private final UserRepository userRepository;
     private final TokenService tokenService;
 
     @Transactional
-    public RefreshToken createOrReuseRefreshToken(User user) {
+    public RefreshToken generateNewRefreshToken(User user) {
 
-        Optional<RefreshToken> existingToken = refreshTokenRepository.findByUserId(user.getId());
-
-        if (existingToken.isPresent()) {
-            RefreshToken token = existingToken.get();
-
-            // If the token is still valid, extend its expiration date and reuse it
-            if (token.getExpiryDate().compareTo(Instant.now()) > 0) {
-                token.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
-                return refreshTokenRepository.save(token);
-            } else {
-                // If it's expired, delete the old one to make room for a new one
-                refreshTokenRepository.delete(token);
-            }
-        }
+        refreshTokenRepository.findByUserId(user.getId())
+                .ifPresent(refreshTokenRepository::delete);
 
         String uniqueToken;
         do {
             uniqueToken = UUID.randomUUID().toString();
         } while (refreshTokenRepository.existsByToken(uniqueToken));
 
-        // Create a brand-new refresh token
         RefreshToken newToken = RefreshToken.builder()
                 .user(user)
                 .token(uniqueToken)
@@ -71,7 +55,10 @@ public class RefreshTokenService {
                 .map(RefreshToken::getUser)
                 .map(user -> {
                     String newAccessToken = tokenService.generateToken(user, currentLgpdVersion);
-                    return new TokenRefreshResponseDTO(newAccessToken, requestRefreshToken);
+
+                    RefreshToken rotatedToken = generateNewRefreshToken(user);
+
+                    return new TokenRefreshResponseDTO(newAccessToken, rotatedToken.getToken());
                 })
                 .orElseThrow(() -> new AppException(
                         HttpStatus.FORBIDDEN,

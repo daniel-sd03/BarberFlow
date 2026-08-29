@@ -30,6 +30,7 @@ public class AuthenticationService {
     private final UserService userService;
     private final RefreshTokenService refreshTokenService;
 
+    @Transactional
     public TokenResponseDTO login(AuthenticationDTO data) {
         User loggedUser = authenticateUser(data);
 
@@ -70,7 +71,7 @@ public class AuthenticationService {
                     .orElse(null);
 
             String token = tokenService.generateToken(loggedUser, lgpdLastAcceptedVersion);
-            RefreshToken refreshToken = refreshTokenService.createOrReuseRefreshToken(loggedUser);
+            RefreshToken refreshToken = refreshTokenService.generateNewRefreshToken(loggedUser);
             String role = loggedUser.getRole().toString();
 
             return new TokenResponseDTO(

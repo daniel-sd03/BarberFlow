@@ -38,7 +38,7 @@ public class LgpdConsentService {
         }
 
         String token = tokenService.generateToken(user, currentLgpdVersion);
-        RefreshToken refreshToken = refreshTokenService.createOrReuseRefreshToken(user);
+        RefreshToken refreshToken = refreshTokenService.generateNewRefreshToken(user);
         String role = user.getRole().toString();
 
         return new TokenResponseDTO(token, refreshToken.getToken(), role);

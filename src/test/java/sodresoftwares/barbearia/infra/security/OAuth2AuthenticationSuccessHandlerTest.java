@@ -75,7 +75,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
         when(oAuth2User.getAttribute("email")).thenReturn(email);
         when(oAuth2User.getAttribute("sub")).thenReturn(googleId);
         when(response.encodeRedirectURL(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(refreshTokenService.createOrReuseRefreshToken(any(User.class))).thenReturn(mockRefresh);
+        when(refreshTokenService.generateNewRefreshToken(any(User.class))).thenReturn(mockRefresh);
 
         ReflectionTestUtils.setField(successHandler, "frontendUrl", "http://localhost:5173/oauth/callback");
         ReflectionTestUtils.setField(successHandler, "cookieDomain", "");

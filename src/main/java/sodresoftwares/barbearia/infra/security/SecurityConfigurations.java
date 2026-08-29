@@ -41,6 +41,7 @@ public class SecurityConfigurations {
                                 // 1. PUBLIC ENDPOINTS (No authentication required)
                                 // ==========================================
                                 .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/auth/refresh").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/users/client").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/users/professional").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/auth/password-resets").permitAll()
