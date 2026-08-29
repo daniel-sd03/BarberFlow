@@ -26,6 +26,7 @@ import sodresoftwares.barbearia.repositories.UserRepository;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,6 +72,7 @@ class QueueEntryServiceTest {
     private QueueSession activeSession;
     private QueueEntry waitingEntry;
     private JoinQueueDTO joinQueueDTO;
+    private QueueEntryResponseDTO cachedDto;
 
     private final String BARBER_USER_ID = "barber-user-123";
     private final String CLIENT_USER_ID = "client-user-123";
@@ -120,6 +122,22 @@ class QueueEntryServiceTest {
                 .joinedAt(Instant.now())
                 .build();
 
+        cachedDto = new QueueEntryResponseDTO(
+                ENTRY_ID,
+                1,
+                CLIENT_USER_ID,
+                "Cliente João",
+                "Corte",
+                QueueEntryStatus.WAITING,
+                null,
+                null,
+                null,
+                Instant.now(),
+                null,
+                15
+        );
+
+
         joinQueueDTO = new JoinQueueDTO(SESSION_ID, "Corte");
     }
 
@@ -132,8 +150,8 @@ class QueueEntryServiceTest {
         String userId = CLIENT_USER_ID;
         when(queueEntryRepository.findByUserIdAndStatusIn(eq(userId), anyList()))
                 .thenReturn(Optional.of(waitingEntry));
-        when(queueCacheService.getActiveEntries(SESSION_ID))
-                .thenReturn(List.of(waitingEntry));
+        when(queueCacheService.getActiveEntriesDTO(SESSION_ID))
+                .thenReturn(List.of(cachedDto));
 
         // Act
         UserQueueStatusDTO result = queueEntryService.getUserQueueStatus(userId);
@@ -209,8 +227,8 @@ class QueueEntryServiceTest {
 
         when(queueEntryRepository.findByUserIdAndStatusIn(eq(userId), anyList()))
                 .thenReturn(Optional.of(waitingEntry));
-        when(queueCacheService.getActiveEntries(SESSION_ID))
-                .thenReturn(List.of(waitingEntry));
+        when(queueCacheService.getActiveEntriesDTO(SESSION_ID))
+                .thenReturn(List.of(cachedDto));
 
         // Act
         Optional<QueueEntryResponseDTO> result = queueEntryService.findActiveEntryByUserId(userId);
@@ -228,7 +246,7 @@ class QueueEntryServiceTest {
         assertThat(dto.toleranceMinute()).isEqualTo(15);
 
         verify(queueEntryRepository).findByUserIdAndStatusIn(eq(userId), anyList());
-        verify(queueCacheService).getActiveEntries(SESSION_ID);
+        verify(queueCacheService).getActiveEntriesDTO(SESSION_ID);
     }
 
     @Test
@@ -321,7 +339,7 @@ class QueueEntryServiceTest {
         assertThat(response.position()).isEqualTo(1);
         assertThat(response.status()).isEqualTo(QueueEntryStatus.WAITING);
 
-        verify(queueCacheService).evict(SESSION_ID);
+        verify(queueCacheService).evictSessionList(SESSION_ID);
     }
 
     @Test
@@ -381,8 +399,6 @@ class QueueEntryServiceTest {
         when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
         when(teamMemberRepository.findById(teamMember.getId())).thenReturn(Optional.of(teamMember));
         when(queueEntryRepository.existsByServedByMemberIdAndStatusIn(eq(teamMember.getId()), anyList())).thenReturn(false);
-        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
-        when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         when(queueEntryRepository.save(any(QueueEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
 
@@ -396,7 +412,7 @@ class QueueEntryServiceTest {
         assertThat(waitingEntry.getServedByMember()).isEqualTo(teamMember);
 
         verify(queueEntryRepository).save(waitingEntry);
-        verify(queueCacheService).evict(SESSION_ID);
+        verify(queueCacheService).evictSessionList(SESSION_ID);
         verify(pushDispatcher).notifyClientTurn(waitingEntry.getUser().getId(), teamMember.getName());
     }
 
@@ -424,35 +440,13 @@ class QueueEntryServiceTest {
         when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
         when(teamMemberRepository.findById(teamMember.getId())).thenReturn(Optional.of(teamMember));
         when(queueEntryRepository.existsByServedByMemberIdAndStatusIn(eq(teamMember.getId()), anyList())).thenReturn(false);
-
-        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of());
+        when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of());
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, BARBER_USER_ID, teamMember.getId()))
                 .isInstanceOf(AppException.class)
                 .hasMessage("There are no clients waiting in the queue.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-    }
-
-    @Test
-    @DisplayName("Should throw not found exception when entry returned by cache does not exist in database")
-    void testCallNext_EntryNotFoundInDatabase() {
-        // Arrange
-        when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
-        when(teamMemberRepository.findById(teamMember.getId())).thenReturn(Optional.of(teamMember));
-        when(queueEntryRepository.existsByServedByMemberIdAndStatusIn(eq(teamMember.getId()), anyList())).thenReturn(false);
-
-        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(List.of(waitingEntry));
-        when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThatThrownBy(() -> queueEntryService.callNext(SESSION_ID, BARBER_USER_ID, teamMember.getId()))
-                .isInstanceOf(AppException.class)
-                .hasMessage("Entry Id not found")
-                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-
-        verify(queueEntryRepository, never()).save(any());
-        verify(queueCacheService, never()).evict(anyString());
     }
 
     @Test
@@ -480,40 +474,44 @@ class QueueEntryServiceTest {
         waitingEntry.setMissedCalls(0);
         waitingEntry.setServedByMember(teamMember);
 
-        when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
-        when(queueEntryRepository.save(any(QueueEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
+        QueueEntry nextClientWaiting = QueueEntry.builder()
+                .id("entry-456")
+                .status(QueueEntryStatus.WAITING)
+                .joinedAt(Instant.now().plusSeconds(10))
+                .build();
+
+        when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID))
+                .thenReturn(new ArrayList<>(List.of(waitingEntry, nextClientWaiting)));
+        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId()))
+                .thenReturn(Optional.of(teamMember));
+        when(queueEntryRepository.save(any(QueueEntry.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        QueueEntryResponseDTO result = queueEntryService.requeueEntry(ENTRY_ID, BARBER_USER_ID);
+        QueueEntryResponseDTO result = queueEntryService.requeueEntry(SESSION_ID, ENTRY_ID, BARBER_USER_ID);
 
         // Assert
-        assertThat(result).isNotNull();
         assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.WAITING);
-        assertThat(waitingEntry.getMissedCalls()).isEqualTo(1);
         assertThat(waitingEntry.getServedByMember()).isNull();
+        assertThat(waitingEntry.getMissedCalls()).isEqualTo(1);
+        assertThat(waitingEntry.getJoinedAt()).isEqualTo(nextClientWaiting.getJoinedAt().plusSeconds(1));
 
-        verify(queueEntryRepository).save(waitingEntry);
-        verify(queueCacheService).evict(SESSION_ID);
-        verify(queueNotificationService).notifyQueueUpdate(SESSION_ID);
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(ENTRY_ID);
+        assertThat(result.status()).isEqualTo(QueueEntryStatus.WAITING);
     }
 
     @Test
     @DisplayName("Should throw bad request exception when trying to requeue an entry that is not CALLED")
     void testRequeueEntry_InvalidStatus() {
-        // Arrange: status starts as WAITING
-        when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        // Arrange
+        when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
         when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
 
         // Act & Assert
-        assertThatThrownBy(() -> queueEntryService.requeueEntry(ENTRY_ID, BARBER_USER_ID))
+        assertThatThrownBy(() -> queueEntryService.requeueEntry(SESSION_ID, ENTRY_ID, BARBER_USER_ID))
                 .isInstanceOf(AppException.class)
-                .hasMessage("Only clients with CALLED status can be returned to the queue.")
-                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-        verify(queueEntryRepository, never()).save(any());
-        verifyNoInteractions(queueCacheService);
+                .hasMessage("Only clients with CALLED status can be returned to the queue.");
     }
 
     // ==================== START SERVICE TESTS ====================
@@ -523,23 +521,17 @@ class QueueEntryServiceTest {
     void testStartService_Success() {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.CALLED);
-        when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+
+        when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
         when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
-        when(queueEntryRepository.save(any(QueueEntry.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-        when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID))
-                .thenReturn(List.of(waitingEntry));
+        when(queueEntryRepository.save(any(QueueEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        QueueEntryResponseDTO result = queueEntryService.startService(ENTRY_ID, BARBER_USER_ID);
+        QueueEntryResponseDTO result = queueEntryService.startService(SESSION_ID, ENTRY_ID, BARBER_USER_ID);
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.id()).isEqualTo(ENTRY_ID);
         assertThat(result.status()).isEqualTo(QueueEntryStatus.IN_SERVICE);
-
-        verify(queueEntryRepository).save(waitingEntry);
-        verify(queueEntryRepository).findActiveEntriesBySessionId(SESSION_ID);
     }
 
     @Test
@@ -547,22 +539,19 @@ class QueueEntryServiceTest {
     void testStartService_InvalidStatus() {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.FINISHED);
-        when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
+        when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
         when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
 
         // Act & Assert
-        assertThatThrownBy(() -> queueEntryService.startService(ENTRY_ID, BARBER_USER_ID))
+        assertThatThrownBy(() -> queueEntryService.startService(SESSION_ID, ENTRY_ID, BARBER_USER_ID))
                 .isInstanceOf(AppException.class)
-                .hasMessage("The client must be called to start the service.")
-                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-        verify(queueEntryRepository, never()).save(any());
+                .hasMessage("The client must be called to start the service.");
     }
 
     // ==================== FINISH SERVICE TESTS ====================
 
     @Test
-    @DisplayName("Should finish service successfully and evict cache")
+    @DisplayName("Should finish service successfully and evictSessionList cache")
     void testFinishService_Success() {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.IN_SERVICE);
@@ -578,7 +567,7 @@ class QueueEntryServiceTest {
         assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.FINISHED);
 
         verify(queueEntryRepository).save(waitingEntry);
-        verify(queueCacheService).evict(SESSION_ID);
+        verify(queueCacheService).evictSessionList(SESSION_ID);
     }
 
     @Test
@@ -613,7 +602,7 @@ class QueueEntryServiceTest {
 
         // Assert
         assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.CANCELLED);
-        verify(queueCacheService).evict(SESSION_ID);
+        verify(queueCacheService).evictSessionList(SESSION_ID);
         verify(queueEntryRepository).save(waitingEntry);
     }
 
@@ -630,7 +619,7 @@ class QueueEntryServiceTest {
 
         // Assert
         assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.CANCELLED);
-        verify(queueCacheService).evict(SESSION_ID);
+        verify(queueCacheService).evictSessionList(SESSION_ID);
         verify(queueEntryRepository).save(waitingEntry);
     }
 

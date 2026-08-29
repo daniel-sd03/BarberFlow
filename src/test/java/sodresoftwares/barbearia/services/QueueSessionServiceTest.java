@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import sodresoftwares.barbearia.dto.queue.QueueEntryResponseDTO;
 import sodresoftwares.barbearia.dto.queue.QueueSessionBusinessResponseDTO;
 import sodresoftwares.barbearia.dto.queue.UpdateQueueSessionDTO;
 import sodresoftwares.barbearia.infra.exception.AppException;
@@ -350,8 +351,15 @@ class QueueSessionServiceTest {
     @DisplayName("Should return session info preview successfully when ticket code exists")
     void testGetSessionInfoByCode_Success() {
         String ticketCode = "BARB1234";
-        when(queueSessionRepository.findByTicketCodeWithBusiness(ticketCode)).thenReturn(Optional.of(existingSession));
-        when(queueCacheService.getActiveEntries(existingSession.getId())).thenReturn(List.of(activeEntry, activeEntry));
+        QueueEntryResponseDTO mockDto = new QueueEntryResponseDTO(
+                "entry-123", 1, "user-1", "Cliente", "Corte",
+                QueueEntryStatus.WAITING, null, null, null, Instant.now(), null, 15
+        );
+
+        when(queueSessionRepository.findByTicketCodeWithBusiness(ticketCode))
+                .thenReturn(Optional.of(existingSession));
+        when(queueCacheService.getActiveEntriesDTO(existingSession.getId()))
+                .thenReturn(List.of(mockDto, mockDto));
 
         var result = queueSessionService.getSessionInfoByCode(ticketCode);
 

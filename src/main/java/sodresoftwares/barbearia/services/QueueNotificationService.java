@@ -38,8 +38,7 @@ public class QueueNotificationService {
     public void executeBroadcast(String sessionId) {
         String destination = "/topic/queue/" + sessionId;
 
-        List<QueueEntry> activeEntries = queueCacheService.getActiveEntries(sessionId);
-        List<QueueEntryResponseDTO> payload = queueMapper.toDtoList(activeEntries);
+        List<QueueEntryResponseDTO> payload = queueCacheService.getActiveEntriesDTO(sessionId);
 
         messagingTemplate.convertAndSend(destination, payload);
 

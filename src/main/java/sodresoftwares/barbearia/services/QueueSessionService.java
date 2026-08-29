@@ -142,7 +142,7 @@ public class QueueSessionService {
                         "Queue not found for the Ticket code."
                 ));
 
-        int peopleInQueue = queueCacheService.getActiveEntries(session.getId()).size();
+        int peopleInQueue = queueCacheService.getActiveEntriesDTO(session.getId()).size();
 
         return new QueueSessionUserResponseDTO(
                 session.getId(),

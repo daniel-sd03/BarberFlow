@@ -171,16 +171,18 @@ class DashboardServiceTest {
     @Test
     @DisplayName("Should return full dashboard data when team member and active session exist")
     void getProfessionalDashboard_FullData() {
+        QueueEntryResponseDTO mockDto = new QueueEntryResponseDTO(
+                "entry-123", 1, "user-1", "Cliente", "Corte",
+                QueueEntryStatus.WAITING, null, null, null, Instant.now(), null, 15
+        );
+
         // Arrange
         when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
         when(teamMemberRepository.findAllByBusinessIdAndIsActiveTrueWithUser(BUSINESS_ID)).thenReturn(List.of(teamMember));
         when(queueSessionRepository.findByBusinessIdWithBusiness(BUSINESS_ID)).thenReturn(Optional.of(queueSession));
 
-        List<QueueEntry> mockEntries = List.of(new QueueEntry());
-        when(queueCacheService.getActiveEntries(SESSION_ID)).thenReturn(mockEntries);
-
-        List<QueueEntryResponseDTO> mockDtos = List.of(mock(QueueEntryResponseDTO.class));
-        when(queueMapper.toDtoList(anyList())).thenReturn(mockDtos);
+        List<QueueEntryResponseDTO> mockDtos = List.of(mockDto);
+        when(queueCacheService.getActiveEntriesDTO(SESSION_ID)).thenReturn(mockDtos);
 
         // Act
         BusinessDashboardDTO result = dashboardService.getProfessionalDashboard(mockUser);
@@ -191,7 +193,6 @@ class DashboardServiceTest {
         assertThat(result.sessionId()).isEqualTo(SESSION_ID);
         assertThat(result.activeQueue()).hasSize(1);
 
-        verify(queueCacheService).getActiveEntries(SESSION_ID);
-        verify(queueMapper).toDtoList(mockEntries);
+        verify(queueCacheService).getActiveEntriesDTO(SESSION_ID);
     }
 }

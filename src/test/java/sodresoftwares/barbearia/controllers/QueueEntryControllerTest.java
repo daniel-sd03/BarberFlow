@@ -20,10 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import sodresoftwares.barbearia.dto.queue.CallNextDTO;
-import sodresoftwares.barbearia.dto.queue.JoinQueueDTO;
-import sodresoftwares.barbearia.dto.queue.QueueEntryResponseDTO;
-import sodresoftwares.barbearia.dto.queue.UserQueueStatusDTO;
+import sodresoftwares.barbearia.dto.queue.*;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
 import sodresoftwares.barbearia.model.QueueEntryStatus;
 import sodresoftwares.barbearia.model.user.User;
@@ -73,7 +70,7 @@ class QueueEntryControllerTest {
 
     private QueueEntryResponseDTO entryResponseDTO;
     private JoinQueueDTO joinQueueDTO;
-
+    private QueueSessionActionDTO actionDTO;
     @BeforeEach
     void setUp() {
         User loggedInUser = User.builder()
@@ -98,6 +95,9 @@ class QueueEntryControllerTest {
                 null,
                 10
         );
+
+
+        actionDTO = new QueueSessionActionDTO("session-789");
 
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(loggedInUser, null, loggedInUser.getAuthorities());
@@ -191,10 +191,12 @@ class QueueEntryControllerTest {
     @Test
     @DisplayName("PATCH /queue-entries/{entryId}/requeue -> Should requeue entry and return 200 OK")
     void testRequeueEntry_Success() throws Exception {
-        when(queueEntryService.requeueEntry(any(), any())).thenReturn(entryResponseDTO);
+
+        when(queueEntryService.requeueEntry(any(), any(), any())).thenReturn(entryResponseDTO);
 
         mockMvc.perform(patch("/queue-entries/{entryId}/requeue", "entry-123")
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(actionDTO).getJson()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("entry-123"));
     }
@@ -218,10 +220,11 @@ class QueueEntryControllerTest {
                 null,
                 10
         );
-        when(queueEntryService.startService(any(), any())).thenReturn(inServiceEntry);
+        when(queueEntryService.startService(any(), any(), any())).thenReturn(inServiceEntry);
 
         mockMvc.perform(patch("/queue-entries/{entryId}/start", "entry-123")
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonTester.write(actionDTO).getJson()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("entry-123"))
                 .andExpect(jsonPath("$.status").value("IN_SERVICE"));

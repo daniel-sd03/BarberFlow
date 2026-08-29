@@ -6,10 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import sodresoftwares.barbearia.dto.queue.CallNextDTO;
-import sodresoftwares.barbearia.dto.queue.JoinQueueDTO;
-import sodresoftwares.barbearia.dto.queue.QueueEntryResponseDTO;
-import sodresoftwares.barbearia.dto.queue.UserQueueStatusDTO;
+import sodresoftwares.barbearia.dto.queue.*;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.QueueEntryService;
 
@@ -48,18 +45,20 @@ public class QueueEntryController {
     @PatchMapping("/{entryId}/requeue")
     public ResponseEntity<QueueEntryResponseDTO> requeueEntry(
             @PathVariable String entryId,
+            @RequestBody @Valid QueueSessionActionDTO dto,
             @AuthenticationPrincipal User loggedUser) {
 
-        QueueEntryResponseDTO response = queueEntryService.requeueEntry(entryId, loggedUser.getId());
+        QueueEntryResponseDTO response = queueEntryService.requeueEntry(dto.sessionId(), entryId, loggedUser.getId());
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{entryId}/start")
     public ResponseEntity<QueueEntryResponseDTO> startService(
             @PathVariable String entryId,
+            @RequestBody @Valid QueueSessionActionDTO dto,
             @AuthenticationPrincipal User loggedInUser) {
 
-        QueueEntryResponseDTO response = queueEntryService.startService(entryId, loggedInUser.getId());
+        QueueEntryResponseDTO response = queueEntryService.startService(dto.sessionId(), entryId, loggedInUser.getId());
         return ResponseEntity.ok(response);
     }
 
