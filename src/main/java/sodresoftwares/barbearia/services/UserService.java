@@ -30,16 +30,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserResponseDTO getMyProfile(String userId) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    return new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "USER_NOT_FOUND",
-                            "User not found."
-                    );
-                });
-
+        User user = getUserById(userId);
         return UserResponseDTO.fromEntity(user);
     }
 
@@ -80,15 +71,28 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponseDTO updateUserProfile(String userId, UpdateUserDTO dto) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    return new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "USER_NOT_FOUND",
-                            "User not found."
-                    );
-                });
+    public UserResponseDTO upgradeToProfessional(String loggedUserId) {
+        User user = getUserById(loggedUserId);
+
+        if (user.getRole() == UserRole.PROFESSIONAL) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "ALREADY_PROFESSIONAL",
+                    "This account is already a professional account."
+            );
+        }
+
+        user.setRole(UserRole.PROFESSIONAL);
+
+        User savedUser = userRepository.save(user);
+        log.info("User {} upgraded to PROFESSIONAL role", loggedUserId);
+
+        return UserResponseDTO.fromEntity(savedUser);
+    }
+
+    @Transactional
+    public UserResponseDTO updateUserProfile(String loggedUserId, UpdateUserDTO dto) {
+        User user = getUserById(loggedUserId);
 
         if (dto.name() != null && !dto.name().isBlank()) {
             user.setName(dto.name().trim());
@@ -105,16 +109,8 @@ public class UserService {
     }
 
     @Transactional
-    public void changePassword(String userId, ChangePasswordDTO dto) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    return new AppException(
-                            HttpStatus.NOT_FOUND,
-                            "USER_NOT_FOUND",
-                            "User not found."
-                    );
-                });
+    public void changePassword(String loggedUserId, ChangePasswordDTO dto) {
+        User user = getUserById(loggedUserId);
 
         if (!passwordEncoder.matches(dto.currentPassword(), user.getPassword())) {
             throw new AppException(
@@ -140,12 +136,7 @@ public class UserService {
 
     @Transactional
     public void deleteMyAccount(String loggedUserId) {
-        User user = userRepository.findById(loggedUserId)
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.NOT_FOUND,
-                        "USER_NOT_FOUND",
-                        "User not found in the system."
-                ));
+        User user = getUserById(loggedUserId);
 
         if (!user.getIsActive()) {
             throw new AppException(
@@ -165,12 +156,7 @@ public class UserService {
 
     @Transactional
     public void reactivateAccount(String loggedUserId) {
-        User user = userRepository.findById(loggedUserId)
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.NOT_FOUND,
-                        "USER_NOT_FOUND",
-                        "User not found in the system."
-                ));
+        User user = getUserById(loggedUserId);
 
         if (user.getIsActive()) {
             throw new AppException(
@@ -186,5 +172,16 @@ public class UserService {
         userRepository.save(user);
 
         log.info("Account reactivated successfully.");
+    }
+
+    //--------- HELPER METHODS ------
+
+    private User getUserById(String userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "USER_NOT_FOUND",
+                        "User not found."
+                ));
     }
 }

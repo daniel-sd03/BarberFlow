@@ -44,6 +44,13 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @PatchMapping("/me/upgrade-role")
+    public ResponseEntity<UserResponseDTO> upgradeToProfessional(
+            @AuthenticationPrincipal User loggedInUser) {
+        UserResponseDTO updatedUser = userService.upgradeToProfessional(loggedInUser.getId());
+        return ResponseEntity.ok(updatedUser);
+    }
+
     @PatchMapping("/me")
     public ResponseEntity<UserResponseDTO> updateMyProfile(
             @AuthenticationPrincipal User loggedInUser,
