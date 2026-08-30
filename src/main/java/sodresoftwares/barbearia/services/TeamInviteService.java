@@ -33,7 +33,7 @@ public class TeamInviteService {
     private final UserRepository userRepository;
 
     public List<TeamInviteResponseDTO> getMyPendingInvites(String userEmail) {
-        return teamInviteRepository.findAllByEmailAndStatus(userEmail, InviteStatus.PENDING)
+        return teamInviteRepository.findAllByEmailAndStatusWithBusiness(userEmail, InviteStatus.PENDING)
                 .stream()
                 .map(invite -> new TeamInviteResponseDTO(
                         invite.getId(),
@@ -120,7 +120,7 @@ public class TeamInviteService {
     // ==========================================
 
     private Business getBusinessForOwner(String loggedUserId) {
-        TeamMember member = teamMemberRepository.findByUserId(loggedUserId)
+        TeamMember member = teamMemberRepository.findByUserIdWithBusiness(loggedUserId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "TEAM_MEMBER_NOT_FOUND",
@@ -139,7 +139,7 @@ public class TeamInviteService {
     }
 
     private TeamInvite getValidInvite(String inviteId, String email) {
-        TeamInvite invite = teamInviteRepository.findById(inviteId)
+        TeamInvite invite = teamInviteRepository.findByIdWithBusiness(inviteId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "INVITE_NOT_FOUND",

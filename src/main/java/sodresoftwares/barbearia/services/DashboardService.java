@@ -35,7 +35,7 @@ public class DashboardService {
         Optional<TeamMember> loggedMemberOpt = teamMemberRepository.findByUserIdWithBusiness(loggedUser.getId());
 
         if (loggedMemberOpt.isEmpty()) {
-            List<TeamInviteResponseDTO> pendingInvites = teamInviteRepository.findAllByEmailAndStatus(loggedUser.getLogin(), InviteStatus.PENDING)
+            List<TeamInviteResponseDTO> pendingInvites = teamInviteRepository.findAllByEmailAndStatusWithBusiness(loggedUser.getLogin(), InviteStatus.PENDING)
                     .stream()
                     .map(invite -> new TeamInviteResponseDTO(
                             invite.getId(),

@@ -103,7 +103,7 @@ class DashboardServiceTest {
                 .expiresAt(Instant.now())
                 .build();
 
-        when(teamInviteRepository.findAllByEmailAndStatus("ze@test.com", InviteStatus.PENDING))
+        when(teamInviteRepository.findAllByEmailAndStatusWithBusiness("ze@test.com", InviteStatus.PENDING))
                 .thenReturn(List.of(mockInvite));
 
         // Act

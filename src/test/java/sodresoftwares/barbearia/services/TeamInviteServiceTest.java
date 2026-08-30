@@ -77,7 +77,7 @@ class TeamInviteServiceTest {
     @Test
     @DisplayName("Should return a list of pending invites mapped to DTO")
     void getMyPendingInvites_Success() {
-        when(teamInviteRepository.findAllByEmailAndStatus("invited@test.com", InviteStatus.PENDING))
+        when(teamInviteRepository.findAllByEmailAndStatusWithBusiness("invited@test.com", InviteStatus.PENDING))
                 .thenReturn(List.of(validInvite));
 
         List<TeamInviteResponseDTO> result = teamInviteService.getMyPendingInvites("invited@test.com");
@@ -94,7 +94,7 @@ class TeamInviteServiceTest {
     void sendInvite_Success() {
         CreateTeamInviteDTO dto = new CreateTeamInviteDTO("new@test.com");
 
-        when(teamMemberRepository.findByUserId("owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness("owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamInviteRepository.existsByEmailAndBusinessIdAndStatus("new@test.com", "biz-id", InviteStatus.PENDING))
                 .thenReturn(false);
 
@@ -117,7 +117,7 @@ class TeamInviteServiceTest {
         ownerMember.setRole(TeamRole.STAFF); // Changing role to trigger error
         CreateTeamInviteDTO dto = new CreateTeamInviteDTO("new@test.com");
 
-        when(teamMemberRepository.findByUserId("owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness("owner-id")).thenReturn(Optional.of(ownerMember));
 
         assertThatThrownBy(() -> teamInviteService.sendInvite("owner-id", dto))
                 .isInstanceOf(AppException.class)
@@ -130,7 +130,7 @@ class TeamInviteServiceTest {
     void sendInvite_FailsWhenAlreadyInvited() {
         CreateTeamInviteDTO dto = new CreateTeamInviteDTO("new@test.com");
 
-        when(teamMemberRepository.findByUserId("owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness("owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamInviteRepository.existsByEmailAndBusinessIdAndStatus("new@test.com", "biz-id", InviteStatus.PENDING))
                 .thenReturn(true); // Simulating existing invite
 
@@ -146,7 +146,7 @@ class TeamInviteServiceTest {
     @DisplayName("Should accept invite and create a new TeamMember")
     void acceptInvite_Success() {
         when(teamMemberRepository.existsByUserId("invited-id")).thenReturn(false);
-        when(teamInviteRepository.findById("invite-id")).thenReturn(Optional.of(validInvite));
+        when(teamInviteRepository.findByIdWithBusiness("invite-id")).thenReturn(Optional.of(validInvite));
         when(userRepository.findById("invited-id")).thenReturn(Optional.of(invitedUser));
 
         teamInviteService.acceptInvite("invite-id", "invited-id", "invited@test.com");
@@ -184,7 +184,7 @@ class TeamInviteServiceTest {
         validInvite.setExpiresAt(Instant.now().minus(1, ChronoUnit.DAYS)); // Expired yesterday
 
         when(teamMemberRepository.existsByUserId("invited-id")).thenReturn(false);
-        when(teamInviteRepository.findById("invite-id")).thenReturn(Optional.of(validInvite));
+        when(teamInviteRepository.findByIdWithBusiness("invite-id")).thenReturn(Optional.of(validInvite));
 
         assertThatThrownBy(() -> teamInviteService.acceptInvite("invite-id", "invited-id", "invited@test.com"))
                 .isInstanceOf(AppException.class)
@@ -200,7 +200,7 @@ class TeamInviteServiceTest {
     @DisplayName("Should throw exception if email does not match")
     void acceptInvite_FailsWhenWrongEmail() {
         when(teamMemberRepository.existsByUserId("invited-id")).thenReturn(false);
-        when(teamInviteRepository.findById("invite-id")).thenReturn(Optional.of(validInvite));
+        when(teamInviteRepository.findByIdWithBusiness("invite-id")).thenReturn(Optional.of(validInvite));
 
         assertThatThrownBy(() -> teamInviteService.acceptInvite("invite-id", "invited-id", "HACKER@test.com"))
                 .isInstanceOf(AppException.class)
@@ -213,7 +213,7 @@ class TeamInviteServiceTest {
     @Test
     @DisplayName("Should decline invite successfully")
     void declineInvite_Success() {
-        when(teamInviteRepository.findById("invite-id")).thenReturn(Optional.of(validInvite));
+        when(teamInviteRepository.findByIdWithBusiness("invite-id")).thenReturn(Optional.of(validInvite));
 
         teamInviteService.declineInvite("invite-id", "invited@test.com");
 
