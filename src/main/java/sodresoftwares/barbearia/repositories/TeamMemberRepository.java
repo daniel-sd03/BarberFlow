@@ -3,12 +3,14 @@ package sodresoftwares.barbearia.repositories;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 import sodresoftwares.barbearia.model.TeamMember;
 import sodresoftwares.barbearia.model.TeamRole;
 
 import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface TeamMemberRepository extends JpaRepository<TeamMember, String> {
 
     @Query("SELECT t FROM TeamMember t " +

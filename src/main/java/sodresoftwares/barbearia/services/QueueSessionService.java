@@ -54,14 +54,7 @@ public class QueueSessionService {
 
     @Transactional
     public QueueSessionBusinessResponseDTO updateQueueStatus(String loggedUserId, boolean activate) {
-        Business business = getBusinessForOwner(loggedUserId);
-
-        QueueSession session = queueSessionRepository.findByBusinessId(business.getId())
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.NOT_FOUND,
-                        "SESSION_NOT_FOUND",
-                        "Queue not set up yet."));
-
+        QueueSession session = getSessionForOwner(loggedUserId);
         session.setIsActive(activate);
         QueueSession savedSession = queueSessionRepository.save(session);
         log.info("Queue session {}", activate ? "opened" : "closed");
@@ -71,14 +64,7 @@ public class QueueSessionService {
 
     @Transactional
     public QueueSessionBusinessResponseDTO updateSessionSettings(String loggedUserId, UpdateQueueSessionDTO dto) {
-        Business business = getBusinessForOwner(loggedUserId);
-
-        QueueSession session = queueSessionRepository.findByBusinessId(business.getId())
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.NOT_FOUND,
-                        "SESSION_NOT_FOUND",
-                        "Queue not found."
-                ));
+        QueueSession session = getSessionForOwner(loggedUserId);
 
         boolean wasUpdated = false;
 
@@ -114,14 +100,7 @@ public class QueueSessionService {
 
     @Transactional
     public QueueSessionBusinessResponseDTO refreshTicketCode(String loggedUserId) {
-        Business business = getBusinessForOwner(loggedUserId);
-
-        QueueSession session = queueSessionRepository.findByBusinessId(business.getId())
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.NOT_FOUND,
-                        "SESSION_NOT_FOUND",
-                        "Queue not found."
-                ));
+        QueueSession session = getSessionForOwner(loggedUserId);
 
         String newTicketCode = generateUniqueTicketCode(session.getPrefix());
 
@@ -151,6 +130,34 @@ public class QueueSessionService {
                 session.getIsActive(),
                 session.getToleranceMinutes()
         );
+    }
+
+    //------------ Auxiliary Methods ------------
+
+    private QueueSession getSessionForOwner(String loggedUserId) {
+        return queueSessionRepository.findByOwnerUserId(loggedUserId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "SESSION_NOT_FOUND",
+                        "Queue not found or you are not the owner."
+                ));
+    }
+
+    private Business getBusinessForOwner(String loggedUserId) {
+        TeamMember member = teamMemberRepository.findByUserIdWithBusiness(loggedUserId)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "TEAM_MEMBER_NOT_FOUND",
+                        "User is not associated with any team/business."));
+
+        if (member.getRole() != TeamRole.OWNER) {
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "ACCESS_DENIED",
+                    "Only the business owner can perform this action.");
+        }
+
+        return member.getBusiness();
     }
 
     // Generates prefix based on Business name or defaults to "FILA"
@@ -196,30 +203,5 @@ public class QueueSessionService {
                 session.getTicketCode(),
                 session.getIsActive()
         );
-    }
-
-    private TeamMember getTeamMember(String loggedUserId) {
-        return teamMemberRepository.findByUserId(loggedUserId)
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.NOT_FOUND,
-                        "TEAM_MEMBER_NOT_FOUND",
-                        "User is not associated with any team/business."));
-    }
-
-    private Business getBusinessForAnyMember(String loggedUserId) {
-        return getTeamMember(loggedUserId).getBusiness();
-    }
-
-    private Business getBusinessForOwner(String loggedUserId) {
-        TeamMember member = getTeamMember(loggedUserId);
-
-        if (member.getRole() != TeamRole.OWNER) {
-            throw new AppException(
-                    HttpStatus.FORBIDDEN,
-                    "ACCESS_DENIED",
-                    "Only the business owner can perform this action.");
-        }
-
-        return member.getBusiness();
     }
 }

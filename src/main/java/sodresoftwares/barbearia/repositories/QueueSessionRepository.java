@@ -10,6 +10,12 @@ import java.util.Optional;
 
 @Repository
 public interface QueueSessionRepository extends JpaRepository<QueueSession, String> {
+
+    @Query("SELECT qs FROM QueueSession qs " +
+            "JOIN qs.business b " +
+            "WHERE b.user.id = :ownerId")
+    Optional<QueueSession> findByOwnerUserId(@Param("ownerId") String ownerId);
+
     @Query("SELECT q FROM QueueSession q " +
             "JOIN FETCH q.business " +
             "WHERE q.business.id = :businessId")

@@ -25,8 +25,8 @@ public class QueueSession {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "business_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_id", nullable = false, unique = true)
     private Business business;
 
     @Column(name = "ticket_code", unique = true, nullable = false, length = 50)
