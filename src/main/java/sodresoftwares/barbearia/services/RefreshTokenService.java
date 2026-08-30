@@ -1,6 +1,7 @@
 package sodresoftwares.barbearia.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class RefreshTokenService {
 
     @Value("${app.security.jwt.refresh-expiration:2592000000}")
@@ -58,6 +61,8 @@ public class RefreshTokenService {
 
                     RefreshToken rotatedToken = generateNewRefreshToken(user);
 
+                    log.info("Refresh token rotated successfully.");
+
                     return new TokenRefreshResponseDTO(newAccessToken, rotatedToken.getToken());
                 })
                 .orElseThrow(() -> new AppException(
@@ -71,6 +76,7 @@ public class RefreshTokenService {
     public RefreshToken verifyExpiration(RefreshToken token) {
         if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
             refreshTokenRepository.delete(token);
+            log.warn("Refresh token expired. Session invalidated.");
             throw new AppException(
                     HttpStatus.UNAUTHORIZED,
                     "REFRESH_TOKEN_EXPIRED",

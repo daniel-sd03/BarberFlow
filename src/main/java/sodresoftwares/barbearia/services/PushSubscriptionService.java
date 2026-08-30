@@ -9,9 +9,10 @@ import sodresoftwares.barbearia.model.UserPushSubscription;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.UserPushSubscriptionRepository;
 
-@Slf4j
 @Service
+@Slf4j
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class PushSubscriptionService {
 
     private final UserPushSubscriptionRepository repository;
