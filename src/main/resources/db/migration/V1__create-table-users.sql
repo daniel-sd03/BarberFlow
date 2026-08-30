@@ -134,7 +134,8 @@ CREATE TABLE refresh_tokens
     CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_team_invites_email ON team_invites (email);
+CREATE INDEX idx_team_invites_email
+    ON team_invites (email);
 
 CREATE INDEX idx_password_reset_email_code
     ON password_reset_tokens (email, code);
@@ -144,3 +145,9 @@ CREATE UNIQUE INDEX idx_unique_active_user_queue
 
 CREATE INDEX idx_queue_entries_session_status
     ON queue_entries (queue_sessions_id, status, joined_at);
+
+CREATE INDEX idx_queue_entries_user_joined_at
+    ON queue_entries (user_id, joined_at DESC);
+
+CREATE UNIQUE INDEX idx_queue_sessions_ticket_code
+    ON queue_sessions (ticket_code);
