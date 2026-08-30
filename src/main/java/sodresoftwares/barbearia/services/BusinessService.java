@@ -29,7 +29,7 @@ public class BusinessService {
 
     public BusinessResponseDTO getMyBusinessProfile(String userId) {
 
-        Business business = businessRepository.findByUserId(userId)
+        Business business = businessRepository.findByUserIdWithUser(userId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "BUSINESS_NOT_FOUND",
@@ -79,7 +79,7 @@ public class BusinessService {
 
     @Transactional
     public BusinessResponseDTO updateBusinessProfile(String userId, UpdateBusinessDTO dto) {
-        Business business = businessRepository.findByUserId(userId)
+        Business business = businessRepository.findByUserIdWithUser(userId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "BUSINESS_NOT_FOUND",
