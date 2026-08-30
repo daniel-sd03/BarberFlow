@@ -11,7 +11,7 @@ public interface BusinessRepository extends JpaRepository<Business, String> {
     @Query("SELECT b FROM Business b " +
             "JOIN FETCH b.user " +
             "WHERE b.user.id = :userId")
-    Optional<Business> findByUserId(@Param("userId") String userId);
+    Optional<Business> findByUserIdWithUser(@Param("userId") String userId);
 
     boolean existsByUserId(String userId);
 }

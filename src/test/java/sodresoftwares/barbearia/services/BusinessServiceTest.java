@@ -76,7 +76,7 @@ class BusinessServiceTest {
     @DisplayName("Should return business profile including user data when it exists")
     void testGetMyBusinessProfile_Success() {
         // Arrange
-        when(businessRepository.findByUserId(USER_ID)).thenReturn(Optional.of(testBusiness));
+        when(businessRepository.findByUserIdWithUser(USER_ID)).thenReturn(Optional.of(testBusiness));
 
         // Act
         BusinessResponseDTO result = businessService.getMyBusinessProfile(USER_ID);
@@ -90,14 +90,14 @@ class BusinessServiceTest {
         assertThat(result.user().id()).isEqualTo(USER_ID);
         assertThat(result.user().name()).isEqualTo("Barbeiro Zé");
 
-        verify(businessRepository).findByUserId(USER_ID);
+        verify(businessRepository).findByUserIdWithUser(USER_ID);
     }
 
     @Test
     @DisplayName("Should throw not found exception when business profile does not exist on get")
     void testGetMyBusinessProfile_NotFound() {
         // Arrange
-        when(businessRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(businessRepository.findByUserIdWithUser(USER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> businessService.getMyBusinessProfile(USER_ID))
@@ -178,7 +178,7 @@ class BusinessServiceTest {
         // Arrange
         UpdateBusinessDTO updateDTO = new UpdateBusinessDTO("New Business Name");
 
-        when(businessRepository.findByUserId(USER_ID)).thenReturn(Optional.of(testBusiness));
+        when(businessRepository.findByUserIdWithUser(USER_ID)).thenReturn(Optional.of(testBusiness));
         when(businessRepository.save(any(Business.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
@@ -197,7 +197,7 @@ class BusinessServiceTest {
         // Arrange
         UpdateBusinessDTO updateDTO = new UpdateBusinessDTO("   ");
 
-        when(businessRepository.findByUserId(USER_ID)).thenReturn(Optional.of(testBusiness));
+        when(businessRepository.findByUserIdWithUser(USER_ID)).thenReturn(Optional.of(testBusiness));
         when(businessRepository.save(any(Business.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
@@ -215,7 +215,7 @@ class BusinessServiceTest {
     void testUpdateBusinessProfile_BusinessNotFound() {
         // Arrange
         UpdateBusinessDTO updateDTO = new UpdateBusinessDTO("New Business Name");
-        when(businessRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(businessRepository.findByUserIdWithUser(USER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> businessService.updateBusinessProfile(USER_ID, updateDTO))
