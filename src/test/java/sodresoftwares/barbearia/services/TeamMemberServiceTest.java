@@ -65,7 +65,7 @@ class TeamMemberServiceTest {
     void quickCreateMember_Success() {
         QuickCreateMemberDTO dto = new QuickCreateMemberDTO("Novo Barbeiro");
 
-        when(teamMemberRepository.findByUserId("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
 
         teamMemberService.quickCreateMember("logged-owner-id", dto);
 
@@ -86,7 +86,7 @@ class TeamMemberServiceTest {
     void quickCreateMember_UserNotFound() {
         QuickCreateMemberDTO dto = new QuickCreateMemberDTO("Novo Barbeiro");
 
-        when(teamMemberRepository.findByUserId("unknown-id")).thenReturn(Optional.empty());
+        when(teamMemberRepository.findByUserIdWithBusiness("unknown-id")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> teamMemberService.quickCreateMember("unknown-id", dto))
                 .isInstanceOf(AppException.class)
@@ -102,7 +102,7 @@ class TeamMemberServiceTest {
         QuickCreateMemberDTO dto = new QuickCreateMemberDTO("Novo Barbeiro");
 
         ownerMember.setRole(TeamRole.STAFF);
-        when(teamMemberRepository.findByUserId("logged-staff-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness("logged-staff-id")).thenReturn(Optional.of(ownerMember));
 
         assertThatThrownBy(() -> teamMemberService.quickCreateMember("logged-staff-id", dto))
                 .isInstanceOf(AppException.class)
@@ -117,7 +117,7 @@ class TeamMemberServiceTest {
     @Test
     @DisplayName("Should deactivate member successfully when requested by owner")
     void removeMember_Success() {
-        when(teamMemberRepository.findByUserId("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamMemberRepository.findById("staff-member-id")).thenReturn(Optional.of(staffMember));
 
         teamMemberService.removeMember("logged-owner-id", "staff-member-id");
@@ -129,7 +129,7 @@ class TeamMemberServiceTest {
     @Test
     @DisplayName("Should throw exception when trying to remove a non-existent member")
     void removeMember_MemberNotFound() {
-        when(teamMemberRepository.findByUserId("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamMemberRepository.findById("unknown-member-id")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> teamMemberService.removeMember("logged-owner-id", "unknown-member-id"))
@@ -146,7 +146,7 @@ class TeamMemberServiceTest {
         Business otherBusiness = Business.builder().id("other-biz-id").name("Outra Barbearia").build();
         staffMember.setBusiness(otherBusiness);
 
-        when(teamMemberRepository.findByUserId("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamMemberRepository.findById("staff-member-id")).thenReturn(Optional.of(staffMember));
 
         assertThatThrownBy(() -> teamMemberService.removeMember("logged-owner-id", "staff-member-id"))
@@ -160,7 +160,7 @@ class TeamMemberServiceTest {
     @Test
     @DisplayName("Should throw exception when owner tries to remove themselves")
     void removeMember_CannotRemoveOwner() {
-        when(teamMemberRepository.findByUserId("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamMemberRepository.findById("owner-member-id")).thenReturn(Optional.of(ownerMember));
 
         assertThatThrownBy(() -> teamMemberService.removeMember("logged-owner-id", "owner-member-id"))
