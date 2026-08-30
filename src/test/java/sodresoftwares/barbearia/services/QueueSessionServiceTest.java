@@ -102,7 +102,7 @@ class QueueSessionServiceTest {
     @Test
     @DisplayName("Should create queue session and generate prefix based on business name")
     void testCreateQueueSession_Success_PrefixGeneration() {
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
         when(queueSessionRepository.existsByBusinessId(business.getId())).thenReturn(false);
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
         when(queueSessionRepository.save(any(QueueSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -119,7 +119,7 @@ class QueueSessionServiceTest {
     @Test
     @DisplayName("Should throw conflict exception when business already has a queue")
     void testCreateQueueSession_AlreadyExists() {
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
         when(queueSessionRepository.existsByBusinessId(business.getId())).thenReturn(true);
 
         assertThatThrownBy(() -> queueSessionService.createQueueSession(PROF_USER_ID))
@@ -133,7 +133,7 @@ class QueueSessionServiceTest {
     @Test
     @DisplayName("Should throw exception when user is not associated with any team")
     void testCreateQueueSession_TeamMemberNotFound() {
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.empty());
+        when(teamMemberRepository.findByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> queueSessionService.createQueueSession(PROF_USER_ID))
                 .isInstanceOf(AppException.class)
@@ -147,7 +147,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should generate a new ticket code if a collision is detected during creation")
     void testCreateQueueSession_CollisionLoop() {
         // Arrange
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
         when(queueSessionRepository.existsByBusinessId(business.getId())).thenReturn(false);
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(true, false);
         when(queueSessionRepository.save(any(QueueSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -159,13 +159,32 @@ class QueueSessionServiceTest {
         verify(queueSessionRepository, times(2)).existsByTicketCode(anyString());
     }
 
+    @Test
+    @DisplayName("Should throw Forbidden (403) when STAFF tries to create a queue session")
+    void testCreateQueueSession_ForbiddenNotOwner() {
+        // Arrange - Setup a staff member
+        TeamMember staffMember = TeamMember.builder()
+                .business(business)
+                .role(TeamRole.STAFF)
+                .build();
+
+        when(teamMemberRepository.findByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(staffMember));
+
+        // Act & Assert
+        assertThatThrownBy(() -> queueSessionService.createQueueSession(PROF_USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Only the business owner can perform this action.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        verify(queueSessionRepository, never()).save(any());
+    }
+
     // ====================  UPDATE QUEUE STATUS TESTS ====================
 
     @Test
     @DisplayName("Should update an existing queue session successfully when user is OWNER")
     void testUpdateQueueStatus_Success() {
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
-        when(queueSessionRepository.findByBusinessId(business.getId())).thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.findByOwnerUserId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
         when(queueSessionRepository.save(any(QueueSession.class))).thenReturn(existingSession);
 
         QueueSessionBusinessResponseDTO result = queueSessionService.updateQueueStatus(PROF_USER_ID, true);
@@ -177,48 +196,28 @@ class QueueSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Should throw Forbidden (403) when STAFF tries to update queue status")
-    void testUpdateQueueStatus_ForbiddenNotOwner() {
-        // Arrange - Setup a staff member
-        TeamMember staffMember = TeamMember.builder()
-                .business(business)
-                .role(TeamRole.STAFF)
-                .build();
-
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(staffMember));
-
-        // Act & Assert
-        assertThatThrownBy(() -> queueSessionService.updateQueueStatus(PROF_USER_ID, true))
-                .isInstanceOf(AppException.class)
-                .hasMessage("Only the business owner can perform this action.")
-                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
-
-        verify(queueSessionRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Should throw exception when updating status but session does not exist")
+    @DisplayName("Should throw exception when updating status and session does not exist or user is not the owner")
     void testUpdateQueueStatus_SessionNotFound() {
         // Arrange
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
-        when(queueSessionRepository.findByBusinessId(business.getId())).thenReturn(Optional.empty());
+        when(queueSessionRepository.findByOwnerUserId(PROF_USER_ID))
+                .thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> queueSessionService.updateQueueStatus(PROF_USER_ID, true))
                 .isInstanceOf(AppException.class)
-                .hasMessage("Queue not set up yet.")
+                .hasMessage("Queue not found or you are not the owner.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
         verify(queueSessionRepository, never()).save(any());
     }
+
     // ==================== UPDATE SESSION SETTINGS TESTS ====================
 
     @Test
     @DisplayName("Should successfully update both prefix and tolerance")
     void testUpdateSessionSettings_UpdateBoth() {
         UpdateQueueSessionDTO dto = new UpdateQueueSessionDTO("CORTE", 15);
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
-        when(queueSessionRepository.findByBusinessId(business.getId())).thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.findByOwnerUserId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
 
         QueueSessionBusinessResponseDTO result = queueSessionService.updateSessionSettings(PROF_USER_ID, dto);
@@ -235,8 +234,7 @@ class QueueSessionServiceTest {
         UpdateQueueSessionDTO dto = new UpdateQueueSessionDTO(null, 20);
         String oldTicketCode = existingSession.getTicketCode();
 
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
-        when(queueSessionRepository.findByBusinessId(business.getId())).thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.findByOwnerUserId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
 
         // Act
         QueueSessionBusinessResponseDTO result = queueSessionService.updateSessionSettings(PROF_USER_ID, dto);
@@ -258,8 +256,7 @@ class QueueSessionServiceTest {
         UpdateQueueSessionDTO dto = new UpdateQueueSessionDTO(newPrefix, null);
         Integer oldTolerance = existingSession.getToleranceMinutes();
 
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
-        when(queueSessionRepository.findByBusinessId(business.getId())).thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.findByOwnerUserId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
 
         // Act
@@ -281,8 +278,7 @@ class QueueSessionServiceTest {
         // Arrange
         UpdateQueueSessionDTO dto = new UpdateQueueSessionDTO(null, null);
 
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
-        when(queueSessionRepository.findByBusinessId(business.getId())).thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.findByOwnerUserId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
 
         // Act
         QueueSessionBusinessResponseDTO result = queueSessionService.updateSessionSettings(PROF_USER_ID, dto);
@@ -299,8 +295,7 @@ class QueueSessionServiceTest {
         // Arrange
         UpdateQueueSessionDTO dto = new UpdateQueueSessionDTO("!!", null);
 
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
-        when(queueSessionRepository.findByBusinessId(business.getId())).thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.findByOwnerUserId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
 
         // Act & Assert
         assertThatThrownBy(() -> queueSessionService.updateSessionSettings(PROF_USER_ID, dto))
@@ -317,8 +312,7 @@ class QueueSessionServiceTest {
     @Test
     @DisplayName("Should successfully refresh ticket code and return new DTO")
     void testRefreshTicketCode_Success() {
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
-        when(queueSessionRepository.findByBusinessId(business.getId())).thenReturn(Optional.of(existingSession));
+        when(queueSessionRepository.findByOwnerUserId(PROF_USER_ID)).thenReturn(Optional.of(existingSession));
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
         when(queueSessionRepository.save(any(QueueSession.class))).thenReturn(existingSession);
 
@@ -330,16 +324,16 @@ class QueueSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Should throw exception when trying to refresh code without an active session")
+    @DisplayName("Should throw exception when trying to refresh code and session does not exist or user is not the ownertuss")
     void testRefreshTicketCode_SessionNotFound() {
         // Arrange
-        when(teamMemberRepository.findByUserId(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
-        when(queueSessionRepository.findByBusinessId(business.getId())).thenReturn(Optional.empty());
+        when(queueSessionRepository.findByOwnerUserId(PROF_USER_ID))
+                .thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> queueSessionService.refreshTicketCode(PROF_USER_ID))
                 .isInstanceOf(AppException.class)
-                .hasMessage("Queue not found.")
+                .hasMessage("Queue not found or you are not the owner.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
         verify(queueSessionRepository, never()).existsByTicketCode(anyString());
