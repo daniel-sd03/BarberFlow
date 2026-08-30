@@ -14,8 +14,9 @@ import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class LgpdConsentService {
 
     private final LgpdConsentRepository lgpdConsentRepository;
