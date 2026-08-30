@@ -92,7 +92,7 @@ public class TeamMemberService {
     }
 
     private Business getBusinessForOwner(String loggedUserId) {
-        TeamMember member = teamMemberRepository.findByUserId(loggedUserId)
+        TeamMember member = teamMemberRepository.findByUserIdWithBusiness(loggedUserId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "TEAM_MEMBER_NOT_FOUND",
