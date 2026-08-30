@@ -166,7 +166,7 @@ class UserServiceTest {
         // Assert
         verify(userRepository).save(argThat(user ->
                 user.getLogin().equals(testUser.getLogin()) &&
-                        user.getRole().equals(UserRole.PROFESSIONAL) // A diferença crucial aqui!
+                        user.getRole().equals(UserRole.PROFESSIONAL)
         ));
         verify(lgpdConsentService).registerConsentForNewUser(testUser, request);
     }
@@ -184,6 +184,66 @@ class UserServiceTest {
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
 
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    // ==================== UPGRADE TO PROFESSIONAL TESTS ====================
+
+    @Test
+    @DisplayName("Should successfully upgrade a USER to PROFESSIONAL")
+    void upgradeToProfessional_Success() {
+        // Arrange
+        User normalUser = User.builder()
+                .id("user-123")
+                .role(UserRole.USER)
+                .build();
+
+        when(userRepository.findById("user-123")).thenReturn(Optional.of(normalUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        UserResponseDTO result = userService.upgradeToProfessional("user-123");
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.role()).isEqualTo(UserRole.PROFESSIONAL.name());
+        assertThat(normalUser.getRole()).isEqualTo(UserRole.PROFESSIONAL);
+
+        verify(userRepository).save(normalUser);
+    }
+
+    @Test
+    @DisplayName("Should throw CONFLICT when user is already a PROFESSIONAL")
+    void upgradeToProfessional_AlreadyProfessional() {
+        // Arrange
+        User professionalUser = User.builder()
+                .id("user-123")
+                .role(UserRole.PROFESSIONAL)
+                .build();
+
+        when(userRepository.findById("user-123")).thenReturn(Optional.of(professionalUser));
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.upgradeToProfessional("user-123"))
+                .isInstanceOf(AppException.class)
+                .hasMessage("This account is already a professional account.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw NOT FOUND when user does not exist on upgrade")
+    void upgradeToProfessional_UserNotFound() {
+        // Arrange
+        when(userRepository.findById("user-123")).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.upgradeToProfessional("user-123"))
+                .isInstanceOf(AppException.class)
+                .hasMessage("User not found.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        verify(userRepository, never()).save(any());
     }
 
     // ==================== UPDATE USER PROFILE TESTS ====================

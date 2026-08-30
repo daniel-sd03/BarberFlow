@@ -32,6 +32,7 @@ import sodresoftwares.barbearia.services.UserService;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -188,6 +189,37 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(userService);
+    }
+
+    // ==================== UPGRADE ROLE TESTS ====================
+
+    @Test
+    @DisplayName("Should return 200 OK when user successfully upgrades to Professional")
+    void upgradeToProfessional_Success() throws Exception {
+        // Arrange
+        User loggedInUser = User.builder()
+                .id("user-123")
+                .role(UserRole.USER)
+                .build();
+
+        UserResponseDTO mockResponse = new UserResponseDTO(
+                "user-123",
+                "João Barbeiro",
+                "joao@test.com",
+                "11999999999",
+                UserRole.PROFESSIONAL.name()
+        );
+
+        when(userService.upgradeToProfessional(any())).thenReturn(mockResponse);
+
+        // Act & Assert
+        mockMvc.perform(patch("/users/me/upgrade-role")
+                        .with(user(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("user-123"))
+                .andExpect(jsonPath("$.role").value("PROFESSIONAL"));
+
+        verify(userService).upgradeToProfessional(any());
     }
 
     // ==================== PATCH UPDATE USER PROFILE TESTS ====================
