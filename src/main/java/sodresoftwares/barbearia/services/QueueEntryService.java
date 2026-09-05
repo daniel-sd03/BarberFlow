@@ -176,6 +176,10 @@ public class QueueEntryService {
         queueCacheService.evictSessionList(sessionId);
         queueNotificationService.notifyQueueUpdate(sessionId);
 
+        if (savedEntry.getUser() != null) {
+            pushDispatcher.notifyReallocation(savedEntry.getUser().getId());
+        }
+
         activeEntries.sort(java.util.Comparator.comparing(QueueEntry::getJoinedAt));
 
         return queueMapper.toSingleDto(savedEntry, activeEntries);
@@ -239,6 +243,12 @@ public class QueueEntryService {
 
         queueCacheService.evictSessionList(entry.getQueueSession().getId());
         queueNotificationService.notifyQueueUpdate(entry.getQueueSession().getId());
+
+        boolean isTheClient = entry.getUser() != null && entry.getUser().getId().equals(loggedUserId);
+
+        if (!isTheClient && entry.getUser() != null) {
+            pushDispatcher.notifyCancellation(entry.getUser().getId());
+        }
     }
 
     // ==========================================
