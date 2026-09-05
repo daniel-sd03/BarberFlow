@@ -499,6 +499,7 @@ class QueueEntryServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.id()).isEqualTo(ENTRY_ID);
         assertThat(result.status()).isEqualTo(QueueEntryStatus.WAITING);
+        verify(pushDispatcher).notifyReallocation(waitingEntry.getUser().getId());
     }
 
     @Test
@@ -604,6 +605,7 @@ class QueueEntryServiceTest {
         assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.CANCELLED);
         verify(queueCacheService).evictSessionList(SESSION_ID);
         verify(queueEntryRepository).save(waitingEntry);
+        verify(pushDispatcher, never()).notifyCancellation(anyString());
     }
 
     @Test
@@ -621,6 +623,7 @@ class QueueEntryServiceTest {
         assertThat(waitingEntry.getStatus()).isEqualTo(QueueEntryStatus.CANCELLED);
         verify(queueCacheService).evictSessionList(SESSION_ID);
         verify(queueEntryRepository).save(waitingEntry);
+        verify(pushDispatcher).notifyCancellation(waitingEntry.getUser().getId());
     }
 
     @Test

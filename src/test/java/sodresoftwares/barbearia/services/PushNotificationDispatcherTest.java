@@ -55,8 +55,8 @@ class PushNotificationDispatcherTest {
         // Arrange
         when(pushRepository.findAllByUserId(USER_ID)).thenReturn(List.of(subscription1));
 
-        String expectedTitle = "É a sua vez! ✂️";
-        String expectedMessage = "Pode ir para a cadeira, o profissional Zé está te aguardando.";
+        String expectedTitle = "É a sua vez! 🎉";
+        String expectedMessage = "Chegou a sua vez na fila! Dirija-se ao local de atendimento (Zé).";
         String expectedJson = """
                 {
                     "title": "%s",
@@ -106,5 +106,53 @@ class PushNotificationDispatcherTest {
         // Assert
         verify(webPushService).sendPushNotification("endpoint-1", "p256dh-1", "auth-1", expectedJson);
         verify(webPushService).sendPushNotification("endpoint-2", "p256dh-2", "auth-2", expectedJson);
+    }
+
+    // ==================== NOTIFY CANCELLATION ====================
+
+    @Test
+    @DisplayName("Should format cancellation message and delegate to notifyUser")
+    void testNotifyCancellation() {
+        // Arrange
+        when(pushRepository.findAllByUserId(USER_ID)).thenReturn(List.of(subscription1));
+
+        String expectedTitle = "Atendimento cancelado ❌";
+        String expectedMessage = "Sua posição na fila foi cancelada. Se precisar, você pode entrar na fila novamente pelo app.";
+        String expectedJson = """
+                {
+                    "title": "%s",
+                    "body": "%s"
+                }
+                """.formatted(expectedTitle, expectedMessage);
+
+        // Act
+        dispatcher.notifyCancellation(USER_ID);
+
+        // Assert
+        verify(webPushService).sendPushNotification("endpoint-1", "p256dh-1", "auth-1", expectedJson);
+    }
+
+    // ==================== NOTIFY REALLOCATION ====================
+
+    @Test
+    @DisplayName("Should format reallocation message and delegate to notifyUser")
+    void testNotifyReallocation() {
+        // Arrange
+        when(pushRepository.findAllByUserId(USER_ID)).thenReturn(List.of(subscription1));
+
+        String expectedTitle = "Posição atualizada 🔄";
+        String expectedMessage = "Sua posição na fila precisou ser realocada. Acompanhe pelo aplicativo para ver quando será sua vez!";
+        String expectedJson = """
+                {
+                    "title": "%s",
+                    "body": "%s"
+                }
+                """.formatted(expectedTitle, expectedMessage);
+
+        // Act
+        dispatcher.notifyReallocation(USER_ID);
+
+        // Assert
+        verify(webPushService).sendPushNotification("endpoint-1", "p256dh-1", "auth-1", expectedJson);
     }
 }

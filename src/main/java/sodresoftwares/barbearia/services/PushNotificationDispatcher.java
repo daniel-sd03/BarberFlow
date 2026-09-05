@@ -19,9 +19,26 @@ public class PushNotificationDispatcher {
     private final UserPushSubscriptionRepository pushRepository;
     private final WebPushService webPushService;
 
-    public void notifyClientTurn(String userId, String barberName) {
-        String title = "É a sua vez! ✂️";
-        String message = "Pode ir para a cadeira, o profissional " + barberName + " está te aguardando.";
+    public void notifyClientTurn(String userId, String attendantOrPlaceName) {
+        String title = "É a sua vez! 🎉";
+        String message = "Chegou a sua vez na fila! Dirija-se ao local de atendimento ("
+                + attendantOrPlaceName + ").";
+
+        notifyUser(userId, title, message);
+    }
+
+    public void notifyCancellation(String userId) {
+        String title = "Atendimento cancelado ❌";
+        String message = "Sua posição na fila foi cancelada. Se precisar, você pode" +
+                " entrar na fila novamente pelo app.";
+
+        notifyUser(userId, title, message);
+    }
+
+    public void notifyReallocation(String userId) {
+        String title = "Posição atualizada 🔄";
+        String message = "Sua posição na fila precisou ser realocada. Acompanhe" +
+                " pelo aplicativo para ver quando será sua vez!";
 
         notifyUser(userId, title, message);
     }
