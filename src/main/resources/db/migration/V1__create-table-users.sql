@@ -1,18 +1,19 @@
 CREATE TABLE users
 (
-    id         TEXT PRIMARY KEY UNIQUE NOT NULL,
-    login      TEXT UNIQUE             NOT NULL,
-    password   TEXT                    NOT NULL,
-    name       TEXT                    NOT NULL,
-    phone      TEXT,
-    role       TEXT                    NOT NULL,
-    google_id  TEXT UNIQUE,
-    is_active  BOOLEAN                 NOT NULL,
-    deleted_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ,
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255)
+    id                 TEXT PRIMARY KEY UNIQUE   NOT NULL,
+    login              TEXT UNIQUE               NOT NULL,
+    password           TEXT                      NOT NULL,
+    name               TEXT                      NOT NULL,
+    phone              TEXT,
+    role               TEXT                      NOT NULL,
+    google_id          TEXT UNIQUE,
+    is_active          BOOLEAN                   NOT NULL,
+    tutorial_completed BOOLEAN     DEFAULT FALSE NOT NULL,
+    deleted_at         TIMESTAMPTZ,
+    created_at         TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TIMESTAMPTZ,
+    created_by         VARCHAR(255),
+    updated_by         VARCHAR(255)
 );
 
 CREATE TABLE lgpd_consents

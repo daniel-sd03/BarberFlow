@@ -54,6 +54,10 @@ public class User implements UserDetails {
 	@Column(name = "is_active", nullable = false)
 	private Boolean isActive = true;
 
+	@Builder.Default
+	@Column(name = "tutorial_completed", nullable = false)
+	private Boolean tutorialCompleted = false;
+
 	@Column(name = "deleted_at")
 	private Instant deletedAt;
 

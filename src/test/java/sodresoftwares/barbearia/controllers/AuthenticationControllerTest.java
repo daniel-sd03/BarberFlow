@@ -98,7 +98,12 @@ class AuthenticationControllerTest {
         String VALID_ROLE = UserRole.USER.toString();
         String VALID_REFRESH_TOKEN = "refresh-token-example";
 
-        TokenResponseDTO mockResponse = new TokenResponseDTO(VALID_TOKEN, VALID_REFRESH_TOKEN, VALID_ROLE);
+        TokenResponseDTO mockResponse = new TokenResponseDTO(
+                VALID_TOKEN,
+                VALID_REFRESH_TOKEN,
+                VALID_ROLE,
+                false
+        );
 
         when(authService.login(any(AuthenticationDTO.class))).thenReturn(mockResponse);
 
@@ -109,7 +114,8 @@ class AuthenticationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token", is(VALID_TOKEN)))
                 .andExpect(jsonPath("$.refreshToken", is(VALID_REFRESH_TOKEN)))
-                .andExpect(jsonPath("$.role", is(VALID_ROLE)));
+                .andExpect(jsonPath("$.role", is(VALID_ROLE)))
+                .andExpect(jsonPath("$.tutorialCompleted", is(false)));
 
         verify(authService).login(any(AuthenticationDTO.class));
     }
@@ -234,7 +240,12 @@ class AuthenticationControllerTest {
         String VALID_ROLE = UserRole.USER.toString();
         String VALID_REFRESH_TOKEN = "refresh-token-example";
 
-        TokenResponseDTO mockResponse = new TokenResponseDTO(VALID_TOKEN, VALID_REFRESH_TOKEN, VALID_ROLE);
+        TokenResponseDTO mockResponse = new TokenResponseDTO(
+                VALID_TOKEN,
+                VALID_REFRESH_TOKEN,
+                VALID_ROLE,
+                false
+        );
 
         when(authService.reactivateAndLogin(any(AuthenticationDTO.class))).thenReturn(mockResponse);
 

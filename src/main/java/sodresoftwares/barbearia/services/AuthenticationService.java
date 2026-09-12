@@ -73,11 +73,14 @@ public class AuthenticationService {
             String token = tokenService.generateToken(loggedUser, lgpdLastAcceptedVersion);
             RefreshToken refreshToken = refreshTokenService.generateNewRefreshToken(loggedUser);
             String role = loggedUser.getRole().toString();
+            boolean tutorialCompleted = loggedUser.getTutorialCompleted();
 
             return new TokenResponseDTO(
                     token,
                     refreshToken.getToken(),
-                    role);
+                    role,
+                    tutorialCompleted
+            );
         } finally {
             MDC.remove("userId");
         }

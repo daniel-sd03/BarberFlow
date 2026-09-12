@@ -67,6 +67,12 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/me/tutorial")
+    public ResponseEntity<Void> completeTutorial(@AuthenticationPrincipal User loggedUser) {
+        userService.markTutorialAsCompleted(loggedUser.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteMyAccount(@AuthenticationPrincipal User loggedUser) {
         userService.deleteMyAccount(loggedUser.getId());

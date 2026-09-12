@@ -291,4 +291,20 @@ class UserControllerTest {
 
         verify(userService).deleteMyAccount(any());
     }
+
+    // ==================== PATCH TUTORIAL TESTS ====================
+
+    @Test
+    @DisplayName("PATCH /users/me/tutorial -> Should complete tutorial and return 204 No Content")
+    void completeTutorial_Success() throws Exception {
+        // Arrange
+        doNothing().when(userService).markTutorialAsCompleted(loggedInUser.getId());
+
+        // Act & Assert
+        mockMvc.perform(patch("/users/me/tutorial")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+
+        verify(userService).markTutorialAsCompleted(any());
+    }
 }
