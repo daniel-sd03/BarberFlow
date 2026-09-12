@@ -453,4 +453,39 @@ class UserServiceTest {
 
         verify(userRepository, never()).save(any());
     }
+
+    // ==================== TUTORIAL TESTS ====================
+
+    @Test
+    @DisplayName("Should mark tutorial as completed successfully")
+    void markTutorialAsCompleted_Success() {
+        // Arrange
+        String loggedUserId = testUser.getId();
+        testUser.setTutorialCompleted(false);
+
+        when(userRepository.findById(loggedUserId)).thenReturn(Optional.of(testUser));
+
+        // Act
+        userService.markTutorialAsCompleted(loggedUserId);
+
+        // Assert
+        assertThat(testUser.getTutorialCompleted()).isTrue();
+        verify(userRepository).findById(loggedUserId);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when user is not found while completing tutorial")
+    void markTutorialAsCompleted_UserNotFound() {
+        // Arrange
+        String invalidUserId = "invalid-id";
+        when(userRepository.findById(invalidUserId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.markTutorialAsCompleted(invalidUserId))
+                .isInstanceOf(AppException.class)
+                .hasMessage("User not found.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        verify(userRepository).findById(invalidUserId);
+    }
 }

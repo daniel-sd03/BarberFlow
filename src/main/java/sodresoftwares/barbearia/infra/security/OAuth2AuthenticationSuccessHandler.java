@@ -125,6 +125,15 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         }
         response.addCookie(roleCookie);
 
+        Cookie tutorialCookie = new Cookie("TEMP_TUTORIAL_COMPLETED", String.valueOf(finalUser.getTutorialCompleted()));
+        tutorialCookie.setPath("/");
+        tutorialCookie.setMaxAge(60);
+        tutorialCookie.setSecure(cookieSecure);
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            tutorialCookie.setDomain(cookieDomain);
+        }
+        response.addCookie(tutorialCookie);
+
         log.info("OAuth2 authentication completed successfully for user {}", finalUser.getId());
         getRedirectStrategy().sendRedirect(request, response, frontendUrl);
     }

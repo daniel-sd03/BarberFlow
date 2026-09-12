@@ -101,6 +101,7 @@ class AuthenticationServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.token()).isEqualTo("valid-jwt-token");
         assertThat(result.role()).isEqualTo(UserRole.USER.toString());
+        assertThat(result.tutorialCompleted()).isFalse();
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(lgpdConsentRepository).findFirstByUserIdOrderByCreatedAtDesc(testUser.getId());
@@ -161,6 +162,7 @@ class AuthenticationServiceTest {
         TokenResponseDTO result = authService.reactivateAndLogin(authDTO);
 
         assertThat(result.token()).isEqualTo("valid-jwt-token");
+        assertThat(result.tutorialCompleted()).isFalse();
         verify(userService).reactivateAccount(testUser.getId());
     }
 }

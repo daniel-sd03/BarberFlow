@@ -174,6 +174,13 @@ public class UserService {
         log.info("Account reactivated successfully.");
     }
 
+    @Transactional
+    public void markTutorialAsCompleted(String loggedUserId) {
+        User user = getUserById(loggedUserId);
+
+        user.setTutorialCompleted(true);
+    }
+
     //--------- HELPER METHODS ------
 
     private User getUserById(String userId) {

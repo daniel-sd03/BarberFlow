@@ -64,7 +64,12 @@ class LgpdConsentControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockResponse = new TokenResponseDTO(newToken, newRefreshToken, "USER");
+        mockResponse = new TokenResponseDTO(
+                newToken,
+                newRefreshToken,
+                "USER",
+                false
+        );
     }
 
     @Test
@@ -79,7 +84,8 @@ class LgpdConsentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value(newToken))
                 .andExpect(jsonPath("$.refreshToken").value(newRefreshToken))
-                .andExpect(jsonPath("$.role").value("USER"));
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.tutorialCompleted").value(false));;
 
         verify(lgpdConsentService).acceptCurrentTerms(any(User.class), any());
     }

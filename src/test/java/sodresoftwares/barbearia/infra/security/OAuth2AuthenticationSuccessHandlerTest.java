@@ -171,10 +171,10 @@ class OAuth2AuthenticationSuccessHandlerTest {
     private void assertCookieAndRedirect() throws Exception {
         ArgumentCaptor<Cookie> cookieCaptor = ArgumentCaptor.forClass(Cookie.class);
 
-        verify(response, times(3)).addCookie(cookieCaptor.capture());
+        verify(response, times(4)).addCookie(cookieCaptor.capture());
 
         List<Cookie> capturedCookies = cookieCaptor.getAllValues();
-        assertEquals(3, capturedCookies.size());
+        assertEquals(4, capturedCookies.size());
 
         Cookie tokenCookie = capturedCookies.stream()
                 .filter(c -> "TEMP_AUTH_TOKEN".equals(c.getName()))
@@ -202,6 +202,15 @@ class OAuth2AuthenticationSuccessHandlerTest {
         assertEquals(UserRole.USER.name(), roleCookie.getValue());
         assertEquals("/", roleCookie.getPath());
         assertEquals(60, roleCookie.getMaxAge());
+
+        Cookie tutorialCookie = capturedCookies.stream()
+                .filter(c -> "TEMP_TUTORIAL_COMPLETED".equals(c.getName()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("TEMP_TUTORIAL_COMPLETED cookie not found"));
+
+        assertEquals("false", tutorialCookie.getValue());
+        assertEquals("/", tutorialCookie.getPath());
+        assertEquals(60, tutorialCookie.getMaxAge());
 
         verify(response).sendRedirect("http://localhost:5173/oauth/callback");
     }
