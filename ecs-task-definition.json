@@ -2,7 +2,7 @@
   "family": "clickfila-production-task",
   "requiresCompatibilities": ["EC2"],
   "networkMode": "awsvpc",
-  "cpu": "2048",
+  "cpu": "1536",
   "memory": "768",
   "pidMode": "host",
   "containerDefinitions": [
