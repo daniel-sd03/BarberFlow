@@ -1,0 +1,107 @@
+{
+  "family": "clickfila-production-task",
+  "requiresCompatibilities": ["EC2"],
+  "networkMode": "awsvpc",
+  "cpu": "2048",
+  "memory": "768",
+  "pidMode": "host",
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "clickfila/clickfila-api:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "dependsOn": [
+        {
+          "containerName": "redis",
+          "condition": "START"
+        }
+      ],
+      "environment": [
+        { "name": "SPRING_DATA_REDIS_HOST", "value": "localhost" },
+        { "name": "SPRING_DATA_REDIS_PORT", "value": "6379" },
+        { "name": "SPRING_CACHE_TYPE", "value": "redis" },
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "prod" },
+        { "name": "SPRING_DOCKER_COMPOSE_ENABLED", "value": "false" },
+        { "name": "SPRINGDOC_SWAGGER_UI_ENABLED", "value": "false" },
+        { "name": "SPRINGDOC_API_DOCS_ENABLED", "value": "false" }
+      ],
+      "logConfiguration": {
+        "logDriver": "json-file",
+        "options": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+    },
+    {
+      "name": "redis",
+      "image": "redis:7",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 6379,
+          "hostPort": 6379,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "json-file",
+        "options": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+    },
+    {
+      "name": "cloudflared",
+      "image": "cloudflare/cloudflared:latest",
+      "essential": true,
+      "command": ["tunnel", "--no-autoupdate", "run"],
+      "environment": [
+        { "name": "TUNNEL_TRANSPORT_PROTOCOL", "value": "http2" }
+      ],
+      "logConfiguration": {
+        "logDriver": "json-file",
+        "options": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+    },
+    {
+      "name": "alloy",
+      "image": "grafana/alloy:latest",
+      "essential": false,
+      "command": ["run", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"],
+      "environment": [],
+      "mountPoints": [
+        { "sourceVolume": "alloy-config", "containerPath": "/etc/alloy/config.alloy", "readOnly": true },
+        { "sourceVolume": "proc", "containerPath": "/host/proc", "readOnly": true },
+        { "sourceVolume": "sys", "containerPath": "/host/sys", "readOnly": true },
+        { "sourceVolume": "rootfs", "containerPath": "/rootfs", "readOnly": true },
+        { "sourceVolume": "docker-sock", "containerPath": "/var/run/docker.sock", "readOnly": true }
+      ],
+      "logConfiguration": {
+        "logDriver": "json-file",
+        "options": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+    }
+  ],
+  "volumes": [
+    { "name": "alloy-config", "host": { "sourcePath": "/etc/alloy/config.alloy" } },
+    { "name": "proc", "host": { "sourcePath": "/proc" } },
+    { "name": "sys", "host": { "sourcePath": "/sys" } },
+    { "name": "rootfs", "host": { "sourcePath": "/" } },
+    { "name": "docker-sock", "host": { "sourcePath": "/var/run/docker.sock" } }
+  ]
+}
