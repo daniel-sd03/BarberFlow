@@ -1,4 +1,4 @@
-package sodresoftwares.barbearia.infra.security;
+package sodresoftwares.barbearia.infra.security.oauth2;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -11,13 +11,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import sodresoftwares.barbearia.infra.security.TokenService;
 import sodresoftwares.barbearia.model.RefreshToken;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.model.LgpdConsent;
 import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
-import sodresoftwares.barbearia.services.LgpdConsentService;
 import sodresoftwares.barbearia.services.RefreshTokenService;
 
 import java.io.IOException;
