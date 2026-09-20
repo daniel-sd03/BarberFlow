@@ -1,15 +1,17 @@
 {
   "family": "clickfila-production-task",
   "requiresCompatibilities": ["EC2"],
-  "networkMode": "awsvpc",
+  "networkMode": "bridge",
   "cpu": "1536",
   "memory": "768",
-  "pidMode": "host",
   "containerDefinitions": [
     {
       "name": "api",
       "image": "clickfila/clickfila-api:latest",
       "essential": true,
+      "links": [
+        "redis"
+      ],
       "portMappings": [
         {
           "containerPort": 8080,
@@ -24,7 +26,7 @@
         }
       ],
       "environment": [
-        { "name": "SPRING_DATA_REDIS_HOST", "value": "localhost" },
+        { "name": "SPRING_DATA_REDIS_HOST", "value": "redis" },
         { "name": "SPRING_DATA_REDIS_PORT", "value": "6379" },
         { "name": "SPRING_CACHE_TYPE", "value": "redis" },
         { "name": "SPRING_PROFILES_ACTIVE", "value": "prod" },
@@ -63,6 +65,9 @@
       "name": "cloudflared",
       "image": "cloudflare/cloudflared:latest",
       "essential": true,
+      "links": [
+        "api"
+      ],
       "command": ["tunnel", "--no-autoupdate", "run"],
       "environment": [
         { "name": "TUNNEL_TRANSPORT_PROTOCOL", "value": "http2" }
@@ -79,6 +84,9 @@
       "name": "alloy",
       "image": "grafana/alloy:latest",
       "essential": false,
+      "links": [
+        "api"
+      ],
       "command": ["run", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"],
       "environment": [],
       "mountPoints": [
