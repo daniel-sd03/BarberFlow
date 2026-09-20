@@ -14,13 +14,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.test.util.ReflectionTestUtils;
+import sodresoftwares.barbearia.infra.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import sodresoftwares.barbearia.model.LgpdConsent;
 import sodresoftwares.barbearia.model.RefreshToken;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.repositories.LgpdConsentRepository;
 import sodresoftwares.barbearia.repositories.UserRepository;
-import sodresoftwares.barbearia.services.LgpdConsentService;
 import sodresoftwares.barbearia.services.RefreshTokenService;
 
 import java.util.List;

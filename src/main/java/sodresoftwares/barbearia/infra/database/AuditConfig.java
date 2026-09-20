@@ -1,4 +1,4 @@
-package sodresoftwares.barbearia.infra.security;
+package sodresoftwares.barbearia.infra.database;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
