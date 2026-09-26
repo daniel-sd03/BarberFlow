@@ -94,7 +94,7 @@ class TeamInviteServiceTest {
     void sendInvite_Success() {
         CreateTeamInviteDTO dto = new CreateTeamInviteDTO("new@test.com");
 
-        when(teamMemberRepository.findByUserIdWithBusiness("owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamInviteRepository.existsByEmailAndBusinessIdAndStatus("new@test.com", "biz-id", InviteStatus.PENDING))
                 .thenReturn(false);
 
@@ -117,7 +117,7 @@ class TeamInviteServiceTest {
         ownerMember.setRole(TeamRole.STAFF); // Changing role to trigger error
         CreateTeamInviteDTO dto = new CreateTeamInviteDTO("new@test.com");
 
-        when(teamMemberRepository.findByUserIdWithBusiness("owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("owner-id")).thenReturn(Optional.of(ownerMember));
 
         assertThatThrownBy(() -> teamInviteService.sendInvite("owner-id", dto))
                 .isInstanceOf(AppException.class)
@@ -130,7 +130,7 @@ class TeamInviteServiceTest {
     void sendInvite_FailsWhenAlreadyInvited() {
         CreateTeamInviteDTO dto = new CreateTeamInviteDTO("new@test.com");
 
-        when(teamMemberRepository.findByUserIdWithBusiness("owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamInviteRepository.existsByEmailAndBusinessIdAndStatus("new@test.com", "biz-id", InviteStatus.PENDING))
                 .thenReturn(true); // Simulating existing invite
 
@@ -145,7 +145,7 @@ class TeamInviteServiceTest {
     @Test
     @DisplayName("Should accept invite and create a new TeamMember")
     void acceptInvite_Success() {
-        when(teamMemberRepository.existsByUserId("invited-id")).thenReturn(false);
+        when(teamMemberRepository.existsByUserIdAndIsActiveTrue("invited-id")).thenReturn(false);
         when(teamInviteRepository.findByIdWithBusiness("invite-id")).thenReturn(Optional.of(validInvite));
         when(userRepository.findById("invited-id")).thenReturn(Optional.of(invitedUser));
 
@@ -170,7 +170,7 @@ class TeamInviteServiceTest {
     @Test
     @DisplayName("Should throw exception if user is already in a team")
     void acceptInvite_FailsWhenAlreadyInTeam() {
-        when(teamMemberRepository.existsByUserId("invited-id")).thenReturn(true);
+        when(teamMemberRepository.existsByUserIdAndIsActiveTrue("invited-id")).thenReturn(true);
 
         assertThatThrownBy(() -> teamInviteService.acceptInvite("invite-id", "invited-id", "invited@test.com"))
                 .isInstanceOf(AppException.class)
@@ -183,7 +183,7 @@ class TeamInviteServiceTest {
     void acceptInvite_FailsWhenExpired() {
         validInvite.setExpiresAt(Instant.now().minus(1, ChronoUnit.DAYS)); // Expired yesterday
 
-        when(teamMemberRepository.existsByUserId("invited-id")).thenReturn(false);
+        when(teamMemberRepository.existsByUserIdAndIsActiveTrue("invited-id")).thenReturn(false);
         when(teamInviteRepository.findByIdWithBusiness("invite-id")).thenReturn(Optional.of(validInvite));
 
         assertThatThrownBy(() -> teamInviteService.acceptInvite("invite-id", "invited-id", "invited@test.com"))
@@ -199,7 +199,7 @@ class TeamInviteServiceTest {
     @Test
     @DisplayName("Should throw exception if email does not match")
     void acceptInvite_FailsWhenWrongEmail() {
-        when(teamMemberRepository.existsByUserId("invited-id")).thenReturn(false);
+        when(teamMemberRepository.existsByUserIdAndIsActiveTrue("invited-id")).thenReturn(false);
         when(teamInviteRepository.findByIdWithBusiness("invite-id")).thenReturn(Optional.of(validInvite));
 
         assertThatThrownBy(() -> teamInviteService.acceptInvite("invite-id", "invited-id", "HACKER@test.com"))

@@ -76,7 +76,7 @@ public class TeamInviteService {
     @Transactional
     public void acceptInvite(String inviteId, String loggedUserId, String loggedUserEmail) {
 
-        if (teamMemberRepository.existsByUserId(loggedUserId)) {
+        if (teamMemberRepository.existsByUserIdAndIsActiveTrue(loggedUserId)) {
             throw new AppException(
                     HttpStatus.CONFLICT,
                     "ALREADY_IN_TEAM",
@@ -95,15 +95,24 @@ public class TeamInviteService {
         invite.setStatus(InviteStatus.ACCEPTED);
         teamInviteRepository.save(invite);
 
-        TeamMember newMember = TeamMember.builder()
-                .business(invite.getBusiness())
-                .user(user)
-                .name(user.getName())
-                .role(invite.getRole())
-                .isActive(true)
-                .build();
+        TeamMember member = teamMemberRepository
+                .findByBusinessIdAndUserId(invite.getBusiness().getId(), loggedUserId)
+                .map(existingMember -> {
+                    existingMember.setName(user.getName());
+                    existingMember.setRole(invite.getRole());
+                    existingMember.setIsActive(true);
+                    return existingMember;
+                })
+                .orElseGet(() -> TeamMember.builder()
+                        .business(invite.getBusiness())
+                        .user(user)
+                        .name(user.getName())
+                        .role(invite.getRole())
+                        .isActive(true)
+                        .build());
 
-        teamMemberRepository.save(newMember);
+        teamMemberRepository.save(member);
+
         log.info("Team invite accepted.");
     }
 
@@ -120,7 +129,7 @@ public class TeamInviteService {
     // ==========================================
 
     private Business getBusinessForOwner(String loggedUserId) {
-        TeamMember member = teamMemberRepository.findByUserIdWithBusiness(loggedUserId)
+        TeamMember member = teamMemberRepository.findActiveByUserIdWithBusiness(loggedUserId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "TEAM_MEMBER_NOT_FOUND",
@@ -169,6 +178,14 @@ public class TeamInviteService {
                     HttpStatus.BAD_REQUEST,
                     "INVITE_EXPIRED",
                     "This invite has expired."
+            );
+        }
+
+        if (!invite.getBusiness().getIsActive()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "BUSINESS_INACTIVE",
+                    "Cannot process invite because the business is no longer active."
             );
         }
 
