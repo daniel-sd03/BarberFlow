@@ -42,6 +42,16 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, String> 
             "WHERE e.id = :id")
     Optional<QueueEntry> findByIdWithFullGraph(@Param("id") String id);
 
+    @Query("SELECT COUNT(qe) > 0 FROM QueueEntry qe " +
+            "WHERE qe.servedByMember.id = :memberId " +
+            "AND qe.status IN ('CALLED', 'IN_SERVICE')")
+    boolean hasActiveServiceByMemberId(@Param("memberId") String memberId);
+
+    @Query("SELECT COUNT(qe) > 0 FROM QueueEntry qe " +
+            "WHERE qe.queueSession.business.id = :businessId " +
+            "AND qe.status IN ('WAITING', 'CALLED', 'IN_SERVICE')")
+    boolean hasActiveEntriesByBusinessId(@Param("businessId") String businessId);
+
     boolean existsByUserIdAndStatusIn(String userId, List<QueueEntryStatus> statuses);
     Optional<QueueEntry> findByUserIdAndStatusIn(String userId, List<QueueEntryStatus> statuses);
     Optional<QueueEntry> findFirstByUserIdOrderByJoinedAtDesc(String userId);

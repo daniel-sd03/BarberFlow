@@ -307,4 +307,36 @@ class UserControllerTest {
 
         verify(userService).markTutorialAsCompleted(any());
     }
+
+    // ==================== DOWNGRADE ROLE TESTS ====================
+
+    @Test
+    @DisplayName("PATCH /users/me/downgrade-to-client -> Should return 200 OK when user successfully downgrades to Client")
+    void downgradeToClient_Success() throws Exception {
+        // Arrange
+        User professionalUser = User.builder()
+                .id("user-123")
+                .role(UserRole.PROFESSIONAL)
+                .build();
+
+        UserResponseDTO mockResponse = new UserResponseDTO(
+                "user-123",
+                "João Cliente",
+                "joao@test.com",
+                "11999999999",
+                UserRole.USER.name()
+        );
+
+        when(userService.downgradeToClient(any())).thenReturn(mockResponse);
+
+        // Act & Assert
+        mockMvc.perform(patch("/users/me/downgrade-to-client")
+                        .with(user(professionalUser))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("user-123"))
+                .andExpect(jsonPath("$.role").value("USER"));
+
+        verify(userService).downgradeToClient(any());
+    }
 }

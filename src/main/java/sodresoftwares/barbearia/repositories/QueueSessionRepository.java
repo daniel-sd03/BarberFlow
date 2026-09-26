@@ -32,6 +32,7 @@ public interface QueueSessionRepository extends JpaRepository<QueueSession, Stri
             "WHERE s.id = :id")
     Optional<QueueSession> findByIdWithBusinessAndUser(@Param("id") String id);
 
+    boolean existsByBusinessIdAndIsActiveTrue(String businessId);
     Optional<QueueSession> findByBusinessId(String businessId);
     boolean existsByTicketCode(String ticketCode);
     boolean existsByBusinessId(String businessId);

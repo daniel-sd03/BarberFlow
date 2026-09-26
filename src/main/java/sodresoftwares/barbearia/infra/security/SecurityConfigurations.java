@@ -58,11 +58,12 @@ public class SecurityConfigurations {
                                 // ==========================================
                                 // 2. PROFESSIONAL ONLY ENDPOINTS
                                 // ==========================================
-                                // Business Management (Antigo Professional)
+                                // Business Management
+                                .requestMatchers(HttpMethod.POST, "/businesses").hasRole("PROFESSIONAL")
                                 .requestMatchers(HttpMethod.GET, "/businesses/me").hasRole("PROFESSIONAL")
                                 .requestMatchers(HttpMethod.PATCH, "/businesses/me").hasRole("PROFESSIONAL")
 
-                                // Dashboard (Novo Padrão BFF)
+                                // Dashboard
                                 .requestMatchers(HttpMethod.GET, "/dashboard/professional").hasRole("PROFESSIONAL")
 
                                 // Queue Session Management
@@ -76,6 +77,9 @@ public class SecurityConfigurations {
                                 .requestMatchers(HttpMethod.PATCH, "/queue-entries/*/start").hasRole("PROFESSIONAL")
                                 .requestMatchers(HttpMethod.PATCH, "/queue-entries/*/finish").hasRole("PROFESSIONAL")
                                 .requestMatchers(HttpMethod.PATCH, "/queue-entries/*/requeue").hasRole("PROFESSIONAL")
+
+                                // User Role Management
+                                .requestMatchers(HttpMethod.PATCH, "/users/me/downgrade-to-client").hasRole("PROFESSIONAL")
 
                                 // ==========================================
                                 // 3. ANY OTHER REQUEST

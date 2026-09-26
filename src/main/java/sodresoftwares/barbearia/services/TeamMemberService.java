@@ -10,6 +10,7 @@ import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.Business;
 import sodresoftwares.barbearia.model.TeamMember;
 import sodresoftwares.barbearia.model.TeamRole;
+import sodresoftwares.barbearia.repositories.QueueEntryRepository;
 import sodresoftwares.barbearia.repositories.TeamMemberRepository;
 
 @Slf4j
@@ -19,6 +20,8 @@ import sodresoftwares.barbearia.repositories.TeamMemberRepository;
 public class TeamMemberService {
 
     private final TeamMemberRepository teamMemberRepository;
+    private final QueueEntryRepository queueEntryRepository;
+    private final BusinessService businessService;
 
     @Transactional
     public void quickCreateMember(String loggedUserId, QuickCreateMemberDTO dto) {
@@ -27,7 +30,7 @@ public class TeamMemberService {
 
         TeamMember teamMember = TeamMember.builder()
                 .business(business)
-                .name(dto.name())
+                .name(dto.name().trim())
                 .user(null)
                 .role(TeamRole.STAFF)
                 .isActive(true)
@@ -64,6 +67,14 @@ public class TeamMemberService {
             );
         }
 
+        if (queueEntryRepository.hasActiveServiceByMemberId(memberToRemove.getId())) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "MEMBER_IN_ACTIVE_SERVICE",
+                    "Cannot remove a member who is currently calling or serving a client."
+            );
+        }
+
         memberToRemove.setIsActive(false);
         teamMemberRepository.save(memberToRemove);
         log.info("Team member deactivated.");
@@ -71,7 +82,7 @@ public class TeamMemberService {
 
     @Transactional
     public void leaveTeam(String loggedUserId) {
-        TeamMember member = teamMemberRepository.findByUserId(loggedUserId)
+        TeamMember member = teamMemberRepository.findActiveByUserId(loggedUserId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "MEMBER_NOT_FOUND",
@@ -86,13 +97,40 @@ public class TeamMemberService {
             );
         }
 
+        if (queueEntryRepository.hasActiveServiceByMemberId(member.getId())) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "MEMBER_IN_ACTIVE_SERVICE",
+                    "Finish your current client service before leaving the team."
+            );
+        }
+
         member.setIsActive(false);
         teamMemberRepository.save(member);
         log.info("Team member left the business voluntarily.");
     }
 
+    @Transactional
+    public void deactivateProfessionalLinksForUser(String userId) {
+        teamMemberRepository.findActiveByUserIdWithBusiness(userId).ifPresent(member -> {
+            if (member.getRole() == TeamRole.OWNER) {
+                businessService.deactivateBusiness(member.getBusiness());
+            } else {
+                if (queueEntryRepository.hasActiveServiceByMemberId(member.getId())) {
+                    throw new AppException(
+                            HttpStatus.CONFLICT,
+                            "MEMBER_IN_ACTIVE_SERVICE",
+                            "Finish your current client service before changing to a client account."
+                    );
+                }
+                member.setIsActive(false);
+                teamMemberRepository.save(member);
+            }
+        });
+    }
+
     private Business getBusinessForOwner(String loggedUserId) {
-        TeamMember member = teamMemberRepository.findByUserIdWithBusiness(loggedUserId)
+        TeamMember member = teamMemberRepository.findActiveByUserIdWithBusiness(loggedUserId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "TEAM_MEMBER_NOT_FOUND",

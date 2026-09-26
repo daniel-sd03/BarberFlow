@@ -13,5 +13,13 @@ public interface BusinessRepository extends JpaRepository<Business, String> {
             "WHERE b.user.id = :userId")
     Optional<Business> findByUserIdWithUser(@Param("userId") String userId);
 
+    @Query("SELECT b FROM Business b " +
+            "JOIN FETCH b.user " +
+            "WHERE b.user.id = :userId " +
+            "AND b.isActive = true")
+    Optional<Business> findActiveByUserIdWithUser(@Param("userId") String userId);
+
+    Optional<Business> findByUserId(String userId);
+
     boolean existsByUserId(String userId);
 }

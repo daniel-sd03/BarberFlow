@@ -14,6 +14,7 @@ import sodresoftwares.barbearia.infra.exception.AppException;
 import sodresoftwares.barbearia.model.Business;
 import sodresoftwares.barbearia.model.TeamMember;
 import sodresoftwares.barbearia.model.TeamRole;
+import sodresoftwares.barbearia.repositories.QueueEntryRepository;
 import sodresoftwares.barbearia.repositories.TeamMemberRepository;
 
 import java.util.Optional;
@@ -29,6 +30,12 @@ class TeamMemberServiceTest {
 
     @Mock
     private TeamMemberRepository teamMemberRepository;
+
+    @Mock
+    private QueueEntryRepository queueEntryRepository;
+
+    @Mock
+    private BusinessService businessService;
 
     @InjectMocks
     private TeamMemberService teamMemberService;
@@ -65,7 +72,7 @@ class TeamMemberServiceTest {
     void quickCreateMember_Success() {
         QuickCreateMemberDTO dto = new QuickCreateMemberDTO("Novo Barbeiro");
 
-        when(teamMemberRepository.findByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
 
         teamMemberService.quickCreateMember("logged-owner-id", dto);
 
@@ -86,7 +93,7 @@ class TeamMemberServiceTest {
     void quickCreateMember_UserNotFound() {
         QuickCreateMemberDTO dto = new QuickCreateMemberDTO("Novo Barbeiro");
 
-        when(teamMemberRepository.findByUserIdWithBusiness("unknown-id")).thenReturn(Optional.empty());
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("unknown-id")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> teamMemberService.quickCreateMember("unknown-id", dto))
                 .isInstanceOf(AppException.class)
@@ -102,7 +109,7 @@ class TeamMemberServiceTest {
         QuickCreateMemberDTO dto = new QuickCreateMemberDTO("Novo Barbeiro");
 
         ownerMember.setRole(TeamRole.STAFF);
-        when(teamMemberRepository.findByUserIdWithBusiness("logged-staff-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("logged-staff-id")).thenReturn(Optional.of(ownerMember));
 
         assertThatThrownBy(() -> teamMemberService.quickCreateMember("logged-staff-id", dto))
                 .isInstanceOf(AppException.class)
@@ -117,7 +124,7 @@ class TeamMemberServiceTest {
     @Test
     @DisplayName("Should deactivate member successfully when requested by owner")
     void removeMember_Success() {
-        when(teamMemberRepository.findByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamMemberRepository.findById("staff-member-id")).thenReturn(Optional.of(staffMember));
 
         teamMemberService.removeMember("logged-owner-id", "staff-member-id");
@@ -129,7 +136,7 @@ class TeamMemberServiceTest {
     @Test
     @DisplayName("Should throw exception when trying to remove a non-existent member")
     void removeMember_MemberNotFound() {
-        when(teamMemberRepository.findByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamMemberRepository.findById("unknown-member-id")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> teamMemberService.removeMember("logged-owner-id", "unknown-member-id"))
@@ -146,7 +153,7 @@ class TeamMemberServiceTest {
         Business otherBusiness = Business.builder().id("other-biz-id").name("Outra Barbearia").build();
         staffMember.setBusiness(otherBusiness);
 
-        when(teamMemberRepository.findByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamMemberRepository.findById("staff-member-id")).thenReturn(Optional.of(staffMember));
 
         assertThatThrownBy(() -> teamMemberService.removeMember("logged-owner-id", "staff-member-id"))
@@ -160,7 +167,7 @@ class TeamMemberServiceTest {
     @Test
     @DisplayName("Should throw exception when owner tries to remove themselves")
     void removeMember_CannotRemoveOwner() {
-        when(teamMemberRepository.findByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
         when(teamMemberRepository.findById("owner-member-id")).thenReturn(Optional.of(ownerMember));
 
         assertThatThrownBy(() -> teamMemberService.removeMember("logged-owner-id", "owner-member-id"))
@@ -172,13 +179,28 @@ class TeamMemberServiceTest {
         verify(teamMemberRepository, never()).save(any());
     }
 
+    @Test
+    @DisplayName("Should throw CONFLICT when trying to remove a member currently serving a client")
+    void removeMember_MemberInActiveService() {
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findById("staff-member-id")).thenReturn(Optional.of(staffMember));
+        when(queueEntryRepository.hasActiveServiceByMemberId("staff-member-id")).thenReturn(true);
+
+        assertThatThrownBy(() -> teamMemberService.removeMember("logged-owner-id", "staff-member-id"))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Cannot remove a member who is currently calling or serving a client.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+
+        verify(teamMemberRepository, never()).save(any());
+    }
+
     // ==================== LEAVE TEAM ====================
 
     @Test
     @DisplayName("Should set isActive to false when a STAFF member leaves the team voluntarily")
     void leaveTeam_Success() {
         // Arrange
-        when(teamMemberRepository.findByUserId("logged-staff-id")).thenReturn(Optional.of(staffMember));
+        when(teamMemberRepository.findActiveByUserId("logged-staff-id")).thenReturn(Optional.of(staffMember));
 
         // Act
         teamMemberService.leaveTeam("logged-staff-id");
@@ -192,13 +214,66 @@ class TeamMemberServiceTest {
     @DisplayName("Should throw exception if an OWNER tries to leave the team")
     void leaveTeam_OwnerCannotLeave() {
         // Arrange
-        when(teamMemberRepository.findByUserId("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserId("logged-owner-id")).thenReturn(Optional.of(ownerMember));
 
         // Act & Assert
         assertThatThrownBy(() -> teamMemberService.leaveTeam("logged-owner-id"))
                 .isInstanceOf(AppException.class)
                 .hasMessage("The owner cannot leave the team. You must delete or transfer the business.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(teamMemberRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw CONFLICT if a STAFF member tries to leave while serving a client")
+    void leaveTeam_MemberInActiveService() {
+        when(teamMemberRepository.findActiveByUserId("logged-staff-id")).thenReturn(Optional.of(staffMember));
+        when(queueEntryRepository.hasActiveServiceByMemberId("staff-member-id")).thenReturn(true);
+
+        assertThatThrownBy(() -> teamMemberService.leaveTeam("logged-staff-id"))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Finish your current client service before leaving the team.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+
+        verify(teamMemberRepository, never()).save(any());
+    }
+
+    // ==================== DEACTIVATE PROFESSIONAL LINKS ====================
+
+    @Test
+    @DisplayName("Should call businessService.deactivateBusiness when user is an OWNER")
+    void deactivateProfessionalLinksForUser_Owner() {
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("logged-owner-id")).thenReturn(Optional.of(ownerMember));
+
+        teamMemberService.deactivateProfessionalLinksForUser("logged-owner-id");
+
+        verify(businessService).deactivateBusiness(business);
+        verify(teamMemberRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should deactivate member when user is STAFF and not in active service")
+    void deactivateProfessionalLinksForUser_StaffSuccess() {
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("logged-staff-id")).thenReturn(Optional.of(staffMember));
+        when(queueEntryRepository.hasActiveServiceByMemberId("staff-member-id")).thenReturn(false);
+
+        teamMemberService.deactivateProfessionalLinksForUser("logged-staff-id");
+
+        assertThat(staffMember.getIsActive()).isFalse();
+        verify(teamMemberRepository).save(staffMember);
+    }
+
+    @Test
+    @DisplayName("Should throw CONFLICT when STAFF user is in active service during downgrade")
+    void deactivateProfessionalLinksForUser_StaffInActiveService() {
+        when(teamMemberRepository.findActiveByUserIdWithBusiness("logged-staff-id")).thenReturn(Optional.of(staffMember));
+        when(queueEntryRepository.hasActiveServiceByMemberId("staff-member-id")).thenReturn(true);
+
+        assertThatThrownBy(() -> teamMemberService.deactivateProfessionalLinksForUser("logged-staff-id"))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Finish your current client service before changing to a client account.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
 
         verify(teamMemberRepository, never()).save(any());
     }
