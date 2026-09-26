@@ -42,6 +42,9 @@ class UserServiceTest {
     @Mock
     private HttpServletRequest request;
 
+    @Mock
+    private TeamMemberService teamMemberService;
+
     @InjectMocks
     private UserService userService;
 
@@ -487,5 +490,63 @@ class UserServiceTest {
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
         verify(userRepository).findById(invalidUserId);
+    }
+
+    // ==================== DOWNGRADE TO CLIENT TESTS ====================
+
+    @Test
+    @DisplayName("Should successfully downgrade a PROFESSIONAL to USER and deactivate professional links")
+    void downgradeToClient_Success() {
+        // Arrange
+        User professionalUser = User.builder()
+                .id(USER_ID)
+                .role(UserRole.PROFESSIONAL)
+                .build();
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(professionalUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        UserResponseDTO result = userService.downgradeToClient(USER_ID);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.role()).isEqualTo(UserRole.USER.name());
+        assertThat(professionalUser.getRole()).isEqualTo(UserRole.USER);
+
+        verify(teamMemberService).deactivateProfessionalLinksForUser(USER_ID);
+        verify(userRepository).save(professionalUser);
+    }
+
+    @Test
+    @DisplayName("Should throw CONFLICT when user is already a USER (client)")
+    void downgradeToClient_AlreadyClient() {
+        // Arrange
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser)); // testUser already has UserRole.USER
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.downgradeToClient(USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("This account is already a client account.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+
+        verify(teamMemberService, never()).deactivateProfessionalLinksForUser(any());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw NOT FOUND when user does not exist on downgrade")
+    void downgradeToClient_UserNotFound() {
+        // Arrange
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.downgradeToClient(USER_ID))
+                .isInstanceOf(AppException.class)
+                .hasMessage("User not found.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        verify(teamMemberService, never()).deactivateProfessionalLinksForUser(any());
+        verify(userRepository, never()).save(any());
     }
 }

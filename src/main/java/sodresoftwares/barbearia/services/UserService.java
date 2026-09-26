@@ -27,6 +27,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final LgpdConsentService lgpdConsentService;
+    private final TeamMemberService teamMemberService;
 
     @Transactional(readOnly = true)
     public UserResponseDTO getMyProfile(String userId) {
@@ -146,6 +147,10 @@ public class UserService {
             );
         }
 
+        if (user.getRole() == UserRole.PROFESSIONAL) {
+            teamMemberService.deactivateProfessionalLinksForUser(loggedUserId);
+        }
+
         user.setIsActive(false);
         user.setDeletedAt(Instant.now());
 
@@ -179,6 +184,28 @@ public class UserService {
         User user = getUserById(loggedUserId);
 
         user.setTutorialCompleted(true);
+    }
+
+    @Transactional
+    public UserResponseDTO downgradeToClient(String loggedUserId) {
+        User user = getUserById(loggedUserId);
+
+        if (user.getRole() == UserRole.USER) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "ALREADY_CLIENT",
+                    "This account is already a client account."
+            );
+        }
+
+        teamMemberService.deactivateProfessionalLinksForUser(loggedUserId);
+
+        user.setRole(UserRole.USER);
+
+        User savedUser = userRepository.save(user);
+        log.info("User downgraded to USER role");
+
+        return UserResponseDTO.fromEntity(savedUser);
     }
 
     //--------- HELPER METHODS ------

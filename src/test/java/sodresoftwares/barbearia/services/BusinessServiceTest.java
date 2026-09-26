@@ -17,9 +17,7 @@ import sodresoftwares.barbearia.model.TeamMember;
 import sodresoftwares.barbearia.model.TeamRole;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
-import sodresoftwares.barbearia.repositories.BusinessRepository;
-import sodresoftwares.barbearia.repositories.TeamMemberRepository;
-import sodresoftwares.barbearia.repositories.UserRepository;
+import sodresoftwares.barbearia.repositories.*;
 
 import java.util.Optional;
 
@@ -37,6 +35,12 @@ class BusinessServiceTest {
 
     @Mock
     private TeamMemberRepository teamMemberRepository;
+
+    @Mock
+    private QueueSessionRepository queueSessionRepository;
+
+    @Mock
+    private QueueEntryRepository queueEntryRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -76,7 +80,7 @@ class BusinessServiceTest {
     @DisplayName("Should return business profile including user data when it exists")
     void testGetMyBusinessProfile_Success() {
         // Arrange
-        when(businessRepository.findByUserIdWithUser(USER_ID)).thenReturn(Optional.of(testBusiness));
+        when(businessRepository.findActiveByUserIdWithUser(USER_ID)).thenReturn(Optional.of(testBusiness));
 
         // Act
         BusinessResponseDTO result = businessService.getMyBusinessProfile(USER_ID);
@@ -90,14 +94,14 @@ class BusinessServiceTest {
         assertThat(result.user().id()).isEqualTo(USER_ID);
         assertThat(result.user().name()).isEqualTo("Barbeiro Zé");
 
-        verify(businessRepository).findByUserIdWithUser(USER_ID);
+        verify(businessRepository).findActiveByUserIdWithUser(USER_ID);
     }
 
     @Test
     @DisplayName("Should throw not found exception when business profile does not exist on get")
     void testGetMyBusinessProfile_NotFound() {
         // Arrange
-        when(businessRepository.findByUserIdWithUser(USER_ID)).thenReturn(Optional.empty());
+        when(businessRepository.findActiveByUserIdWithUser(USER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> businessService.getMyBusinessProfile(USER_ID))
@@ -111,44 +115,69 @@ class BusinessServiceTest {
     @Test
     @DisplayName("Should create new business and owner team member successfully")
     void testCreateBusiness_Successful() {
-        // Arrange
-        when(businessRepository.existsByUserId(USER_ID)).thenReturn(false);
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+        when(businessRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
         when(businessRepository.save(any(Business.class))).thenReturn(testBusiness);
 
-        // Act
         businessService.createBusiness(USER_ID, createBusinessDTO);
 
-        // Assert
-        verify(businessRepository).existsByUserId(USER_ID);
         verify(userRepository).findById(USER_ID);
+        verify(businessRepository).findByUserId(USER_ID);
 
         verify(businessRepository).save(argThat(business ->
                 business.getUser().getId().equals(USER_ID) &&
-                        business.getName().equals("Barbearia do Zé")
+                        business.getName().equals("Barbearia do Zé") &&
+                        Boolean.TRUE.equals(business.getIsActive())
         ));
 
         verify(teamMemberRepository).save(argThat(member ->
                 member.getBusiness().getId().equals(BUSINESS_ID) &&
                         member.getUser().getId().equals(USER_ID) &&
                         member.getRole().equals(TeamRole.OWNER) &&
-                        member.getName().equals("Barbeiro Zé")
+                        member.getName().equals("Barbeiro Zé") &&
+                        Boolean.TRUE.equals(member.getIsActive())
         ));
     }
 
     @Test
-    @DisplayName("Should throw exception when trying to create a business for a user that already has one")
-    void testCreateBusiness_UserAlreadyHasBusiness() {
-        // Arrange
-        when(businessRepository.existsByUserId(USER_ID)).thenReturn(true);
+    @DisplayName("Should reactivate existing inactive business and owner member instead of creating a new one")
+    void testCreateBusiness_ReactivateInactiveBusiness() {
+        testBusiness.setIsActive(false);
 
-        // Act & Assert
+        TeamMember inactiveOwner = TeamMember.builder()
+                .id("member-123")
+                .business(testBusiness)
+                .user(testUser)
+                .role(TeamRole.OWNER)
+                .isActive(false)
+                .build();
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+        when(businessRepository.findByUserId(USER_ID)).thenReturn(Optional.of(testBusiness));
+        when(teamMemberRepository.findByBusinessIdAndUserId(BUSINESS_ID, USER_ID)).thenReturn(Optional.of(inactiveOwner));
+
+        businessService.createBusiness(USER_ID, createBusinessDTO);
+
+        assertThat(testBusiness.getIsActive()).isTrue();
+        assertThat(testBusiness.getName()).isEqualTo("Barbearia do Zé");
+        assertThat(inactiveOwner.getIsActive()).isTrue();
+
+        verify(businessRepository).save(testBusiness);
+        verify(teamMemberRepository).save(inactiveOwner);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to create a business for a user that already has an active one")
+    void testCreateBusiness_UserAlreadyHasActiveBusiness() {
+        testBusiness.setIsActive(true);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+        when(businessRepository.findByUserId(USER_ID)).thenReturn(Optional.of(testBusiness));
+
         assertThatThrownBy(() -> businessService.createBusiness(USER_ID, createBusinessDTO))
                 .isInstanceOf(AppException.class)
-                .hasMessage("This user already owns a registered business.")
+                .hasMessage("This user already owns an active registered business.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
 
-        verify(userRepository, never()).findById(any());
         verify(businessRepository, never()).save(any(Business.class));
         verify(teamMemberRepository, never()).save(any(TeamMember.class));
     }
@@ -156,16 +185,14 @@ class BusinessServiceTest {
     @Test
     @DisplayName("Should throw exception when user is not found during business creation")
     void testCreateBusiness_UserNotFound() {
-        // Arrange
-        when(businessRepository.existsByUserId(USER_ID)).thenReturn(false);
         when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThatThrownBy(() -> businessService.createBusiness(USER_ID, createBusinessDTO))
                 .isInstanceOf(AppException.class)
                 .hasMessage("User not found.")
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
+        verify(businessRepository, never()).findByUserId(any());
         verify(businessRepository, never()).save(any(Business.class));
         verify(teamMemberRepository, never()).save(any(TeamMember.class));
     }
@@ -178,7 +205,7 @@ class BusinessServiceTest {
         // Arrange
         UpdateBusinessDTO updateDTO = new UpdateBusinessDTO("New Business Name");
 
-        when(businessRepository.findByUserIdWithUser(USER_ID)).thenReturn(Optional.of(testBusiness));
+        when(businessRepository.findActiveByUserIdWithUser(USER_ID)).thenReturn(Optional.of(testBusiness));
         when(businessRepository.save(any(Business.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
@@ -197,7 +224,7 @@ class BusinessServiceTest {
         // Arrange
         UpdateBusinessDTO updateDTO = new UpdateBusinessDTO("   ");
 
-        when(businessRepository.findByUserIdWithUser(USER_ID)).thenReturn(Optional.of(testBusiness));
+        when(businessRepository.findActiveByUserIdWithUser(USER_ID)).thenReturn(Optional.of(testBusiness));
         when(businessRepository.save(any(Business.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
@@ -215,7 +242,7 @@ class BusinessServiceTest {
     void testUpdateBusinessProfile_BusinessNotFound() {
         // Arrange
         UpdateBusinessDTO updateDTO = new UpdateBusinessDTO("New Business Name");
-        when(businessRepository.findByUserIdWithUser(USER_ID)).thenReturn(Optional.empty());
+        when(businessRepository.findActiveByUserIdWithUser(USER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> businessService.updateBusinessProfile(USER_ID, updateDTO))
@@ -224,5 +251,49 @@ class BusinessServiceTest {
                 .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
         verify(businessRepository, never()).save(any());
+    }
+
+    // ==================== DEACTIVATE BUSINESS TESTS ====================
+
+    @Test
+    @DisplayName("Should deactivate business and all its team members when no active queue or clients exist")
+    void testDeactivateBusiness_Success() {
+        when(queueSessionRepository.existsByBusinessIdAndIsActiveTrue(BUSINESS_ID)).thenReturn(false);
+        when(queueEntryRepository.hasActiveEntriesByBusinessId(BUSINESS_ID)).thenReturn(false);
+
+        businessService.deactivateBusiness(testBusiness);
+
+        assertThat(testBusiness.getIsActive()).isFalse();
+        verify(businessRepository).save(testBusiness);
+        verify(teamMemberRepository).deactivateAllByBusinessId(BUSINESS_ID);
+    }
+
+    @Test
+    @DisplayName("Should throw CONFLICT when trying to deactivate business with an active queue session")
+    void testDeactivateBusiness_ActiveQueueSession() {
+        when(queueSessionRepository.existsByBusinessIdAndIsActiveTrue(BUSINESS_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> businessService.deactivateBusiness(testBusiness))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Cannot deactivate business while there is an active queue session. Close the queue first.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+
+        verify(businessRepository, never()).save(any());
+        verify(teamMemberRepository, never()).deactivateAllByBusinessId(any());
+    }
+
+    @Test
+    @DisplayName("Should throw CONFLICT when trying to deactivate business with clients still in queue")
+    void testDeactivateBusiness_ClientsStillInQueue() {
+        when(queueSessionRepository.existsByBusinessIdAndIsActiveTrue(BUSINESS_ID)).thenReturn(false);
+        when(queueEntryRepository.hasActiveEntriesByBusinessId(BUSINESS_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> businessService.deactivateBusiness(testBusiness))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Cannot deactivate business while there are still clients waiting or being served in the queue.")
+                .extracting(e -> ((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+
+        verify(businessRepository, never()).save(any());
+        verify(teamMemberRepository, never()).deactivateAllByBusinessId(any());
     }
 }

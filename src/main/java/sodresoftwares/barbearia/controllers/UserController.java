@@ -73,6 +73,11 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/me/downgrade-to-client")
+    public ResponseEntity<UserResponseDTO> downgradeToClient(@AuthenticationPrincipal User loggedUser) {
+        return ResponseEntity.ok(userService.downgradeToClient(loggedUser.getId()));
+    }
+
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteMyAccount(@AuthenticationPrincipal User loggedUser) {
         userService.deleteMyAccount(loggedUser.getId());
