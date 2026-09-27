@@ -184,6 +184,9 @@ public class UserService {
         User user = getUserById(loggedUserId);
 
         user.setTutorialCompleted(true);
+        userRepository.save(user);
+
+        log.info("Tutorial marked as completed");
     }
 
     @Transactional
