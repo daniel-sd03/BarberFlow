@@ -104,6 +104,7 @@ class QueueEntryServiceTest {
                 .business(business)
                 .user(barberUser)
                 .role(TeamRole.STAFF)
+                .isActive(true)
                 .build();
 
         activeSession = QueueSession.builder()
@@ -423,7 +424,7 @@ class QueueEntryServiceTest {
         String intruderUserId = "intruder-user-999";
         when(queueSessionRepository.findByIdWithBusinessAndUser(SESSION_ID)).thenReturn(Optional.of(activeSession));
         when(teamMemberRepository.findById(teamMember.getId())).thenReturn(Optional.of(teamMember));
-        when(teamMemberRepository.existsByUserIdAndBusinessIdAndRole(intruderUserId, business.getId(), TeamRole.OWNER))
+        when(teamMemberRepository.existsByUserIdAndBusinessIdAndRoleAndIsActiveTrue(intruderUserId, business.getId(), TeamRole.OWNER))
                 .thenReturn(false);
 
         // Act & Assert
@@ -482,7 +483,7 @@ class QueueEntryServiceTest {
 
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID))
                 .thenReturn(new ArrayList<>(List.of(waitingEntry, nextClientWaiting)));
-        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId()))
+        when(teamMemberRepository.findByUserIdAndBusinessIdAndIsActiveTrue(BARBER_USER_ID, business.getId()))
                 .thenReturn(Optional.of(teamMember));
         when(queueEntryRepository.save(any(QueueEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -507,7 +508,7 @@ class QueueEntryServiceTest {
     void testRequeueEntry_InvalidStatus() {
         // Arrange
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
-        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findByUserIdAndBusinessIdAndIsActiveTrue(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.requeueEntry(SESSION_ID, ENTRY_ID, BARBER_USER_ID))
@@ -524,7 +525,7 @@ class QueueEntryServiceTest {
         waitingEntry.setStatus(QueueEntryStatus.CALLED);
 
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
-        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findByUserIdAndBusinessIdAndIsActiveTrue(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
         when(queueEntryRepository.save(any(QueueEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
@@ -541,7 +542,7 @@ class QueueEntryServiceTest {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.FINISHED);
         when(queueEntryRepository.findActiveEntriesBySessionId(SESSION_ID)).thenReturn(List.of(waitingEntry));
-        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findByUserIdAndBusinessIdAndIsActiveTrue(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.startService(SESSION_ID, ENTRY_ID, BARBER_USER_ID))
@@ -557,7 +558,7 @@ class QueueEntryServiceTest {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.IN_SERVICE);
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findByUserIdAndBusinessIdAndIsActiveTrue(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
         when(queueEntryRepository.save(any(QueueEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -576,7 +577,7 @@ class QueueEntryServiceTest {
     void testFinishService_InvalidStatus() {
         // Arrange:
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(teamMemberRepository.findByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findByUserIdAndBusinessIdAndIsActiveTrue(BARBER_USER_ID, business.getId())).thenReturn(Optional.of(teamMember));
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.finishService(ENTRY_ID, BARBER_USER_ID))
@@ -595,7 +596,7 @@ class QueueEntryServiceTest {
     void testCancelEntry_ByClient_Success() {
         // Arrange
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(teamMemberRepository.existsByUserIdAndBusinessId(CLIENT_USER_ID, business.getId())).thenReturn(false);
+        when(teamMemberRepository.existsByUserIdAndBusinessIdAndIsActiveTrue(CLIENT_USER_ID, business.getId())).thenReturn(false);
         when(queueEntryRepository.save(any(QueueEntry.class))).thenReturn(waitingEntry);
 
         // Act
@@ -613,7 +614,7 @@ class QueueEntryServiceTest {
     void testCancelEntry_ByBarber_Success() {
         // Arrange
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(teamMemberRepository.existsByUserIdAndBusinessId(BARBER_USER_ID, business.getId())).thenReturn(true);
+        when(teamMemberRepository.existsByUserIdAndBusinessIdAndIsActiveTrue(BARBER_USER_ID, business.getId())).thenReturn(true);
         when(queueEntryRepository.save(any(QueueEntry.class))).thenReturn(waitingEntry);
 
         // Act
@@ -632,7 +633,7 @@ class QueueEntryServiceTest {
         // Arrange
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
         String intruderUserId = "intruder-user-999";
-        when(teamMemberRepository.existsByUserIdAndBusinessId(intruderUserId, business.getId())).thenReturn(false);
+        when(teamMemberRepository.existsByUserIdAndBusinessIdAndIsActiveTrue(intruderUserId, business.getId())).thenReturn(false);
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.cancelEntry(ENTRY_ID, intruderUserId))
@@ -651,7 +652,7 @@ class QueueEntryServiceTest {
         // Arrange
         waitingEntry.setStatus(invalidStatus);
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(teamMemberRepository.existsByUserIdAndBusinessId(CLIENT_USER_ID, business.getId())).thenReturn(false);
+        when(teamMemberRepository.existsByUserIdAndBusinessIdAndIsActiveTrue(CLIENT_USER_ID, business.getId())).thenReturn(false);
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.cancelEntry(ENTRY_ID, CLIENT_USER_ID))
@@ -668,7 +669,7 @@ class QueueEntryServiceTest {
         // Arrange
         waitingEntry.setStatus(QueueEntryStatus.IN_SERVICE);
         when(queueEntryRepository.findByIdWithFullGraph(ENTRY_ID)).thenReturn(Optional.of(waitingEntry));
-        when(teamMemberRepository.existsByUserIdAndBusinessId(CLIENT_USER_ID, business.getId())).thenReturn(false);
+        when(teamMemberRepository.existsByUserIdAndBusinessIdAndIsActiveTrue(CLIENT_USER_ID, business.getId())).thenReturn(false);
 
         // Act & Assert
         assertThatThrownBy(() -> queueEntryService.cancelEntry(ENTRY_ID, CLIENT_USER_ID))

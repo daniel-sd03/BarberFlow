@@ -312,10 +312,17 @@ public class QueueEntryService {
                     "This member does not belong to this business.");
         }
 
+        if (!actionMember.getIsActive()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "MEMBER_INACTIVE",
+                    "This team member is no longer active.");
+        }
+
         boolean isOwnAccount = actionMember.getUser() != null &&
                 actionMember.getUser().getId().equals(loggedUserId);
 
-        boolean isOwnerDevice = teamMemberRepository.existsByUserIdAndBusinessIdAndRole(
+        boolean isOwnerDevice = teamMemberRepository.existsByUserIdAndBusinessIdAndRoleAndIsActiveTrue(
                 loggedUserId,
                 session.getBusiness().getId(),
                 TeamRole.OWNER
@@ -335,7 +342,7 @@ public class QueueEntryService {
     private void validatePermissionToManageEntry(QueueEntry entry, String loggedUserId) {
         String businessId = entry.getQueueSession().getBusiness().getId();
 
-        TeamMember loggedMember = teamMemberRepository.findByUserIdAndBusinessId(loggedUserId, businessId)
+        TeamMember loggedMember = teamMemberRepository.findByUserIdAndBusinessIdAndIsActiveTrue(loggedUserId, businessId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.FORBIDDEN,
                         "FORBIDDEN",
@@ -371,7 +378,7 @@ public class QueueEntryService {
     }
 
     private void validateCancelPermission(QueueEntry entry, String loggedUserId) {
-        boolean isTeamMember = teamMemberRepository.existsByUserIdAndBusinessId(
+        boolean isTeamMember = teamMemberRepository.existsByUserIdAndBusinessIdAndIsActiveTrue(
                 loggedUserId,
                 entry.getQueueSession().getBusiness().getId()
         );
