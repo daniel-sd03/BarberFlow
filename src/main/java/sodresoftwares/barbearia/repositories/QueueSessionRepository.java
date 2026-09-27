@@ -12,28 +12,31 @@ import java.util.Optional;
 public interface QueueSessionRepository extends JpaRepository<QueueSession, String> {
 
     @Query("SELECT qs FROM QueueSession qs " +
-            "JOIN qs.business b " +
-            "WHERE b.user.id = :ownerId")
+            "JOIN FETCH qs.business b " +
+            "WHERE b.user.id = :ownerId " +
+            "AND b.isActive = true")
     Optional<QueueSession> findByOwnerUserId(@Param("ownerId") String ownerId);
 
     @Query("SELECT q FROM QueueSession q " +
-            "JOIN FETCH q.business " +
-            "WHERE q.business.id = :businessId")
+            "JOIN FETCH q.business b " +
+            "WHERE b.id = :businessId " +
+            "AND b.isActive = true")
     Optional<QueueSession> findByBusinessIdWithBusiness(@Param("businessId") String businessId);
 
     @Query("SELECT q FROM QueueSession q " +
-            "JOIN FETCH q.business " +
-            "WHERE q.ticketCode = :ticketCode")
+            "JOIN FETCH q.business b " +
+            "WHERE q.ticketCode = :ticketCode " +
+            "AND b.isActive = true")
     Optional<QueueSession> findByTicketCodeWithBusiness(@Param("ticketCode") String ticketCode);
 
     @Query("SELECT s FROM QueueSession s " +
             "JOIN FETCH s.business b " +
             "JOIN FETCH b.user " +
-            "WHERE s.id = :id")
+            "WHERE s.id = :id " +
+            "AND b.isActive = true")
     Optional<QueueSession> findByIdWithBusinessAndUser(@Param("id") String id);
 
     boolean existsByBusinessIdAndIsActiveTrue(String businessId);
-    Optional<QueueSession> findByBusinessId(String businessId);
     boolean existsByTicketCode(String ticketCode);
     boolean existsByBusinessId(String businessId);
 }

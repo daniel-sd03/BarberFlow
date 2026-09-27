@@ -102,7 +102,7 @@ class QueueSessionServiceTest {
     @Test
     @DisplayName("Should create queue session and generate prefix based on business name")
     void testCreateQueueSession_Success_PrefixGeneration() {
-        when(teamMemberRepository.findByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
         when(queueSessionRepository.existsByBusinessId(business.getId())).thenReturn(false);
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(false);
         when(queueSessionRepository.save(any(QueueSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -119,7 +119,7 @@ class QueueSessionServiceTest {
     @Test
     @DisplayName("Should throw conflict exception when business already has a queue")
     void testCreateQueueSession_AlreadyExists() {
-        when(teamMemberRepository.findByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
         when(queueSessionRepository.existsByBusinessId(business.getId())).thenReturn(true);
 
         assertThatThrownBy(() -> queueSessionService.createQueueSession(PROF_USER_ID))
@@ -133,7 +133,7 @@ class QueueSessionServiceTest {
     @Test
     @DisplayName("Should throw exception when user is not associated with any team")
     void testCreateQueueSession_TeamMemberNotFound() {
-        when(teamMemberRepository.findByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.empty());
+        when(teamMemberRepository.findActiveByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> queueSessionService.createQueueSession(PROF_USER_ID))
                 .isInstanceOf(AppException.class)
@@ -147,7 +147,7 @@ class QueueSessionServiceTest {
     @DisplayName("Should generate a new ticket code if a collision is detected during creation")
     void testCreateQueueSession_CollisionLoop() {
         // Arrange
-        when(teamMemberRepository.findByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(ownerMember));
         when(queueSessionRepository.existsByBusinessId(business.getId())).thenReturn(false);
         when(queueSessionRepository.existsByTicketCode(anyString())).thenReturn(true, false);
         when(queueSessionRepository.save(any(QueueSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -168,7 +168,7 @@ class QueueSessionServiceTest {
                 .role(TeamRole.STAFF)
                 .build();
 
-        when(teamMemberRepository.findByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(staffMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness(PROF_USER_ID)).thenReturn(Optional.of(staffMember));
 
         // Act & Assert
         assertThatThrownBy(() -> queueSessionService.createQueueSession(PROF_USER_ID))

@@ -144,7 +144,7 @@ public class QueueSessionService {
     }
 
     private Business getBusinessForOwner(String loggedUserId) {
-        TeamMember member = teamMemberRepository.findByUserIdWithBusiness(loggedUserId)
+        TeamMember member = teamMemberRepository.findActiveByUserIdWithBusiness(loggedUserId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
                         "TEAM_MEMBER_NOT_FOUND",

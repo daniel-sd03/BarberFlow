@@ -92,7 +92,7 @@ class DashboardServiceTest {
     @DisplayName("Should return empty dashboard with pending invites when user is not associated with any team")
     void getProfessionalDashboard_NoTeamMember() {
         // Arrange
-        when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.empty());
+        when(teamMemberRepository.findActiveByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.empty());
 
         TeamInvite mockInvite = TeamInvite.builder()
                 .id("inv-1")
@@ -132,7 +132,7 @@ class DashboardServiceTest {
                 .isActive(true)
                 .build();
 
-        when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
         when(teamMemberRepository.findAllByBusinessIdAndIsActiveTrueWithUser(BUSINESS_ID))
                 .thenReturn(List.of(teamMember, shadowMember));
         when(queueSessionRepository.findByBusinessIdWithBusiness(BUSINESS_ID)).thenReturn(Optional.empty());
@@ -149,7 +149,7 @@ class DashboardServiceTest {
     @DisplayName("Should return business data but no session data when queue session does not exist")
     void getProfessionalDashboard_NoActiveSession() {
         // Arrange
-        when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
         when(teamMemberRepository.findAllByBusinessIdAndIsActiveTrueWithUser(BUSINESS_ID)).thenReturn(List.of(teamMember));
         when(queueSessionRepository.findByBusinessIdWithBusiness(BUSINESS_ID)).thenReturn(Optional.empty());
 
@@ -177,7 +177,7 @@ class DashboardServiceTest {
         );
 
         // Arrange
-        when(teamMemberRepository.findByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.findActiveByUserIdWithBusiness(LOGGED_USER_ID)).thenReturn(Optional.of(teamMember));
         when(teamMemberRepository.findAllByBusinessIdAndIsActiveTrueWithUser(BUSINESS_ID)).thenReturn(List.of(teamMember));
         when(queueSessionRepository.findByBusinessIdWithBusiness(BUSINESS_ID)).thenReturn(Optional.of(queueSession));
 

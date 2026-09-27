@@ -32,7 +32,7 @@ public class DashboardService {
 
     public BusinessDashboardDTO getProfessionalDashboard(User loggedUser) {
 
-        Optional<TeamMember> loggedMemberOpt = teamMemberRepository.findByUserIdWithBusiness(loggedUser.getId());
+        Optional<TeamMember> loggedMemberOpt = teamMemberRepository.findActiveByUserIdWithBusiness(loggedUser.getId());
 
         if (loggedMemberOpt.isEmpty()) {
             List<TeamInviteResponseDTO> pendingInvites = teamInviteRepository.findAllByEmailAndStatusWithBusiness(loggedUser.getLogin(), InviteStatus.PENDING)

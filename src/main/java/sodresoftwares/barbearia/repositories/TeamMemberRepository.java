@@ -14,11 +14,6 @@ import java.util.Optional;
 @Repository
 public interface TeamMemberRepository extends JpaRepository<TeamMember, String> {
 
-    @Query("SELECT t FROM TeamMember t " +
-            "JOIN FETCH t.business " +
-            "WHERE t.user.id = :userId")
-    Optional<TeamMember> findByUserIdWithBusiness(@Param("userId") String userId);
-
     @Query("SELECT tm FROM TeamMember tm " +
             "LEFT JOIN FETCH tm.user " +
             "WHERE tm.business.id = :businessId " +
@@ -46,15 +41,11 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, String> 
 
     Optional<TeamMember> findByBusinessIdAndUserId(String businessId, String userId);
 
-    Optional<TeamMember> findByUserId(String userId);
+    Optional<TeamMember> findByUserIdAndBusinessIdAndIsActiveTrue(String userId, String businessId);
 
-    Optional<TeamMember> findByUserIdAndBusinessId(String userId, String businessId);
+    boolean existsByUserIdAndBusinessIdAndIsActiveTrue(String userId, String businessId);
 
-    boolean existsByUserIdAndBusinessId(String userId, String businessId);
-
-    boolean existsByUserIdAndBusinessIdAndRole(String loggedUserId, String id, TeamRole owner);
-
-    boolean existsByUserId(String userId);
+    boolean existsByUserIdAndBusinessIdAndRoleAndIsActiveTrue(String userId, String businessId, TeamRole role);
 
     boolean existsByUserIdAndIsActiveTrue(String userId);
 }
