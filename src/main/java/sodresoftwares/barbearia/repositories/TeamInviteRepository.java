@@ -16,9 +16,10 @@ public interface TeamInviteRepository extends JpaRepository<TeamInvite, String> 
     boolean existsByEmailAndBusinessIdAndStatus(String email, String businessId, InviteStatus status);
 
     @Query("SELECT ti FROM TeamInvite ti " +
-            "JOIN FETCH ti.business " +
+            "JOIN FETCH ti.business b " +
             "WHERE ti.email = :email " +
-            "AND ti.status = :status")
+            "AND ti.status = :status "+
+            "AND b.isActive = true")
     List<TeamInvite> findAllByEmailAndStatusWithBusiness(@Param("email") String email, @Param("status") InviteStatus status);
 
     @Query("SELECT ti FROM TeamInvite ti " +

@@ -53,7 +53,11 @@ class TeamInviteServiceTest {
         ownerUser = User.builder().id("owner-id").name("Owner").login("owner@test.com").build();
         invitedUser = User.builder().id("invited-id").name("Invited").login("invited@test.com").build();
 
-        business = Business.builder().id("biz-id").name("Barbearia Teste").build();
+        business = Business.builder()
+                .id("biz-id")
+                .name("Barbearia Teste")
+                .isActive(true)
+                .build();
 
         ownerMember = TeamMember.builder()
                 .id("member-id")
