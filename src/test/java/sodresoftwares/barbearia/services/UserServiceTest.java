@@ -428,6 +428,19 @@ class UserServiceTest {
         verify(userRepository, never()).save(any());
     }
 
+    @Test
+    @DisplayName("Should deactivate professional links when a PROFESSIONAL deletes their account")
+    void testDeleteMyAccount_Professional_DeactivatesLinks() {
+        testUser.setRole(UserRole.PROFESSIONAL);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+
+        userService.deleteMyAccount(USER_ID);
+
+        assertThat(testUser.getIsActive()).isFalse();
+        verify(teamMemberService).deactivateProfessionalLinksForUser(USER_ID);
+        verify(userRepository).save(testUser);
+    }
+
     // ==================== REACTIVATE ACCOUNT TESTS ====================
 
     @Test
@@ -474,6 +487,7 @@ class UserServiceTest {
         // Assert
         assertThat(testUser.getTutorialCompleted()).isTrue();
         verify(userRepository).findById(loggedUserId);
+        verify(userRepository).save(testUser);
     }
 
     @Test
