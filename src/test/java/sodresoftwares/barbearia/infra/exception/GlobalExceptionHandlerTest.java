@@ -24,6 +24,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.*;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
+import sodresoftwares.barbearia.infra.security.SubscriptionCheckInterceptor;
+import sodresoftwares.barbearia.infra.security.WebMvcConfig;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -34,7 +36,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         controllers = GlobalExceptionHandlerTest.TestController.class,
         excludeFilters = @ComponentScan.Filter(
                 type = FilterType.ASSIGNABLE_TYPE,
-                classes = SecurityFilter.class
+                classes = {
+                        SecurityFilter.class,
+                        SubscriptionCheckInterceptor.class,
+                        WebMvcConfig.class
+                }
         ),
         excludeAutoConfiguration = {
                 SecurityAutoConfiguration.class,

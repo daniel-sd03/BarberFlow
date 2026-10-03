@@ -25,6 +25,8 @@ import sodresoftwares.barbearia.dto.auth.RegisterDTO;
 import sodresoftwares.barbearia.dto.user.UpdateUserDTO;
 import sodresoftwares.barbearia.dto.user.UserResponseDTO;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
+import sodresoftwares.barbearia.infra.security.SubscriptionCheckInterceptor;
+import sodresoftwares.barbearia.infra.security.WebMvcConfig;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.UserService;
@@ -42,7 +44,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         excludeFilters = {
                 @ComponentScan.Filter(
                         type = FilterType.ASSIGNABLE_TYPE,
-                        classes = SecurityFilter.class
+                        classes = {
+                                SecurityFilter.class,
+                                SubscriptionCheckInterceptor.class,
+                                WebMvcConfig.class
+                        }
                 )
         },
         excludeAutoConfiguration = {

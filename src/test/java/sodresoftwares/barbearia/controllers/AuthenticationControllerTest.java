@@ -20,6 +20,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import sodresoftwares.barbearia.dto.auth.*;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
+import sodresoftwares.barbearia.infra.security.SubscriptionCheckInterceptor;
+import sodresoftwares.barbearia.infra.security.WebMvcConfig;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.services.AuthenticationService;
 import sodresoftwares.barbearia.services.PasswordResetService;
@@ -38,7 +40,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         excludeFilters = {
                 @ComponentScan.Filter(
                         type = FilterType.ASSIGNABLE_TYPE,
-                        classes = SecurityFilter.class
+                classes = {
+                        SecurityFilter.class,
+                        SubscriptionCheckInterceptor.class,
+                        WebMvcConfig.class
+                }
                 )
         },
         excludeAutoConfiguration = {

@@ -18,6 +18,8 @@ import sodresoftwares.barbearia.model.TeamRole;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.model.user.UserRole;
 import sodresoftwares.barbearia.repositories.*;
+import sodresoftwares.barbearia.repositories.billing.SubscriptionRepository;
+import sodresoftwares.barbearia.services.billing.SubscriptionService;
 
 import java.util.Optional;
 
@@ -44,6 +46,12 @@ class BusinessServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
+
+    @Mock
+    private SubscriptionService subscriptionService;
 
     @InjectMocks
     private BusinessService businessService;
@@ -137,6 +145,8 @@ class BusinessServiceTest {
                         member.getName().equals("Barbeiro Zé") &&
                         Boolean.TRUE.equals(member.getIsActive())
         ));
+
+        verify(subscriptionService).createTrialSubscription(testBusiness);
     }
 
     @Test
@@ -155,6 +165,7 @@ class BusinessServiceTest {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
         when(businessRepository.findByUserId(USER_ID)).thenReturn(Optional.of(testBusiness));
         when(teamMemberRepository.findByBusinessIdAndUserId(BUSINESS_ID, USER_ID)).thenReturn(Optional.of(inactiveOwner));
+        when(subscriptionRepository.existsByBusinessId(BUSINESS_ID)).thenReturn(false);
 
         businessService.createBusiness(USER_ID, createBusinessDTO);
 
@@ -164,6 +175,7 @@ class BusinessServiceTest {
 
         verify(businessRepository).save(testBusiness);
         verify(teamMemberRepository).save(inactiveOwner);
+        verify(subscriptionService).createTrialSubscription(testBusiness);
     }
 
     @Test

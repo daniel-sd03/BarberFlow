@@ -52,6 +52,10 @@ services:
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
       - VAPID_SUBJECT=${VAPID_SUBJECT}
 
+      # Payment Gateway (Asaas)
+      - ASAAS_API_URL=${ASAAS_API_URL}
+      - ASAAS_API_KEY=${ASAAS_API_KEY}
+
   redis:
     image: redis:7
     container_name: clickFila_redis

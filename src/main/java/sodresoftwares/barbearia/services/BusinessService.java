@@ -14,6 +14,8 @@ import sodresoftwares.barbearia.model.TeamMember;
 import sodresoftwares.barbearia.model.TeamRole;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.repositories.*;
+import sodresoftwares.barbearia.repositories.billing.SubscriptionRepository;
+import sodresoftwares.barbearia.services.billing.SubscriptionService;
 
 import java.util.Optional;
 
@@ -28,6 +30,8 @@ public class BusinessService {
     private final UserRepository userRepository;
     private final QueueSessionRepository queueSessionRepository;
     private final QueueEntryRepository queueEntryRepository;
+    private final SubscriptionService subscriptionService;
+    private final SubscriptionRepository subscriptionRepository;
 
     public BusinessResponseDTO getMyBusinessProfile(String userId) {
 
@@ -84,6 +88,11 @@ public class BusinessService {
                             .build());
 
             teamMemberRepository.save(ownerMember);
+
+            if (!subscriptionRepository.existsByBusinessId(existingBusiness.getId())) {
+                subscriptionService.createTrialSubscription(existingBusiness);
+            }
+
             log.info("Existing business reactivated successfully for user {}", userId);
             return;
         }
@@ -105,6 +114,8 @@ public class BusinessService {
                 .build();
 
         teamMemberRepository.save(ownerMember);
+
+        subscriptionService.createTrialSubscription(savedBusiness);
 
         log.info("Business and Owner Team Member registered successfully");
     }

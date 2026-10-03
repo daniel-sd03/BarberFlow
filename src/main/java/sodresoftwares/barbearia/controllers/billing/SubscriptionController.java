@@ -1,0 +1,44 @@
+package sodresoftwares.barbearia.controllers.billing;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+import sodresoftwares.barbearia.dto.billing.CheckoutRequest;
+import sodresoftwares.barbearia.dto.billing.SubscriptionResponseDTO;
+import sodresoftwares.barbearia.model.user.User;
+import sodresoftwares.barbearia.services.billing.SubscriptionService;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/subscriptions")
+@RequiredArgsConstructor
+public class SubscriptionController {
+
+    private final SubscriptionService subscriptionService;
+
+    @PostMapping("/checkout")
+    public ResponseEntity<Map<String, String>> generateCheckout(
+            @Valid @RequestBody CheckoutRequest request) {
+        String checkoutUrl = subscriptionService.generateCheckout(request.businessId(), request.planCode());
+        return ResponseEntity.ok(Map.of("checkoutUrl", checkoutUrl));
+    }
+
+
+    @PostMapping("/cancel/{businessId}")
+    public ResponseEntity<Void> cancelSubscription(
+            @PathVariable String businessId) {
+        subscriptionService.cancelSubscription(businessId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<SubscriptionResponseDTO> getMySubscription(
+            @AuthenticationPrincipal User loggedInUser) {
+        SubscriptionResponseDTO response = subscriptionService.getMySubscriptionDetails(loggedInUser.getId());
+        return ResponseEntity.ok(response);
+    }
+}
