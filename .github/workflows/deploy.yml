@@ -89,6 +89,8 @@ jobs:
             VAPID_PUBLIC_KEY=${{ secrets.VAPID_PUBLIC_KEY }}
             VAPID_PRIVATE_KEY=${{ secrets.VAPID_PRIVATE_KEY }}
             VAPID_SUBJECT=${{ secrets.VAPID_SUBJECT }}
+            ASAAS_API_URL=${{ secrets.ASAAS_API_URL }}
+            ASAAS_API_KEY=${{ secrets.ASAAS_API_KEY }}
 
       - name: Fill Cloudflare token
         id: task-def-cf

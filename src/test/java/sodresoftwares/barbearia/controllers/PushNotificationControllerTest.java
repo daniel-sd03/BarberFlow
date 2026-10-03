@@ -21,6 +21,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import sodresoftwares.barbearia.dto.push.PushSubscriptionDTO;
 import sodresoftwares.barbearia.infra.exception.GlobalExceptionHandler;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
+import sodresoftwares.barbearia.infra.security.SubscriptionCheckInterceptor;
+import sodresoftwares.barbearia.infra.security.WebMvcConfig;
 import sodresoftwares.barbearia.services.PushSubscriptionService;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                         type = FilterType.ASSIGNABLE_TYPE,
                         classes = {
                                 SecurityFilter.class,
+                                SubscriptionCheckInterceptor.class,
+                                WebMvcConfig.class,
                                 GlobalExceptionHandler.class
                         }
                 )

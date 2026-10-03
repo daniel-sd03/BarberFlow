@@ -18,6 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import sodresoftwares.barbearia.dto.auth.TokenResponseDTO;
 import sodresoftwares.barbearia.infra.exception.GlobalExceptionHandler;
 import sodresoftwares.barbearia.infra.security.SecurityFilter;
+import sodresoftwares.barbearia.infra.security.SubscriptionCheckInterceptor;
+import sodresoftwares.barbearia.infra.security.WebMvcConfig;
 import sodresoftwares.barbearia.model.user.User;
 import sodresoftwares.barbearia.services.LgpdConsentService;
 
@@ -35,6 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                         type = FilterType.ASSIGNABLE_TYPE,
                         classes = {
                                 SecurityFilter.class,
+                                SubscriptionCheckInterceptor.class,
+                                WebMvcConfig.class,
                                 GlobalExceptionHandler.class
                         }
                 )

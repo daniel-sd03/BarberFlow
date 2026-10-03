@@ -33,6 +33,9 @@ public class Business {
     @Column(name = "name", nullable = false)
     private String name;
 
+    @Column(name = "cpf_cnpj", length = 14)
+    private String cpfCnpj;
+
     @Builder.Default
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;

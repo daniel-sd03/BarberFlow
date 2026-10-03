@@ -49,6 +49,7 @@ public class SecurityConfigurations {
                                 .requestMatchers(HttpMethod.POST, "/auth/password-resets/validate").permitAll()
                                 .requestMatchers(HttpMethod.PATCH, "/auth/passwords").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/auth/reactivate").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/webhooks/asaas").permitAll()
                                 .requestMatchers("/oauth2/**", "/barbearia/oauth2/**").permitAll()
                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                                 .requestMatchers("/error").permitAll()
@@ -62,6 +63,9 @@ public class SecurityConfigurations {
                                 .requestMatchers(HttpMethod.POST, "/businesses").hasRole("PROFESSIONAL")
                                 .requestMatchers(HttpMethod.GET, "/businesses/me").hasRole("PROFESSIONAL")
                                 .requestMatchers(HttpMethod.PATCH, "/businesses/me").hasRole("PROFESSIONAL")
+                                .requestMatchers(HttpMethod.POST, "/subscriptions/checkout").hasRole("PROFESSIONAL")
+                                .requestMatchers(HttpMethod.POST, "/subscriptions/cancel/*").hasRole("PROFESSIONAL")
+                                .requestMatchers(HttpMethod.GET, "/subscriptions/me").hasRole("PROFESSIONAL")
 
                                 // Dashboard
                                 .requestMatchers(HttpMethod.GET, "/dashboard/professional").hasRole("PROFESSIONAL")

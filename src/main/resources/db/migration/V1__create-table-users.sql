@@ -32,6 +32,7 @@ CREATE TABLE businesses
     id         TEXT PRIMARY KEY UNIQUE NOT NULL,
     user_id    TEXT UNIQUE             NOT NULL,
     name       TEXT                    NOT NULL,
+    cpf_cnpj   VARCHAR(14),
     is_active  BOOLEAN                 NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ,
@@ -132,60 +133,86 @@ CREATE TABLE refresh_tokens
     token       VARCHAR(255)             NOT NULL UNIQUE,
     user_id     VARCHAR(255)             NOT NULL UNIQUE,
     expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
+
     CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 CREATE TABLE plans
 (
-    id               VARCHAR(36) PRIMARY KEY,
-    name             VARCHAR(100)   NOT NULL,
-    description      TEXT,
-    price            DECIMAL(10, 2) NOT NULL,
-    currency         VARCHAR(3)     NOT NULL,
-    duration_in_days INT,
-    billing_cycle    VARCHAR(20)    NOT NULL,
-    gateway_plan_id  VARCHAR(100),
-    is_active        BOOLEAN        NOT NULL,
-    created_at       TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    updated_at       TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    id              TEXT PRIMARY KEY UNIQUE   NOT NULL,
+    code            VARCHAR(30) UNIQUE        NOT NULL,
+    name            VARCHAR(100)              NOT NULL,
+    description     TEXT,
+    price           DECIMAL(10, 2)            NOT NULL,
+    currency        VARCHAR(3)  DEFAULT 'BRL' NOT NULL,
+    billing_cycle   VARCHAR(20)               NOT NULL,
+    gateway_plan_id VARCHAR(100),
+    is_active       BOOLEAN     DEFAULT TRUE  NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ,
+    created_by      VARCHAR(255),
+    updated_by      VARCHAR(255)
 );
 
 CREATE TABLE subscriptions
 (
-    id                      VARCHAR(36) PRIMARY KEY,
-    business_id             VARCHAR(36) NOT NULL,
-    plan_id                 VARCHAR(36) NOT NULL,
+    id                      TEXT PRIMARY KEY UNIQUE   NOT NULL,
+    business_id             TEXT UNIQUE               NOT NULL,
+    plan_id                 TEXT,
+    payment_provider        VARCHAR(30)               NOT NULL,
     gateway_subscription_id VARCHAR(100) UNIQUE,
     gateway_customer_id     VARCHAR(100),
-    status                  VARCHAR(30) NOT NULL,
-    current_period_start    TIMESTAMP WITHOUT TIME ZONE,
-    current_period_end      TIMESTAMP WITHOUT TIME ZONE,
-    cancel_at_period_end    BOOLEAN     NOT NULL,
-    canceled_at             TIMESTAMP WITHOUT TIME ZONE,
-    created_at              TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    updated_at              TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-
+    status                  VARCHAR(30)               NOT NULL,
+    billing_anchor_day      INTEGER,
+    current_period_start    DATE                      NOT NULL,
+    current_period_end      DATE                      NOT NULL,
+    cancel_at_period_end    BOOLEAN     DEFAULT FALSE NOT NULL,
+    canceled_at             TIMESTAMPTZ,
+    created_at              TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at              TIMESTAMPTZ,
+    created_by              VARCHAR(255),
+    updated_by              VARCHAR(255),
     CONSTRAINT fk_subscription_plan FOREIGN KEY (plan_id) REFERENCES plans (id),
     CONSTRAINT fk_subscription_business FOREIGN KEY (business_id) REFERENCES businesses (id) ON DELETE CASCADE
 );
 
 CREATE TABLE payments
 (
-    id                 VARCHAR(36) PRIMARY KEY,
-    subscription_id    VARCHAR(36)    NOT NULL,
+    id                 TEXT PRIMARY KEY UNIQUE   NOT NULL,
+    subscription_id    TEXT                      NOT NULL,
+    payment_provider   VARCHAR(30)               NOT NULL,
     gateway_invoice_id VARCHAR(100) UNIQUE,
-    amount             DECIMAL(10, 2) NOT NULL,
-    currency           VARCHAR(3)     NOT NULL,
-    status             VARCHAR(30)    NOT NULL,
-    payment_method     VARCHAR(50),
-    paid_at            TIMESTAMP WITHOUT TIME ZONE,
-    due_date           TIMESTAMP WITHOUT TIME ZONE,
+    amount             DECIMAL(10, 2)            NOT NULL,
+    currency           VARCHAR(3)  DEFAULT 'BRL' NOT NULL,
+    status             VARCHAR(30)               NOT NULL,
+    payment_method     VARCHAR(30),
+    installments       INTEGER     DEFAULT 1     NOT NULL,
+    due_date           DATE                      NOT NULL,
+    paid_at            TIMESTAMPTZ,
+    invoice_url        TEXT,
+    pix_copy_paste     TEXT,
+    pix_qr_code_base64 TEXT,
     receipt_url        TEXT,
-    created_at         TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    updated_at         TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-
-    CONSTRAINT fk_payment_subscription FOREIGN KEY (subscription_id) REFERENCES subscriptions (id)
+    created_at         TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TIMESTAMPTZ,
+    created_by         VARCHAR(255),
+    updated_by         VARCHAR(255),
+    CONSTRAINT fk_payment_subscription FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE CASCADE
 );
+
+CREATE TABLE subscription_history
+(
+    id                TEXT PRIMARY KEY UNIQUE NOT NULL,
+    subscription_id   TEXT                    NOT NULL,
+    previous_status   VARCHAR(30),
+    new_status        VARCHAR(30)             NOT NULL,
+    reason            TEXT                    NOT NULL,
+    created_at        TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_history_subscription FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_subscription_history_sub_id
+    ON subscription_history (subscription_id);
 
 CREATE INDEX idx_team_invites_email
     ON team_invites (email);
@@ -204,3 +231,9 @@ CREATE INDEX idx_queue_entries_user_joined_at
 
 CREATE UNIQUE INDEX idx_queue_sessions_ticket_code
     ON queue_sessions (ticket_code);
+
+CREATE INDEX idx_subscriptions_status_period_end
+    ON subscriptions (status, current_period_end);
+
+CREATE INDEX idx_payments_subscription_status
+    ON payments (subscription_id, status);
